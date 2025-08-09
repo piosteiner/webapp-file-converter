@@ -86,30 +86,41 @@ function setupDragDrop(dropZone, handler) {
 // Load FFmpeg.wasm
 async function loadFFmpeg() {
     try {
-        const { FFmpeg } = FFmpegWASM;
+        // Check if FFmpeg is available globally
+        if (typeof FFmpeg === 'undefined') {
+            throw new Error('FFmpeg library not loaded. Please check your internet connection.');
+        }
+        
+        // When loaded via CDN, FFmpeg is available directly on window
+        const { FFmpeg: FFmpegClass } = FFmpeg;
         const { fetchFile } = FFmpegUtil;
         
-        // Store for global access
-        window.FFmpegClass = FFmpeg;
+        // Store fetchFile for global access
         window.fetchFile = fetchFile;
         
-        ffmpeg = new FFmpeg();
+        // Create new FFmpeg instance
+        ffmpeg = new FFmpegClass();
         
+        // Set up event listeners
         ffmpeg.on('log', ({ message }) => {
-            console.log(message);
+            console.log('FFmpeg:', message);
         });
 
         ffmpeg.on('progress', ({ progress }) => {
             updateProgress(progress * 100);
         });
 
-        // Load with proper CDN URLs
+        console.log('Loading FFmpeg core...');
+        
+        // Load FFmpeg core with explicit CDN URLs
         await ffmpeg.load({
             coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-            wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+            wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+            workerURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js'
         });
         
         ffmpegLoaded = true;
+        console.log('FFmpeg loaded successfully!');
         
         const statusEl = document.getElementById('ffmpegStatus');
         statusEl.innerHTML = '✅ FFmpeg.wasm loaded and ready!';
@@ -122,7 +133,7 @@ async function loadFFmpeg() {
     } catch (error) {
         console.error('Failed to load FFmpeg:', error);
         const statusEl = document.getElementById('ffmpegStatus');
-        statusEl.innerHTML = '❌ Failed to load FFmpeg.wasm. Please refresh the page to try again.';
+        statusEl.innerHTML = `❌ Failed to load FFmpeg.wasm: ${error.message}<br>Please refresh the page to try again.`;
         statusEl.style.background = 'rgba(244, 67, 54, 0.1)';
         statusEl.style.borderColor = 'rgba(244, 67, 54, 0.3)';
         statusEl.style.color = '#f44336';
@@ -181,13 +192,14 @@ async function convertGifToWebm(file) {
     const crf = parseInt(document.getElementById('crf').value);
     
     dropZone.classList.add('processing');
-    showStatus('Converting GIF to WebM...', 'processing');
+    showStatus('<span class="spinner"></span>Converting GIF to WebM...', 'processing');
 
     try {
         // Write input file to FFmpeg filesystem
         const inputFileName = 'input.gif';
         const outputFileName = 'output.webm';
         
+        console.log('Writing file to FFmpeg filesystem...');
         await ffmpeg.writeFile(inputFileName, await window.fetchFile(file));
 
         // Calculate scale filter based on mode
@@ -214,11 +226,12 @@ async function convertGifToWebm(file) {
             outputFileName
         ];
 
-        console.log('FFmpeg command:', args.join(' '));
+        console.log('Running FFmpeg with command:', args.join(' '));
 
         // Run FFmpeg conversion
         await ffmpeg.exec(args);
 
+        console.log('Reading output file...');
         // Read the output file
         const data = await ffmpeg.readFile(outputFileName);
         const blob = new Blob([data.buffer], { type: 'video/webm' });
@@ -234,10 +247,10 @@ async function convertGifToWebm(file) {
             downloadFile(blob, outputFilename);
             
             dropZone.classList.remove('processing');
-            showStatus(`GIF converted to WebM successfully! Size: ${(blob.size/1024).toFixed(1)} KB`, 'success', outputFilename);
+            showStatus(`✅ GIF converted to WebM successfully!<br><strong>Size:</strong> ${(blob.size/1024).toFixed(1)} KB<br><strong>Mode:</strong> ${gifMode}`, 'success', outputFilename);
         } else {
             dropZone.classList.remove('processing');
-            showStatus(`❌ File too large (${(blob.size/1024).toFixed(1)} KB). Try higher CRF value or lower max size limit.`, 'error');
+            showStatus(`❌ File too large (${(blob.size/1024).toFixed(1)} KB).<br>Max size: ${maxSize/1024} KB<br>Try increasing CRF value (lower quality) or reducing max size limit.`, 'error');
         }
 
         // Clean up FFmpeg filesystem
@@ -276,7 +289,7 @@ function showStatus(message, type, filename = null) {
     if (type === 'success' && filename) {
         const now = new Date();
         const timeString = now.toLocaleString();
-        status.innerHTML = `✅ ${message}<br><strong>File:</strong> ${filename}<br><strong>Downloaded:</strong> ${timeString}`;
+        status.innerHTML = `${message}<br><strong>File:</strong> ${filename}<br><strong>Downloaded:</strong> ${timeString}`;
     } else {
         status.innerHTML = message;
     }
@@ -306,6 +319,10 @@ function clearStatusOnNewFile() {
 function updateProgress(percent) {
     console.log(`Progress: ${percent.toFixed(1)}%`);
     // You can implement a progress bar here if needed
+    const status = document.getElementById('status');
+    if (status.classList.contains('processing')) {
+        status.innerHTML = `<span class="spinner"></span>Converting GIF to WebM... ${percent.toFixed(0)}%`;
+    }
 }
 
 // Prevent default drag behaviors on the page
