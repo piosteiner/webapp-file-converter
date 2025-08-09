@@ -640,7 +640,8 @@
                         
                         canvas.toBlob((blob) => {
                             if (blob) {
-                                downloadFile(blob, file.name.replace(/\.[^/.]+$/, '') + '.jpg');
+                                const sanitizedName = sanitizeFilename(file.name);
+                                downloadFile(blob, `${sanitizedName}.jpg`);
                                 dropZone.classList.remove('processing');
                                 showStatus('✅ PNG converted to JPEG successfully!', 'success');
                                 document.getElementById('pngFileInput').value = '';
@@ -722,9 +723,9 @@
                 // Check file size
                 if (blob.size <= maxSize) {
                     // Success!
-                    const originalName = file.name.replace(/\.[^/.]+$/, '');
+                    const sanitizedName = sanitizeFilename(file.name);
                     const suffix = gifMode === 'emoji' ? '_emoji' : '_sticker';
-                    downloadFile(blob, `${originalName}${suffix}.webm`);
+                    downloadFile(blob, `${sanitizedName}${suffix}.webm`);
                     
                     dropZone.classList.remove('processing');
                     showStatus(`✅ GIF converted to WebM! Size: ${(blob.size/1024).toFixed(1)} KB`, 'success');
@@ -748,6 +749,23 @@
         // Helper function to convert file to Uint8Array
         async function fetchFile(file) {
             return new Uint8Array(await file.arrayBuffer());
+        }
+
+        // Sanitize filename for safe downloading
+        function sanitizeFilename(filename) {
+            // Remove file extension
+            const name = filename.replace(/\.[^/.]+$/, '');
+            
+            // Replace problematic characters with underscores
+            const sanitized = name
+                .replace(/[<>:"/\\|?*]/g, '_')  // Replace invalid characters
+                .replace(/\s+/g, '_')           // Replace spaces with underscores
+                .replace(/,/g, '_')             // Replace commas with underscores
+                .replace(/_+/g, '_')            // Replace multiple underscores with single
+                .replace(/^_|_$/g, '')          // Remove leading/trailing underscores
+                .slice(0, 100);                // Limit length to 100 characters
+            
+            return sanitized || 'converted_image'; // Fallback name if empty
         }
 
         // Download file
