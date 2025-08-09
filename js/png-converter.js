@@ -1,5 +1,7 @@
-// PNG to JPEG Converter
-// Simple, clean implementation for browser-based image conversion
+// PNG to JPEG Converter with Working Bulk Support
+// Fixed version with proper async handling and file processing
+
+let isProcessing = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     initializePngConverter();
@@ -18,25 +20,31 @@ function initializePngConverter() {
 
     // Click to browse
     dropZone.addEventListener('click', () => {
-        fileInput.click();
-    });
-
-    // File input change
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handlePngFile(e.target.files[0]);
+        if (!isProcessing) {
+            fileInput.click();
         }
     });
 
-    // Drag and drop events
-    setupDragDrop(dropZone, handlePngFile);
+    // File input change - NOW HANDLES MULTIPLE FILES
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            console.log('Selected files:', files.length);
+            processFiles(files);
+        }
+    });
+
+    // Drag and drop events - NOW HANDLES MULTIPLE FILES
+    setupDragDrop(dropZone);
 }
 
-// Drag and drop setup
-function setupDragDrop(dropZone, handler) {
+// NEW: Simplified drag and drop setup
+function setupDragDrop(dropZone) {
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropZone.classList.add('dragover');
+        if (!isProcessing) {
+            dropZone.classList.add('dragover');
+        }
     });
 
     dropZone.addEventListener('dragleave', (e) => {
@@ -48,10 +56,210 @@ function setupDragDrop(dropZone, handler) {
         e.preventDefault();
         dropZone.classList.remove('dragover');
         
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handler(files[0]);
+        if (!isProcessing) {
+            const files = Array.from(e.dataTransfer.files);
+            console.log('Dropped files:', files.length);
+            if (files.length > 0) {
+                processFiles(files);
+            }
         }
+    });
+}
+
+// NEW: Main file processing function that handles both single and multiple files
+async function processFiles(files) {
+    if (isProcessing) {
+        showStatus('❌ Please wait for current conversion to complete.', 'error');
+        return;
+    }
+
+    console.log(`Starting processing of ${files.length} files`);
+    clearStatusOnNewFile();
+    isProcessing = true;
+
+    const dropZone = document.getElementById('dropZone');
+    dropZone.classList.add('processing');
+
+    // Filter to PNG files only
+    const pngFiles = files.filter(file => file.type.includes('png'));
+    
+    if (pngFiles.length === 0) {
+        finishProcessing('❌ No PNG files found. Please select PNG files only.', 'error');
+        return;
+    }
+
+    if (pngFiles.length !== files.length) {
+        console.log(`Filtered to ${pngFiles.length} PNG files from ${files.length} total files`);
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Show initial status
+    if (pngFiles.length === 1) {
+        showStatus('<span class="spinner"></span>Converting PNG to JPEG...', 'processing');
+    } else {
+        showStatus(`<span class="spinner"></span>Converting ${pngFiles.length} PNG files to JPEG...<br>Starting conversion...`, 'processing');
+    }
+
+    // Process each file
+    for (let i = 0; i < pngFiles.length; i++) {
+        const file = pngFiles[i];
+        console.log(`Processing file ${i + 1}/${pngFiles.length}: ${file.name}`);
+        
+        // Update progress
+        updateProgress(pngFiles.length, i + 1, file.name);
+
+        try {
+            // Validate file size
+            if (file.size > 50 * 1024 * 1024) {
+                console.warn(`Skipping ${file.name}: too large`);
+                errorCount++;
+                continue;
+            }
+
+            if (file.size === 0) {
+                console.warn(`Skipping ${file.name}: empty file`);
+                errorCount++;
+                continue;
+            }
+
+            // Validate PNG signature
+            const isValidPng = await isPngFile(file);
+            if (!isValidPng) {
+                console.warn(`Skipping ${file.name}: not a valid PNG`);
+                errorCount++;
+                continue;
+            }
+
+            // Convert file
+            const blob = await convertPngToJpegBlob(file);
+            if (blob) {
+                const sanitizedName = sanitizeFilename(file.name);
+                const outputFilename = `${sanitizedName}.jpg`;
+                
+                // Download immediately
+                downloadFile(blob, outputFilename);
+                successCount++;
+                
+                console.log(`Successfully converted: ${file.name}`);
+            } else {
+                errorCount++;
+                console.error(`Failed to convert: ${file.name}`);
+            }
+
+        } catch (error) {
+            errorCount++;
+            console.error(`Error converting ${file.name}:`, error);
+        }
+
+        // Small delay between files
+        if (i < pngFiles.length - 1) {
+            await sleep(100);
+        }
+    }
+
+    // Show final status
+    const now = new Date();
+    const timeString = now.toLocaleString();
+
+    if (successCount > 0) {
+        if (pngFiles.length === 1) {
+            finishProcessing(`✅ PNG converted to JPEG successfully!<br><strong>Downloaded:</strong> ${timeString}`, 'success');
+        } else if (errorCount > 0) {
+            finishProcessing(`⚠️ Converted ${successCount} out of ${pngFiles.length} PNG files<br><strong>Files downloaded:</strong> ${successCount}<br><strong>Completed:</strong> ${timeString}`, 'success');
+        } else {
+            finishProcessing(`✅ Successfully converted all ${successCount} PNG files to JPEG!<br><strong>Files downloaded:</strong> ${successCount}<br><strong>Completed:</strong> ${timeString}`, 'success');
+        }
+    } else {
+        finishProcessing('❌ No files were successfully converted.', 'error');
+    }
+}
+
+// NEW: Update progress display
+function updateProgress(total, current, currentFileName) {
+    const status = document.getElementById('status');
+    if (total === 1) {
+        status.innerHTML = `<span class="spinner"></span>Converting PNG to JPEG...<br>Processing: ${currentFileName}`;
+    } else {
+        const progress = Math.round((current / total) * 100);
+        status.innerHTML = `<span class="spinner"></span>Converting ${total} PNG files to JPEG...<br>Progress: ${current}/${total} (${progress}%)<br>Current: ${currentFileName}`;
+    }
+}
+
+// NEW: Finish processing and cleanup
+function finishProcessing(message, type) {
+    isProcessing = false;
+    const dropZone = document.getElementById('dropZone');
+    dropZone.classList.remove('processing');
+    document.getElementById('fileInput').value = '';
+    showStatus(message, type);
+}
+
+// NEW: Promise-based sleep function
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// UPDATED: Convert PNG to JPEG and return blob (no auto-download)
+function convertPngToJpegBlob(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    if (!ctx) {
+                        reject(new Error('Could not get canvas context'));
+                        return;
+                    }
+                    
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Check for reasonable dimensions
+                    if (img.width > 10000 || img.height > 10000) {
+                        reject(new Error('Image dimensions too large (max 10,000px)'));
+                        return;
+                    }
+                    
+                    // Fill with white background (removes PNG transparency)
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const quality = document.getElementById('quality').value / 100;
+                    
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Failed to create JPEG blob'));
+                        }
+                    }, 'image/jpeg', quality);
+                    
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            
+            img.onerror = () => {
+                reject(new Error('Could not load image'));
+            };
+            
+            img.src = e.target.result;
+        };
+        
+        reader.onerror = () => {
+            reject(new Error('Could not read file'));
+        };
+        
+        reader.readAsDataURL(file);
     });
 }
 
@@ -99,118 +307,13 @@ function sanitizeFilename(filename) {
     return sanitized || 'converted_image'; // Fallback name if empty
 }
 
-// Handle PNG file
-async function handlePngFile(file) {
-    clearStatusOnNewFile();
-    console.log('Processing file:', file.name, 'Size:', file.size, 'Type:', file.type);
-    
-    if (!file.type.includes('png')) {
-        showStatus('❌ Please select a PNG file only.', 'error');
-        return;
-    }
-
-    if (file.size > 50 * 1024 * 1024) {
-        showStatus('❌ File too large. Please select a file under 50MB.', 'error');
-        return;
-    }
-
-    if (file.size === 0) {
-        showStatus('❌ File appears to be empty. Please try another file.', 'error');
-        return;
-    }
-
-    // Validate PNG file signature
-    const isValidPng = await isPngFile(file);
-    if (!isValidPng) {
-        showStatus('❌ File is not a valid PNG image. It may be corrupted or incorrectly named.', 'error');
-        return;
-    }
-
-    convertPngToJpeg(file);
-}
-
-// Convert PNG to JPEG
-function convertPngToJpeg(file) {
-    const dropZone = document.getElementById('dropZone');
-    dropZone.classList.add('processing');
-    showStatus('Converting PNG to JPEG...', 'processing');
-
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-        console.log('FileReader loaded successfully');
-        const img = new Image();
-        
-        img.onload = () => {
-            console.log('Image loaded successfully:', img.width + 'x' + img.height);
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                if (!ctx) {
-                    throw new Error('Could not get canvas context');
-                }
-                
-                canvas.width = img.width;
-                canvas.height = img.height;
-                
-                // Check for reasonable dimensions
-                if (img.width > 10000 || img.height > 10000) {
-                    throw new Error('Image dimensions too large (max 10,000px)');
-                }
-                
-                // Fill with white background (removes PNG transparency)
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
-                
-                const quality = document.getElementById('quality').value / 100;
-                
-                canvas.toBlob((blob) => {
-                    if (blob) {
-                        console.log('Conversion successful, blob size:', blob.size);
-                        const sanitizedName = sanitizeFilename(file.name);
-                        const outputFilename = `${sanitizedName}.jpg`;
-                        downloadFile(blob, outputFilename);
-                        dropZone.classList.remove('processing');
-                        showStatus('PNG converted to JPEG successfully!', 'success', outputFilename);
-                        document.getElementById('fileInput').value = '';
-                    } else {
-                        throw new Error('Failed to create JPEG blob - canvas.toBlob returned null');
-                    }
-                }, 'image/jpeg', quality);
-                
-            } catch (error) {
-                console.error('Canvas processing error:', error);
-                dropZone.classList.remove('processing');
-                showStatus(`❌ Processing failed: ${error.message}`, 'error');
-            }
-        };
-        
-        img.onerror = (error) => {
-            console.error('Image load error:', error);
-            dropZone.classList.remove('processing');
-            showStatus('❌ Could not load image. File may be corrupted or not a valid PNG.', 'error');
-        };
-        
-        img.src = e.target.result;
-    };
-    
-    reader.onerror = (error) => {
-        console.error('FileReader error:', error);
-        dropZone.classList.remove('processing');
-        showStatus('❌ Could not read file. Please try again.', 'error');
-    };
-    
-    reader.readAsDataURL(file);
-}
-
 // Download file
 function downloadFile(blob, filename) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
