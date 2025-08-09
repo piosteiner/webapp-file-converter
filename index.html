@@ -237,6 +237,8 @@
             font-weight: 500;
             opacity: 0;
             transition: all 0.3s ease;
+            text-align: left;
+            line-height: 1.5;
         }
 
         .status.show {
@@ -438,7 +440,7 @@
                     document.getElementById(targetTab).classList.add('active');
                     
                     currentTab = targetTab;
-                    clearStatus();
+                    clearStatus(); // Clear status when switching tabs
                 });
             });
         }
@@ -580,8 +582,36 @@
             });
         }
 
+        // Validate PNG file signature
+        function isPngFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const arr = new Uint8Array(e.target.result);
+                    // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+                    const pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+                    
+                    if (arr.length < 8) {
+                        resolve(false);
+                        return;
+                    }
+                    
+                    for (let i = 0; i < 8; i++) {
+                        if (arr[i] !== pngSignature[i]) {
+                            resolve(false);
+                            return;
+                        }
+                    }
+                    resolve(true);
+                };
+                reader.onerror = () => resolve(false);
+                reader.readAsArrayBuffer(file.slice(0, 8));
+            });
+        }
+
         // Handle PNG file
-        function handlePngFile(file) {
+        async function handlePngFile(file) {
+            clearStatusOnNewFile(); // Clear previous status
             console.log('Processing file:', file.name, 'Size:', file.size, 'Type:', file.type);
             
             if (!file.type.includes('png')) {
@@ -599,11 +629,20 @@
                 return;
             }
 
+            // Validate PNG file signature
+            const isValidPng = await isPngFile(file);
+            if (!isValidPng) {
+                showStatus('❌ File is not a valid PNG image. It may be corrupted or incorrectly named.', 'error');
+                return;
+            }
+
             convertPngToJpeg(file);
         }
 
         // Handle GIF file
         function handleGifFile(file) {
+            clearStatusOnNewFile(); // Clear previous status
+            
             if (!ffmpegLoaded) {
                 showStatus('FFmpeg is still loading. Please wait...', 'error');
                 return;
@@ -662,9 +701,10 @@
                             if (blob) {
                                 console.log('Conversion successful, blob size:', blob.size);
                                 const sanitizedName = sanitizeFilename(file.name);
-                                downloadFile(blob, `${sanitizedName}.jpg`);
+                                const outputFilename = `${sanitizedName}.jpg`;
+                                downloadFile(blob, outputFilename);
                                 dropZone.classList.remove('processing');
-                                showStatus('✅ PNG converted to JPEG successfully!', 'success');
+                                showStatus('PNG converted to JPEG successfully!', 'success', outputFilename);
                                 document.getElementById('pngFileInput').value = '';
                             } else {
                                 throw new Error('Failed to create JPEG blob - canvas.toBlob returned null');
@@ -748,10 +788,11 @@
                     // Success!
                     const sanitizedName = sanitizeFilename(file.name);
                     const suffix = gifMode === 'emoji' ? '_emoji' : '_sticker';
-                    downloadFile(blob, `${sanitizedName}${suffix}.webm`);
+                    const outputFilename = `${sanitizedName}${suffix}.webm`;
+                    downloadFile(blob, outputFilename);
                     
                     dropZone.classList.remove('processing');
-                    showStatus(`✅ GIF converted to WebM! Size: ${(blob.size/1024).toFixed(1)} KB`, 'success');
+                    showStatus(`GIF converted to WebM successfully! Size: ${(blob.size/1024).toFixed(1)} KB`, 'success', outputFilename);
                 } else {
                     dropZone.classList.remove('processing');
                     showStatus(`❌ File too large (${(blob.size/1024).toFixed(1)} KB). Try higher CRF or lower max size.`, 'error');
@@ -804,15 +845,26 @@
         }
 
         // Show status message
-        function showStatus(message, type) {
+        function showStatus(message, type, filename = null) {
             const status = document.getElementById('status');
-            status.innerHTML = message;
+            
+            if (type === 'success' && filename) {
+                const now = new Date();
+                const timeString = now.toLocaleString();
+                status.innerHTML = `✅ ${message}<br><strong>File:</strong> ${filename}<br><strong>Downloaded:</strong> ${timeString}`;
+            } else {
+                status.innerHTML = message;
+            }
+            
             status.className = `status show ${type}`;
             
-            if (type !== 'processing') {
+            // Only auto-hide processing messages, keep success and error messages visible
+            if (type === 'processing') {
                 setTimeout(() => {
-                    status.classList.remove('show');
-                }, 4000);
+                    if (status.classList.contains('processing')) {
+                        status.classList.remove('show');
+                    }
+                }, 30000); // Hide after 30 seconds if still processing
             }
         }
 
@@ -820,6 +872,15 @@
         function clearStatus() {
             const status = document.getElementById('status');
             status.classList.remove('show');
+            status.innerHTML = '';
+        }
+
+        // Clear status when starting new conversion
+        function clearStatusOnNewFile() {
+            const status = document.getElementById('status');
+            if (!status.classList.contains('processing')) {
+                clearStatus();
+            }
         }
 
         // Update progress (for FFmpeg)
