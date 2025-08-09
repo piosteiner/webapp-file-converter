@@ -1,7 +1,8 @@
-// PNG to JPEG Converter with Working Bulk Support
+// PNG to JPEG Converter with Working Bulk Support and Message History
 // Fixed version with proper async handling and file processing
 
 let isProcessing = false;
+let messageHistory = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     initializePngConverter();
@@ -69,12 +70,11 @@ function setupDragDrop(dropZone) {
 // NEW: Main file processing function that handles both single and multiple files
 async function processFiles(files) {
     if (isProcessing) {
-        showStatus('❌ Please wait for current conversion to complete.', 'error');
+        addMessage('❌ Please wait for current conversion to complete.', 'error');
         return;
     }
 
     console.log(`Starting processing of ${files.length} files`);
-    clearStatusOnNewFile();
     isProcessing = true;
 
     const dropZone = document.getElementById('dropZone');
@@ -84,7 +84,7 @@ async function processFiles(files) {
     const pngFiles = files.filter(file => file.type.includes('png'));
     
     if (pngFiles.length === 0) {
-        finishProcessing('❌ No PNG files found. Please select PNG files only.', 'error');
+        finishProcessing('❌ No PNG files found. Please select PNG files only.', 'error', []);
         return;
     }
 
@@ -94,12 +94,13 @@ async function processFiles(files) {
 
     let successCount = 0;
     let errorCount = 0;
+    let successfulFiles = []; // Track successful conversions
 
     // Show initial status
     if (pngFiles.length === 1) {
-        showStatus('<span class="spinner"></span>Converting PNG to JPEG...', 'processing');
+        addMessage('<span class="spinner"></span>Converting PNG to JPEG...', 'processing', [], true);
     } else {
-        showStatus(`<span class="spinner"></span>Converting ${pngFiles.length} PNG files to JPEG...<br>Starting conversion...`, 'processing');
+        addMessage(`<span class="spinner"></span>Converting ${pngFiles.length} PNG files to JPEG...<br>Starting conversion...`, 'processing', [], true);
     }
 
     // Process each file
@@ -141,6 +142,10 @@ async function processFiles(files) {
                 // Download immediately
                 downloadFile(blob, outputFilename);
                 successCount++;
+                successfulFiles.push({
+                    original: file.name,
+                    converted: outputFilename
+                });
                 
                 console.log(`Successfully converted: ${file.name}`);
             } else {
@@ -159,46 +164,107 @@ async function processFiles(files) {
         }
     }
 
-    // Show final status
+    // Show final status with all converted filenames
     const now = new Date();
     const timeString = now.toLocaleString();
 
     if (successCount > 0) {
         if (pngFiles.length === 1) {
-            finishProcessing(`✅ PNG converted to JPEG successfully!<br><strong>Downloaded:</strong> ${timeString}`, 'success');
+            finishProcessing(`✅ PNG converted to JPEG successfully!<br><strong>Downloaded:</strong> ${timeString}`, 'success', successfulFiles);
         } else if (errorCount > 0) {
-            finishProcessing(`⚠️ Converted ${successCount} out of ${pngFiles.length} PNG files<br><strong>Files downloaded:</strong> ${successCount}<br><strong>Completed:</strong> ${timeString}`, 'success');
+            finishProcessing(`⚠️ Converted ${successCount} out of ${pngFiles.length} PNG files<br><strong>Completed:</strong> ${timeString}`, 'success', successfulFiles);
         } else {
-            finishProcessing(`✅ Successfully converted all ${successCount} PNG files to JPEG!<br><strong>Files downloaded:</strong> ${successCount}<br><strong>Completed:</strong> ${timeString}`, 'success');
+            finishProcessing(`✅ Successfully converted all ${successCount} PNG files to JPEG!<br><strong>Completed:</strong> ${timeString}`, 'success', successfulFiles);
         }
     } else {
-        finishProcessing('❌ No files were successfully converted.', 'error');
+        finishProcessing('❌ No files were successfully converted.', 'error', []);
     }
 }
 
-// NEW: Update progress display
+// NEW: Update progress display (updates current processing message)
 function updateProgress(total, current, currentFileName) {
-    const status = document.getElementById('status');
-    if (total === 1) {
-        status.innerHTML = `<span class="spinner"></span>Converting PNG to JPEG...<br>Processing: ${currentFileName}`;
-    } else {
-        const progress = Math.round((current / total) * 100);
-        status.innerHTML = `<span class="spinner"></span>Converting ${total} PNG files to JPEG...<br>Progress: ${current}/${total} (${progress}%)<br>Current: ${currentFileName}`;
+    const statusContainer = document.getElementById('status');
+    const processingMessages = statusContainer.querySelectorAll('.status-message.processing');
+    
+    if (processingMessages.length > 0) {
+        const latestProcessingMessage = processingMessages[0]; // First one is newest
+        if (total === 1) {
+            latestProcessingMessage.innerHTML = `<span class="spinner"></span>Converting PNG to JPEG...<br>Processing: ${currentFileName}`;
+        } else {
+            const progress = Math.round((current / total) * 100);
+            latestProcessingMessage.innerHTML = `<span class="spinner"></span>Converting ${total} PNG files to JPEG...<br>Progress: ${current}/${total} (${progress}%)<br>Current: ${currentFileName}`;
+        }
     }
 }
 
 // NEW: Finish processing and cleanup
-function finishProcessing(message, type) {
+function finishProcessing(message, type, successfulFiles) {
     isProcessing = false;
     const dropZone = document.getElementById('dropZone');
     dropZone.classList.remove('processing');
     document.getElementById('fileInput').value = '';
-    showStatus(message, type);
+    
+    // Remove any processing messages and add final result
+    removeProcessingMessages();
+    addMessage(message, type, successfulFiles);
+}
+
+// NEW: Remove processing messages
+function removeProcessingMessages() {
+    const statusContainer = document.getElementById('status');
+    const processingMessages = statusContainer.querySelectorAll('.status-message.processing');
+    processingMessages.forEach(msg => msg.remove());
 }
 
 // NEW: Promise-based sleep function
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// NEW: Add message to history (newest on top)
+function addMessage(message, type, successfulFiles = [], isProcessing = false) {
+    const statusContainer = document.getElementById('status');
+    
+    // Create new message element
+    const messageElement = document.createElement('div');
+    messageElement.className = `status-message show ${type}`;
+    
+    // Build message content
+    let messageContent = message;
+    
+    // Add list of successful files if any
+    if (successfulFiles.length > 0) {
+        messageContent += '<br><strong>Converted files:</strong><br>';
+        successfulFiles.forEach(file => {
+            messageContent += `• ${file.original} → ${file.converted}<br>`;
+        });
+    }
+    
+    messageElement.innerHTML = messageContent;
+    
+    // Insert at the top (newest first)
+    if (statusContainer.firstChild) {
+        statusContainer.insertBefore(messageElement, statusContainer.firstChild);
+    } else {
+        statusContainer.appendChild(messageElement);
+    }
+    
+    // Keep only last 5 messages to prevent overflow
+    const allMessages = statusContainer.querySelectorAll('.status-message');
+    if (allMessages.length > 5) {
+        for (let i = 5; i < allMessages.length; i++) {
+            allMessages[i].remove();
+        }
+    }
+    
+    // Auto-hide processing messages after 30 seconds
+    if (type === 'processing') {
+        setTimeout(() => {
+            if (messageElement.classList.contains('processing')) {
+                messageElement.remove();
+            }
+        }, 30000);
+    }
 }
 
 // UPDATED: Convert PNG to JPEG and return blob (no auto-download)
@@ -320,37 +386,14 @@ function downloadFile(blob, filename) {
     URL.revokeObjectURL(url);
 }
 
-// Show status message
+// DEPRECATED: Old status function (keeping for compatibility but not used)
 function showStatus(message, type, filename = null) {
-    const status = document.getElementById('status');
-    
-    if (type === 'success' && filename) {
-        const now = new Date();
-        const timeString = now.toLocaleString();
-        status.innerHTML = `✅ ${message}<br><strong>File:</strong> ${filename}<br><strong>Downloaded:</strong> ${timeString}`;
-    } else {
-        status.innerHTML = message;
-    }
-    
-    status.className = `status show ${type}`;
-    
-    // Only auto-hide processing messages
-    if (type === 'processing') {
-        setTimeout(() => {
-            if (status.classList.contains('processing')) {
-                status.classList.remove('show');
-            }
-        }, 30000);
-    }
+    addMessage(message, type, filename ? [{original: filename, converted: filename}] : []);
 }
 
-// Clear status when starting new conversion
+// DEPRECATED: Old clear function (keeping for compatibility but not used)
 function clearStatusOnNewFile() {
-    const status = document.getElementById('status');
-    if (!status.classList.contains('processing')) {
-        status.classList.remove('show');
-        status.innerHTML = '';
-    }
+    // No longer clearing messages - they persist as history
 }
 
 // Prevent default drag behaviors on the page
