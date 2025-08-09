@@ -1,14 +1,16 @@
 /* 
- * File Converter - Consolidated Styles
- * Includes dark mode support and styles for all pages
+ * File Converter - Consolidated Styles with Theme Switcher
+ * Includes manual theme switching and dark mode support
  */
 
 /* ========================================
    CSS VARIABLES & THEME SYSTEM
    ======================================== */
 
-:root {
-    /* Light mode colors (default) */
+/* Light mode colors (default) */
+:root,
+:root.theme-light {
+    /* Light mode colors */
     --bg-gradient-start: #667eea;
     --bg-gradient-end: #764ba2;
     --container-bg: rgba(255, 255, 255, 0.95);
@@ -72,11 +74,94 @@
     /* Effects */
     --shadow-color: rgba(0, 0, 0, 0.1);
     --backdrop-blur: blur(10px);
+    
+    /* Theme Switcher */
+    --theme-toggle-bg: rgba(255, 255, 255, 0.9);
+    --theme-toggle-border: rgba(102, 126, 234, 0.2);
+    --theme-toggle-hover-bg: rgba(102, 126, 234, 0.05);
+    --theme-menu-bg: rgba(255, 255, 255, 0.98);
+    --theme-menu-shadow: rgba(0, 0, 0, 0.15);
+    --theme-option-hover: rgba(102, 126, 234, 0.1);
 }
 
-/* Dark mode colors */
+/* Dark mode colors - Manual selection */
+:root.theme-dark {
+    --bg-gradient-start: #2d3748;
+    --bg-gradient-end: #4a5568;
+    --container-bg: rgba(26, 32, 44, 0.95);
+    --text-primary: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --text-tertiary: #718096;
+    --text-accent: #81a1f4;
+    --text-accent-hover: #9f7aea;
+    
+    /* Layout & Controls */
+    --controls-bg: rgba(129, 161, 244, 0.15);
+    --card-bg: linear-gradient(145deg, #2d3748, #4a5568);
+    --card-hover-border: #81a1f4;
+    --card-shadow: rgba(129, 161, 244, 0.3);
+    --features-bg: rgba(129, 161, 244, 0.1);
+    --feature-icon: #81a1f4;
+    
+    /* Drop Zone */
+    --drop-zone-border: #81a1f4;
+    --drop-zone-hover-border: #9f7aea;
+    --drop-zone-hover-bg: rgba(129, 161, 244, 0.1);
+    --drop-zone-dragover-border: #68d391;
+    --drop-zone-dragover-bg: rgba(104, 211, 145, 0.15);
+    --drop-zone-processing-border: #fbb040;
+    --drop-zone-processing-bg: rgba(251, 176, 64, 0.15);
+    
+    /* Form Controls */
+    --slider-bg: #4a5568;
+    --slider-thumb: #81a1f4;
+    --slider-thumb-hover: #9f7aea;
+    --mode-btn-border: #4a5568;
+    --mode-btn-bg: #2d3748;
+    --mode-btn-text: #a0aec0;
+    --mode-btn-active-border: #81a1f4;
+    --mode-btn-active-bg: #81a1f4;
+    --mode-btn-active-text: #1a202c;
+    
+    /* Status Messages */
+    --success-bg: rgba(104, 211, 145, 0.15);
+    --success-text: #68d391;
+    --success-border: rgba(104, 211, 145, 0.3);
+    --error-bg: rgba(252, 129, 129, 0.15);
+    --error-text: #fc8181;
+    --error-border: rgba(252, 129, 129, 0.3);
+    --processing-bg: rgba(251, 176, 64, 0.15);
+    --processing-text: #fbb040;
+    --processing-border: rgba(251, 176, 64, 0.3);
+    
+    /* FFmpeg Status */
+    --ffmpeg-status-bg: rgba(251, 176, 64, 0.15);
+    --ffmpeg-status-border: rgba(251, 176, 64, 0.3);
+    --ffmpeg-status-text: #fbb040;
+    --ffmpeg-loaded-bg: rgba(104, 211, 145, 0.15);
+    --ffmpeg-loaded-border: rgba(104, 211, 145, 0.3);
+    --ffmpeg-loaded-text: #68d391;
+    
+    /* Progress Bar */
+    --progress-bg: rgba(251, 176, 64, 0.2);
+    --progress-fill: #fbb040;
+    
+    /* Effects */
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --backdrop-blur: blur(15px);
+    
+    /* Theme Switcher */
+    --theme-toggle-bg: rgba(45, 55, 72, 0.9);
+    --theme-toggle-border: rgba(129, 161, 244, 0.3);
+    --theme-toggle-hover-bg: rgba(129, 161, 244, 0.1);
+    --theme-menu-bg: rgba(26, 32, 44, 0.98);
+    --theme-menu-shadow: rgba(0, 0, 0, 0.4);
+    --theme-option-hover: rgba(129, 161, 244, 0.15);
+}
+
+/* Dark mode colors - System preference */
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root.theme-system {
         --bg-gradient-start: #2d3748;
         --bg-gradient-end: #4a5568;
         --container-bg: rgba(26, 32, 44, 0.95);
@@ -140,7 +225,142 @@
         /* Effects */
         --shadow-color: rgba(0, 0, 0, 0.3);
         --backdrop-blur: blur(15px);
+        
+        /* Theme Switcher */
+        --theme-toggle-bg: rgba(45, 55, 72, 0.9);
+        --theme-toggle-border: rgba(129, 161, 244, 0.3);
+        --theme-toggle-hover-bg: rgba(129, 161, 244, 0.1);
+        --theme-menu-bg: rgba(26, 32, 44, 0.98);
+        --theme-menu-shadow: rgba(0, 0, 0, 0.4);
+        --theme-option-hover: rgba(129, 161, 244, 0.15);
     }
+}
+
+/* ========================================
+   THEME SWITCHER STYLES
+   ======================================== */
+
+.theme-toggle-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+}
+
+.theme-toggle {
+    background: var(--theme-toggle-bg);
+    border: 1px solid var(--theme-toggle-border);
+    border-radius: 10px;
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 10px var(--shadow-color);
+}
+
+.theme-toggle:hover {
+    background: var(--theme-toggle-hover-bg);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+.theme-toggle-icon {
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+}
+
+.theme-toggle-icon .sun-icon,
+.theme-toggle-icon .moon-icon,
+.theme-toggle-icon .system-icon {
+    display: none;
+}
+
+.theme-toggle.light-active .sun-icon,
+.theme-toggle.dark-active .moon-icon,
+.theme-toggle.system-active .system-icon {
+    display: block;
+}
+
+.theme-toggle-label {
+    font-weight: 500;
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .theme-toggle-label {
+        display: inline;
+    }
+}
+
+.theme-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--theme-menu-bg);
+    border: 1px solid var(--theme-toggle-border);
+    border-radius: 10px;
+    padding: 8px;
+    min-width: 160px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px var(--theme-menu-shadow);
+    backdrop-filter: blur(10px);
+}
+
+.theme-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.theme-option:hover {
+    background: var(--theme-option-hover);
+}
+
+.theme-option-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.theme-option-label {
+    flex: 1;
+    text-align: left;
+    font-weight: 500;
+}
+
+.theme-option-check {
+    opacity: 0;
+    color: var(--text-accent);
+    font-weight: bold;
+}
+
+.theme-option.active .theme-option-check {
+    opacity: 1;
 }
 
 /* ========================================
@@ -733,6 +953,11 @@ h1 {
     .mode-selector {
         flex-direction: column;
     }
+
+    .theme-toggle-container {
+        top: 15px;
+        right: 15px;
+    }
 }
 
 @media (max-width: 600px) {
@@ -760,5 +985,10 @@ h1 {
 
     .converter-icon {
         font-size: 3em;
+    }
+
+    .theme-toggle-container {
+        top: 10px;
+        right: 10px;
     }
 }
