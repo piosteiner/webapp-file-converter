@@ -1,5 +1,5 @@
-// GIF to WebM Converter
-// Professional video conversion with FFmpeg.wasm
+// GIF to WebM Converter - Using stable FFmpeg.wasm v0.11
+// This version uses the older, more reliable API
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -8,14 +8,7 @@ let gifMode = 'sticker';
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initializeGifConverter();
-});
-
-// Wait for all scripts to load, then initialize FFmpeg
-window.addEventListener('load', () => {
-    // Give CDN scripts a moment to initialize
-    setTimeout(() => {
-        loadFFmpeg();
-    }, 500);
+    loadFFmpeg();
 });
 
 function initializeGifConverter() {
@@ -91,48 +84,37 @@ function setupDragDrop(dropZone, handler) {
     });
 }
 
-// Load FFmpeg.wasm with better error handling and fallbacks
+// Load FFmpeg.wasm using v0.11 API
 async function loadFFmpeg() {
     const statusEl = document.getElementById('ffmpegStatus');
     
     try {
-        console.log('Starting FFmpeg initialization...');
+        console.log('Initializing FFmpeg v0.11...');
         
-        // Check if libraries are loaded
-        if (typeof window.FFmpeg === 'undefined' || typeof window.FFmpegUtil === 'undefined') {
-            console.error('FFmpeg libraries not found, attempting dynamic load...');
-            
-            // Try to load dynamically as a fallback
-            await loadFFmpegDynamically();
-            return;
+        // Check if FFmpeg is available
+        if (typeof FFmpeg === 'undefined') {
+            throw new Error('FFmpeg library not loaded. Please check your internet connection.');
         }
         
-        console.log('FFmpeg libraries found, creating instance...');
+        // Use the v0.11 API
+        const { createFFmpeg, fetchFile } = FFmpeg;
         
-        // Access the FFmpeg constructor and utilities
-        const { FFmpeg: FFmpegConstructor } = window.FFmpeg;
-        const { fetchFile } = window.FFmpegUtil;
+        // Create FFmpeg instance with v0.11 API
+        ffmpeg = createFFmpeg({
+            log: true, // Enable logging for debugging
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+            progress: ({ ratio }) => {
+                updateProgress(ratio * 100);
+            }
+        });
         
         // Store fetchFile globally for later use
         window.fetchFile = fetchFile;
         
-        // Create FFmpeg instance
-        ffmpeg = new FFmpegConstructor();
-        
-        // Set up logging
-        ffmpeg.on('log', ({ message }) => {
-            console.log('FFmpeg Log:', message);
-        });
-        
-        // Set up progress tracking
-        ffmpeg.on('progress', ({ progress, time }) => {
-            updateProgress(progress * 100);
-        });
-        
         console.log('Loading FFmpeg core files...');
-        statusEl.innerHTML = '<span class="spinner"></span>Loading FFmpeg core files (this may take a moment)...';
+        statusEl.innerHTML = '<span class="spinner"></span>Loading FFmpeg core (this may take a moment)...';
         
-        // Load FFmpeg core - let it auto-detect CDN URLs
+        // Load FFmpeg
         await ffmpeg.load();
         
         ffmpegLoaded = true;
@@ -154,7 +136,7 @@ async function loadFFmpeg() {
         statusEl.innerHTML = `
             ❌ Failed to load FFmpeg.wasm<br>
             <small>${error.message}</small><br>
-            <button onclick="retryFFmpegLoad()" style="
+            <button onclick="location.reload()" style="
                 margin-top: 10px;
                 padding: 8px 16px;
                 background: #667eea;
@@ -163,7 +145,7 @@ async function loadFFmpeg() {
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 14px;
-            ">Retry Loading</button>
+            ">Refresh Page</button>
         `;
         statusEl.classList.remove('loaded');
         statusEl.style.background = 'rgba(244, 67, 54, 0.1)';
@@ -172,63 +154,13 @@ async function loadFFmpeg() {
     }
 }
 
-// Fallback: Load FFmpeg dynamically
-async function loadFFmpegDynamically() {
-    const statusEl = document.getElementById('ffmpegStatus');
-    
-    try {
-        console.log('Attempting to load FFmpeg dynamically...');
-        statusEl.innerHTML = '<span class="spinner"></span>Loading FFmpeg libraries...';
-        
-        // Load FFmpeg script
-        await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-        
-        // Load FFmpeg Util script
-        await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
-        
-        // Wait for scripts to initialize
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Try loading again
-        await loadFFmpeg();
-        
-    } catch (error) {
-        console.error('Dynamic loading failed:', error);
-        statusEl.innerHTML = `
-            ❌ Could not load FFmpeg libraries<br>
-            <small>Please check your internet connection and try refreshing the page</small>
-        `;
-    }
-}
-
-// Helper function to load scripts dynamically
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-        document.head.appendChild(script);
-    });
-}
-
-// Global retry function
-window.retryFFmpegLoad = function() {
-    const statusEl = document.getElementById('ffmpegStatus');
-    statusEl.innerHTML = '<span class="spinner"></span>Retrying...';
-    statusEl.style.background = 'rgba(255, 152, 0, 0.1)';
-    statusEl.style.borderColor = 'rgba(255, 152, 0, 0.3)';
-    statusEl.style.color = '#ff9800';
-    loadFFmpeg();
-};
-
 // Handle GIF file
 function handleGifFile(file) {
     clearStatusOnNewFile();
     console.log('Processing GIF file:', file.name, 'Size:', file.size, 'Type:', file.type);
     
     if (!ffmpegLoaded) {
-        showStatus('❌ FFmpeg is still loading. Please wait a moment and try again.', 'error');
+        showStatus('❌ FFmpeg is still loading. Please wait and try again.', 'error');
         return;
     }
 
@@ -250,7 +182,7 @@ function handleGifFile(file) {
     convertGifToWebm(file);
 }
 
-// Convert GIF to WebM
+// Convert GIF to WebM using v0.11 API
 async function convertGifToWebm(file) {
     const dropZone = document.getElementById('dropZone');
     const maxSize = parseInt(document.getElementById('maxSize').value) * 1024;
@@ -260,46 +192,37 @@ async function convertGifToWebm(file) {
     showStatus('<span class="spinner"></span>Converting GIF to WebM...', 'processing');
 
     try {
-        // Write input file
-        const inputFileName = 'input.gif';
-        const outputFileName = 'output.webm';
-        
+        // Write input file using v0.11 API
         console.log('Writing input file...');
-        const fileData = await window.fetchFile(file);
-        await ffmpeg.writeFile(inputFileName, fileData);
+        ffmpeg.FS('writeFile', 'input.gif', await window.fetchFile(file));
 
-        // Build scale filter
+        // Calculate scale filter based on mode
         let scaleFilter;
         if (gifMode === 'emoji') {
-            // Emoji mode - exact 100x100 with padding
             scaleFilter = 'scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:black@0';
         } else {
-            // Sticker mode - max 512px preserving aspect ratio
+            // Sticker mode - preserve aspect ratio, max 512px on longest side
             scaleFilter = 'scale=512:512:force_original_aspect_ratio=decrease';
         }
 
-        // FFmpeg command arguments
-        const args = [
-            '-i', inputFileName,
-            '-t', '3',                                    // Max 3 seconds
-            '-c:v', 'libvpx-vp9',                        // VP9 codec
-            '-crf', crf.toString(),                      // Quality
-            '-b:v', '0',                                  // Variable bitrate
-            '-an',                                        // No audio
-            '-pix_fmt', 'yuva420p',                      // Transparency support
-            '-vf', `${scaleFilter},fps=30`,              // Scale and FPS limit
-            '-auto-alt-ref', '0',                        // Better compatibility
-            outputFileName
-        ];
-
-        console.log('Running FFmpeg command:', args.join(' '));
+        // FFmpeg command arguments for v0.11
+        console.log('Running FFmpeg conversion...');
+        await ffmpeg.run(
+            '-i', 'input.gif',
+            '-t', '3',                              // Limit to 3 seconds
+            '-c:v', 'libvpx-vp9',                   // VP9 codec
+            '-crf', crf.toString(),                 // Quality setting
+            '-b:v', '0',                            // Use CRF mode
+            '-an',                                  // Remove audio
+            '-pix_fmt', 'yuva420p',                 // Support transparency
+            '-vf', `${scaleFilter},fps=30`,         // Scale and limit FPS to 30
+            '-auto-alt-ref', '0',                   // Better compatibility
+            'output.webm'
+        );
         
-        // Execute conversion
-        await ffmpeg.exec(args);
-        
-        // Read output file
+        // Read output file using v0.11 API
         console.log('Reading output file...');
-        const data = await ffmpeg.readFile(outputFileName);
+        const data = ffmpeg.FS('readFile', 'output.webm');
         const blob = new Blob([data.buffer], { type: 'video/webm' });
         
         console.log(`Conversion complete. Size: ${blob.size} bytes (${(blob.size/1024).toFixed(1)} KB)`);
@@ -334,10 +257,10 @@ async function convertGifToWebm(file) {
             );
         }
 
-        // Cleanup
+        // Cleanup using v0.11 API
         try {
-            await ffmpeg.deleteFile(inputFileName);
-            await ffmpeg.deleteFile(outputFileName);
+            ffmpeg.FS('unlink', 'input.gif');
+            ffmpeg.FS('unlink', 'output.webm');
         } catch (e) {
             console.warn('Cleanup warning:', e);
         }
@@ -416,7 +339,7 @@ function updateProgress(percent) {
     }
 }
 
-// Prevent default drag behaviors
+// Prevent default drag behaviors on the page
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     document.addEventListener(eventName, (e) => {
         e.preventDefault();
