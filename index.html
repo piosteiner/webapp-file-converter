@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image & Video Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .converter-section {
+            display: none;
+        }
+
+        .converter-section.active {
+            display: block;
+        }
+
+        .controls {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .control-input {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-input::-webkit-slider-thumb:hover {
+            background: #764ba2;
+            transform: scale(1.2);
+        }
+
+        .control-value {
+            margin-top: 5px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            background: white;
+            color: #666;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .mode-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 30px;
+            margin: 30px 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(102, 126, 234, 0.1) 50%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+
+        .drop-zone:hover::before {
+            transform: translateX(100%);
+        }
+
+        .drop-zone:hover {
+            border-color: #764ba2;
+            background-color: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+
+        .drop-zone.dragover {
+            border-color: #4CAF50;
+            background-color: rgba(76, 175, 80, 0.1);
+            transform: scale(1.02);
+        }
+
+        .drop-zone.processing {
+            border-color: #ff9800;
+            background-color: rgba(255, 152, 0, 0.1);
+        }
+
+        .drop-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone:hover .drop-icon {
+            transform: scale(1.1);
+        }
+
+        .drop-text {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .drop-subtext {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 500;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .status.show {
+            opacity: 1;
+        }
+
+        .status.success {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status.error {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status.processing {
+            background-color: rgba(255, 152, 0, 0.1);
+            color: #ff9800;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 152, 0, 0.2);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #ff9800;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 152, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: #ff9800;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .ffmpeg-status {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            color: #ff9800;
+        }
+
+        .ffmpeg-status.loaded {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .drop-zone {
+                padding: 40px 20px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 File Converter</h1>
+        <p class="subtitle">Convert PNG to JPEG or GIF to WebM with precision</p>
+        
+        <div class="tabs">
+            <button class="tab active" data-tab="png-jpeg">PNG → JPEG</button>
+            <button class="tab" data-tab="gif-webm">GIF → WebM</button>
+        </div>
+
+        <!-- PNG to JPEG Converter -->
+        <div id="png-jpeg" class="converter-section active">
+            <div class="controls">
+                <div class="control-group">
+                    <label class="control-label" for="quality">JPEG Quality</label>
+                    <input type="range" id="quality" class="control-input" min="10" max="100" value="90">
+                    <div class="control-value" id="qualityValue">90%</div>
+                </div>
+            </div>
+
+            <div class="drop-zone" id="pngDropZone">
+                <div class="drop-icon">📸</div>
+                <div class="drop-text">Drop your PNG file here</div>
+                <div class="drop-subtext">or click to browse</div>
+            </div>
+
+            <input type="file" id="pngFileInput" accept=".png,image/png" class="hidden">
+        </div>
+
+        <!-- GIF to WebM Converter -->
+        <div id="gif-webm" class="converter-section">
+            <div id="ffmpegStatus" class="ffmpeg-status">
+                <span class="spinner"></span>Loading FFmpeg.wasm...
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label class="control-label">Conversion Mode</label>
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="sticker">
+                            Sticker<br><small>512px max, aspect preserved</small>
+                        </button>
+                        <button class="mode-btn" data-mode="emoji">
+                            Emoji<br><small>100x100px exact</small>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label" for="maxSize">Max File Size</label>
+                    <input type="range" id="maxSize" class="control-input" min="64" max="512" value="256">
+                    <div class="control-value" id="maxSizeValue">256 KB</div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label" for="crf">Quality (CRF)</label>
+                    <input type="range" id="crf" class="control-input" min="20" max="63" value="35">
+                    <div class="control-value" id="crfValue">35 (High)</div>
+                </div>
+            </div>
+
+            <div class="drop-zone" id="gifDropZone">
+                <div class="drop-icon">🎬</div>
+                <div class="drop-text">Drop your GIF file here</div>
+                <div class="drop-subtext">or click to browse • Max 3s duration, 30 FPS</div>
+            </div>
+
+            <input type="file" id="gifFileInput" accept=".gif,image/gif" class="hidden">
+        </div>
+        
+        <div class="status" id="status"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-wasm/0.12.4/ffmpeg.min.js"></script>
+    <script>
+        // Global variables
+        let currentTab = 'png-jpeg';
+        let gifMode = 'sticker';
+        let ffmpegLoaded = false;
+        let ffmpeg = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTabs();
+            initializePngConverter();
+            initializeGifConverter();
+            loadFFmpeg();
+        });
+
+        // Tab functionality
+        function initializeTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            const sections = document.querySelectorAll('.converter-section');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetTab = tab.dataset.tab;
+                    
+                    // Update tab appearance
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Update section visibility
+                    sections.forEach(s => s.classList.remove('active'));
+                    document.getElementById(targetTab).classList.add('active');
+                    
+                    currentTab = targetTab;
+                    clearStatus();
+                });
+            });
+        }
+
+        // PNG to JPEG Converter
+        function initializePngConverter() {
+            const dropZone = document.getElementById('pngDropZone');
+            const fileInput = document.getElementById('pngFileInput');
+            const qualitySlider = document.getElementById('quality');
+            const qualityValue = document.getElementById('qualityValue');
+
+            // Update quality display
+            qualitySlider.addEventListener('input', (e) => {
+                qualityValue.textContent = e.target.value + '%';
+            });
+
+            // Click to browse
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handlePngFile(e.target.files[0]);
+                }
+            });
+
+            // Drag and drop events
+            setupDragDrop(dropZone, handlePngFile);
+        }
+
+        // GIF to WebM Converter
+        function initializeGifConverter() {
+            const dropZone = document.getElementById('gifDropZone');
+            const fileInput = document.getElementById('gifFileInput');
+            const modeButtons = document.querySelectorAll('.mode-btn');
+            const maxSizeSlider = document.getElementById('maxSize');
+            const maxSizeValue = document.getElementById('maxSizeValue');
+            const crfSlider = document.getElementById('crf');
+            const crfValue = document.getElementById('crfValue');
+
+            // Mode selection
+            modeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modeButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gifMode = btn.dataset.mode;
+                });
+            });
+
+            // Update max size display
+            maxSizeSlider.addEventListener('input', (e) => {
+                maxSizeValue.textContent = e.target.value + ' KB';
+            });
+
+            // Update CRF display
+            crfSlider.addEventListener('input', (e) => {
+                const crf = parseInt(e.target.value);
+                let quality = 'Ultra High';
+                if (crf > 20) quality = 'High';
+                if (crf > 30) quality = 'Medium';
+                if (crf > 45) quality = 'Low';
+                if (crf > 55) quality = 'Very Low';
+                crfValue.textContent = `${crf} (${quality})`;
+            });
+
+            // Click to browse
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleGifFile(e.target.files[0]);
+                }
+            });
+
+            // Drag and drop events
+            setupDragDrop(dropZone, handleGifFile);
+        }
+
+        // Load FFmpeg.wasm
+        async function loadFFmpeg() {
+            try {
+                const { FFmpeg } = FFmpegWASM;
+                ffmpeg = new FFmpeg();
+                
+                ffmpeg.on('log', ({ message }) => {
+                    console.log(message);
+                });
+
+                ffmpeg.on('progress', ({ progress }) => {
+                    updateProgress(progress * 100);
+                });
+
+                await ffmpeg.load();
+                ffmpegLoaded = true;
+                
+                const statusEl = document.getElementById('ffmpegStatus');
+                statusEl.innerHTML = '✅ FFmpeg.wasm loaded and ready!';
+                statusEl.classList.add('loaded');
+                
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Failed to load FFmpeg:', error);
+                const statusEl = document.getElementById('ffmpegStatus');
+                statusEl.innerHTML = '❌ Failed to load FFmpeg.wasm. GIF conversion unavailable.';
+                statusEl.style.background = 'rgba(244, 67, 54, 0.1)';
+                statusEl.style.borderColor = 'rgba(244, 67, 54, 0.3)';
+                statusEl.style.color = '#f44336';
+            }
+        }
+
+        // Drag and drop setup
+        function setupDragDrop(dropZone, handler) {
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handler(files[0]);
+                }
+            });
+        }
+
+        // Handle PNG file
+        function handlePngFile(file) {
+            if (!file.type.includes('png')) {
+                showStatus('Please select a PNG file only.', 'error');
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) {
+                showStatus('File too large. Please select a file under 50MB.', 'error');
+                return;
+            }
+
+            convertPngToJpeg(file);
+        }
+
+        // Handle GIF file
+        function handleGifFile(file) {
+            if (!ffmpegLoaded) {
+                showStatus('FFmpeg is still loading. Please wait...', 'error');
+                return;
+            }
+
+            if (!file.type.includes('gif')) {
+                showStatus('Please select a GIF file only.', 'error');
+                return;
+            }
+
+            if (file.size > 100 * 1024 * 1024) {
+                showStatus('File too large. Please select a file under 100MB.', 'error');
+                return;
+            }
+
+            convertGifToWebm(file);
+        }
+
+        // Convert PNG to JPEG
+        function convertPngToJpeg(file) {
+            const dropZone = document.getElementById('pngDropZone');
+            dropZone.classList.add('processing');
+            showStatus('Converting PNG to JPEG...', 'processing');
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        
+                        const quality = document.getElementById('quality').value / 100;
+                        
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                downloadFile(blob, file.name.replace(/\.[^/.]+$/, '') + '.jpg');
+                                dropZone.classList.remove('processing');
+                                showStatus('✅ PNG converted to JPEG successfully!', 'success');
+                                document.getElementById('pngFileInput').value = '';
+                            } else {
+                                throw new Error('Failed to create JPEG blob');
+                            }
+                        }, 'image/jpeg', quality);
+                        
+                    } catch (error) {
+                        console.error('Conversion error:', error);
+                        dropZone.classList.remove('processing');
+                        showStatus('❌ Conversion failed. Please try again.', 'error');
+                    }
+                };
+                
+                img.onerror = () => {
+                    dropZone.classList.remove('processing');
+                    showStatus('❌ Invalid image file. Please try another PNG.', 'error');
+                };
+                
+                img.src = e.target.result;
+            };
+            
+            reader.onerror = () => {
+                dropZone.classList.remove('processing');
+                showStatus('❌ Failed to read file. Please try again.', 'error');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        // Convert GIF to WebM
+        async function convertGifToWebm(file) {
+            const dropZone = document.getElementById('gifDropZone');
+            const maxSize = parseInt(document.getElementById('maxSize').value) * 1024; // Convert to bytes
+            const crf = parseInt(document.getElementById('crf').value);
+            
+            dropZone.classList.add('processing');
+            showStatus('Converting GIF to WebM...', 'processing');
+
+            try {
+                // Write input file to FFmpeg filesystem
+                const inputFileName = 'input.gif';
+                const outputFileName = 'output.webm';
+                
+                await ffmpeg.writeFile(inputFileName, await fetchFile(file));
+
+                // Calculate scale filter based on mode
+                let scaleFilter;
+                if (gifMode === 'emoji') {
+                    scaleFilter = 'scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:black@0';
+                } else {
+                    // Sticker mode - get dimensions first to determine scaling
+                    scaleFilter = 'scale=512:512:force_original_aspect_ratio=decrease';
+                }
+
+                // Build FFmpeg command
+                const args = [
+                    '-i', inputFileName,
+                    '-t', '3',                              // Limit to 3 seconds
+                    '-c:v', 'libvpx-vp9',                   // VP9 codec
+                    '-crf', crf.toString(),                 // Quality setting
+                    '-b:v', '0',                            // Use CRF mode
+                    '-an',                                  // Remove audio
+                    '-pix_fmt', 'yuva420p',                 // Support transparency
+                    '-vf', `${scaleFilter},fps=fps=min(30\\,source_fps)`, // Scale and limit FPS
+                    '-f', 'webm',                           // Force WebM format
+                    '-y',                                   // Overwrite output
+                    outputFileName
+                ];
+
+                // Run FFmpeg conversion
+                await ffmpeg.exec(args);
+
+                // Read the output file
+                const data = await ffmpeg.readFile(outputFileName);
+                const blob = new Blob([data.buffer], { type: 'video/webm' });
+
+                // Check file size
+                if (blob.size <= maxSize) {
+                    // Success!
+                    const originalName = file.name.replace(/\.[^/.]+$/, '');
+                    const suffix = gifMode === 'emoji' ? '_emoji' : '_sticker';
+                    downloadFile(blob, `${originalName}${suffix}.webm`);
+                    
+                    dropZone.classList.remove('processing');
+                    showStatus(`✅ GIF converted to WebM! Size: ${(blob.size/1024).toFixed(1)} KB`, 'success');
+                } else {
+                    dropZone.classList.remove('processing');
+                    showStatus(`❌ File too large (${(blob.size/1024).toFixed(1)} KB). Try higher CRF or lower max size.`, 'error');
+                }
+
+                // Clean up
+                await ffmpeg.deleteFile(inputFileName);
+                await ffmpeg.deleteFile(outputFileName);
+                document.getElementById('gifFileInput').value = '';
+
+            } catch (error) {
+                console.error('FFmpeg conversion error:', error);
+                dropZone.classList.remove('processing');
+                showStatus('❌ Conversion failed. Please try again.', 'error');
+            }
+        }
+
+        // Helper function to convert file to Uint8Array
+        async function fetchFile(file) {
+            return new Uint8Array(await file.arrayBuffer());
+        }
+
+        // Download file
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.innerHTML = message;
+            status.className = `status show ${type}`;
+            
+            if (type !== 'processing') {
+                setTimeout(() => {
+                    status.classList.remove('show');
+                }, 4000);
+            }
+        }
+
+        // Clear status
+        function clearStatus() {
+            const status = document.getElementById('status');
+            status.classList.remove('show');
+        }
+
+        // Update progress (for FFmpeg)
+        function updateProgress(percent) {
+            // You can implement a progress bar here if needed
+            console.log(`Progress: ${percent.toFixed(1)}%`);
+        }
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+    </script>
+</body>
+</html>
