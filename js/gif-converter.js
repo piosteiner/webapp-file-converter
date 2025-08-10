@@ -1,14 +1,12 @@
-// GIF to WebM Converter - Updated for FFmpeg.wasm v0.12+
-// This version uses the new v0.12+ API
+// GIF to WebM Converter - Browser-based with proper GIF parsing
+// Uses gifuct-js for GIF parsing + Canvas API + MediaRecorder for WebM output
 
-let ffmpeg = null;
-let ffmpegLoaded = false;
+let isProcessing = false;
 let gifMode = 'sticker';
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initializeGifConverter();
-    loadFFmpeg();
 });
 
 function initializeGifConverter() {
@@ -34,20 +32,22 @@ function initializeGifConverter() {
         maxSizeValue.textContent = e.target.value + ' KB';
     });
 
-    // Update CRF display
+    // Update quality display
     crfSlider.addEventListener('input', (e) => {
-        const crf = parseInt(e.target.value);
-        let quality = 'Ultra High';
-        if (crf > 20) quality = 'High';
-        if (crf > 30) quality = 'Medium';
-        if (crf > 45) quality = 'Low';
-        if (crf > 55) quality = 'Very Low';
-        crfValue.textContent = `${crf} (${quality})`;
+        const quality = parseInt(e.target.value);
+        let qualityText = 'Ultra High';
+        if (quality > 20) qualityText = 'High';
+        if (quality > 30) qualityText = 'Medium';
+        if (quality > 45) qualityText = 'Low';
+        if (quality > 55) qualityText = 'Very Low';
+        crfValue.textContent = `${quality} (${qualityText})`;
     });
 
     // Click to browse
     dropZone.addEventListener('click', () => {
-        fileInput.click();
+        if (!isProcessing) {
+            fileInput.click();
+        }
     });
 
     // File input change
@@ -65,7 +65,9 @@ function initializeGifConverter() {
 function setupDragDrop(dropZone, handler) {
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropZone.classList.add('dragover');
+        if (!isProcessing) {
+            dropZone.classList.add('dragover');
+        }
     });
 
     dropZone.addEventListener('dragleave', (e) => {
@@ -77,109 +79,32 @@ function setupDragDrop(dropZone, handler) {
         e.preventDefault();
         dropZone.classList.remove('dragover');
         
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handler(files[0]);
+        if (!isProcessing) {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handler(files[0]);
+            }
         }
     });
 }
 
-// Load FFmpeg.wasm using v0.12+ API
-async function loadFFmpeg() {
-    const statusEl = document.getElementById('ffmpegStatus');
-    
-    try {
-        console.log('Initializing FFmpeg v0.12+...');
-        
-        // Check if FFmpeg is available
-        if (typeof FFmpeg === 'undefined') {
-            throw new Error('FFmpeg library not loaded. Please check your internet connection.');
-        }
-        
-        // Use the v0.12+ API
-        const { FFmpeg } = FFmpeg;
-        const { fetchFile } = FFmpegUtil;
-        
-        // Create FFmpeg instance with v0.12+ API
-        ffmpeg = new FFmpeg();
-        
-        // Store fetchFile globally for later use
-        window.fetchFile = fetchFile;
-        
-        // Set up logging
-        ffmpeg.on('log', ({ message }) => {
-            console.log('FFmpeg:', message);
-        });
-        
-        // Set up progress tracking
-        ffmpeg.on('progress', ({ progress }) => {
-            updateProgress(progress * 100);
-        });
-        
-        console.log('Loading FFmpeg core files...');
-        statusEl.innerHTML = '<span class="spinner"></span>Loading FFmpeg core (this may take a moment)...';
-        
-        // Load FFmpeg with the correct base URL for v0.12+
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-        await ffmpeg.load({
-            coreURL: await fetchFile(`${baseURL}/ffmpeg-core.js`),
-            wasmURL: await fetchFile(`${baseURL}/ffmpeg-core.wasm`),
-        });
-        
-        ffmpegLoaded = true;
-        console.log('FFmpeg loaded successfully!');
-        
-        // Update status
-        statusEl.innerHTML = '✅ FFmpeg.wasm loaded and ready!';
-        statusEl.classList.add('loaded');
-        
-        // Hide status after 3 seconds
-        setTimeout(() => {
-            statusEl.style.display = 'none';
-        }, 3000);
-        
-    } catch (error) {
-        console.error('FFmpeg loading error:', error);
-        
-        // Show error with retry option
-        statusEl.innerHTML = `
-            ❌ Failed to load FFmpeg.wasm<br>
-            <small>${error.message}</small><br>
-            <button onclick="location.reload()" style="
-                margin-top: 10px;
-                padding: 8px 16px;
-                background: #667eea;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 14px;
-            ">Refresh Page</button>
-        `;
-        statusEl.classList.remove('loaded');
-        statusEl.style.background = 'rgba(244, 67, 54, 0.1)';
-        statusEl.style.borderColor = 'rgba(244, 67, 54, 0.3)';
-        statusEl.style.color = '#f44336';
-    }
-}
-
 // Handle GIF file
 function handleGifFile(file) {
-    clearStatusOnNewFile();
-    console.log('Processing GIF file:', file.name, 'Size:', file.size, 'Type:', file.type);
-    
-    if (!ffmpegLoaded) {
-        showStatus('❌ FFmpeg is still loading. Please wait and try again.', 'error');
+    if (isProcessing) {
+        showStatus('❌ Please wait for current conversion to complete.', 'error');
         return;
     }
+
+    clearStatusOnNewFile();
+    console.log('Processing GIF file:', file.name, 'Size:', file.size, 'Type:', file.type);
 
     if (!file.type.includes('gif')) {
         showStatus('❌ Please select a GIF file only.', 'error');
         return;
     }
 
-    if (file.size > 100 * 1024 * 1024) {
-        showStatus('❌ File too large. Please select a file under 100MB.', 'error');
+    if (file.size > 50 * 1024 * 1024) {
+        showStatus('❌ File too large. Please select a file under 50MB.', 'error');
         return;
     }
 
@@ -188,69 +113,116 @@ function handleGifFile(file) {
         return;
     }
 
-    convertGifToWebm(file);
+    // Check MediaRecorder support
+    if (!window.MediaRecorder) {
+        showStatus('❌ Your browser does not support video recording. Please try a modern browser like Chrome or Firefox.', 'error');
+        return;
+    }
+
+    // Check WebM support
+    const supportedTypes = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8', 
+        'video/webm'
+    ];
+    
+    const supportedType = supportedTypes.find(type => MediaRecorder.isTypeSupported(type));
+    if (!supportedType) {
+        showStatus('❌ Your browser does not support WebM recording. Please try Chrome or Firefox.', 'error');
+        return;
+    }
+
+    convertGifToWebm(file, supportedType);
 }
 
-// Convert GIF to WebM using v0.12+ API
-async function convertGifToWebm(file) {
+// Convert GIF to WebM using gifuct-js + Canvas + MediaRecorder
+async function convertGifToWebm(file, mimeType) {
+    isProcessing = true;
     const dropZone = document.getElementById('dropZone');
     const maxSize = parseInt(document.getElementById('maxSize').value) * 1024;
-    const crf = parseInt(document.getElementById('crf').value);
+    const quality = parseInt(document.getElementById('crf').value);
     
     dropZone.classList.add('processing');
-    showStatus('<span class="spinner"></span>Converting GIF to WebM...', 'processing');
+    showStatus('<span class="spinner"></span>Parsing GIF...', 'processing');
 
     try {
-        // Write input file using v0.12+ API
-        console.log('Writing input file...');
-        await ffmpeg.writeFile('input.gif', await window.fetchFile(file));
-
-        // Calculate scale filter based on mode
-        let scaleFilter;
-        if (gifMode === 'emoji') {
-            scaleFilter = 'scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:black@0';
-        } else {
-            // Sticker mode - preserve aspect ratio, max 512px on longest side
-            scaleFilter = 'scale=512:512:force_original_aspect_ratio=decrease';
+        // Parse GIF using gifuct-js
+        const buffer = await file.arrayBuffer();
+        
+        // Check if gifuct-js is loaded
+        if (typeof gifuct === 'undefined') {
+            throw new Error('GIF parsing library not loaded. Please refresh the page.');
+        }
+        
+        const gif = gifuct.parseGIF(buffer);
+        const frames = gifuct.decompressFrames(gif, true);
+        
+        if (frames.length === 0) {
+            throw new Error('No frames found in GIF');
         }
 
-        // FFmpeg command arguments for v0.12+
-        console.log('Running FFmpeg conversion...');
-        await ffmpeg.exec([
-            '-i', 'input.gif',
-            '-t', '3',                              // Limit to 3 seconds
-            '-c:v', 'libvpx-vp9',                   // VP9 codec
-            '-crf', crf.toString(),                 // Quality setting
-            '-b:v', '0',                            // Use CRF mode
-            '-an',                                  // Remove audio
-            '-pix_fmt', 'yuva420p',                 // Support transparency
-            '-vf', `${scaleFilter},fps=30`,         // Scale and limit FPS to 30
-            '-auto-alt-ref', '0',                   // Better compatibility
-            'output.webm'
-        ]);
+        console.log(`Parsed GIF: ${frames.length} frames, ${gif.lsd.width}x${gif.lsd.height}`);
+        showStatus('<span class="spinner"></span>Converting to WebM...', 'processing');
+
+        // Calculate dimensions based on mode
+        const { width, height } = calculateDimensions(gif.lsd.width, gif.lsd.height);
         
-        // Read output file using v0.12+ API
-        console.log('Reading output file...');
-        const data = await ffmpeg.readFile('output.webm');
-        const blob = new Blob([data], { type: 'video/webm' });
-        
-        console.log(`Conversion complete. Size: ${blob.size} bytes (${(blob.size/1024).toFixed(1)} KB)`);
+        // Create canvas for rendering
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = width;
+        canvas.height = height;
+
+        // Set up MediaRecorder
+        const stream = canvas.captureStream();
+        const recorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            videoBitsPerSecond: calculateBitrate(quality, width, height)
+        });
+
+        const chunks = [];
+        recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+                chunks.push(e.data);
+            }
+        };
+
+        // Start recording
+        recorder.start();
+
+        // Render GIF frames to canvas
+        await renderGifFrames(ctx, frames, gif.lsd.width, gif.lsd.height, width, height);
+
+        // Stop recording
+        recorder.stop();
+
+        // Wait for recording to finish
+        const webmBlob = await new Promise((resolve) => {
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: mimeType });
+                resolve(blob);
+            };
+        });
+
+        console.log(`Conversion complete. Size: ${webmBlob.size} bytes (${(webmBlob.size/1024).toFixed(1)} KB)`);
 
         // Check file size
-        if (blob.size <= maxSize) {
+        if (webmBlob.size <= maxSize) {
             // Success - download the file
             const sanitizedName = sanitizeFilename(file.name);
             const suffix = gifMode === 'emoji' ? '_emoji' : '_sticker';
             const outputFilename = `${sanitizedName}${suffix}.webm`;
             
-            downloadFile(blob, outputFilename);
+            downloadFile(webmBlob, outputFilename);
             
             dropZone.classList.remove('processing');
             showStatus(
                 `✅ GIF converted successfully!<br>` +
                 `<strong>Output:</strong> ${outputFilename}<br>` +
-                `<strong>Size:</strong> ${(blob.size/1024).toFixed(1)} KB<br>` +
-                `<strong>Mode:</strong> ${gifMode}`,
+                `<strong>Size:</strong> ${(webmBlob.size/1024).toFixed(1)} KB<br>` +
+                `<strong>Mode:</strong> ${gifMode}<br>` +
+                `<strong>Dimensions:</strong> ${width}×${height}<br>` +
+                `<strong>Frames:</strong> ${frames.length}`,
                 'success',
                 outputFilename
             );
@@ -259,31 +231,128 @@ async function convertGifToWebm(file) {
             dropZone.classList.remove('processing');
             showStatus(
                 `❌ Output file too large!<br>` +
-                `<strong>Size:</strong> ${(blob.size/1024).toFixed(1)} KB<br>` +
+                `<strong>Size:</strong> ${(webmBlob.size/1024).toFixed(1)} KB<br>` +
                 `<strong>Limit:</strong> ${maxSize/1024} KB<br>` +
-                `Try increasing CRF value (lower quality) to reduce file size.`,
+                `Try reducing quality or using a smaller/shorter GIF.`,
                 'error'
             );
         }
 
-        // Cleanup using v0.12+ API
-        try {
-            await ffmpeg.deleteFile('input.gif');
-            await ffmpeg.deleteFile('output.webm');
-        } catch (e) {
-            console.warn('Cleanup warning:', e);
-        }
-        
         document.getElementById('fileInput').value = '';
 
     } catch (error) {
         console.error('Conversion error:', error);
         dropZone.classList.remove('processing');
         showStatus(`❌ Conversion failed: ${error.message}`, 'error');
+    } finally {
+        isProcessing = false;
     }
 }
 
-// Sanitize filename
+// Calculate output dimensions based on mode
+function calculateDimensions(originalWidth, originalHeight) {
+    if (gifMode === 'emoji') {
+        return { width: 100, height: 100 };
+    } else {
+        // Sticker mode - preserve aspect ratio, max 512px
+        const maxSize = 512;
+        const aspectRatio = originalWidth / originalHeight;
+        
+        if (originalWidth > originalHeight) {
+            const width = Math.min(maxSize, originalWidth);
+            return {
+                width: Math.round(width),
+                height: Math.round(width / aspectRatio)
+            };
+        } else {
+            const height = Math.min(maxSize, originalHeight);
+            return {
+                width: Math.round(height * aspectRatio),
+                height: Math.round(height)
+            };
+        }
+    }
+}
+
+// Calculate bitrate based on quality setting
+function calculateBitrate(quality, width, height) {
+    const pixels = width * height;
+    const baseBitrate = Math.max(200000, pixels * 0.08); // Minimum 200kbps
+    
+    // Quality affects bitrate (lower quality = higher number = lower bitrate)
+    const qualityMultiplier = Math.max(0.1, (63 - quality) / 43);
+    
+    return Math.round(baseBitrate * qualityMultiplier);
+}
+
+// Render GIF frames to canvas with proper timing
+async function renderGifFrames(ctx, frames, originalWidth, originalHeight, canvasWidth, canvasHeight) {
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = originalWidth;
+    tempCanvas.height = originalHeight;
+    
+    // Calculate total duration and limit to 3 seconds
+    const totalDelay = frames.reduce((sum, frame) => sum + frame.delay, 0);
+    const maxDuration = 3000; // 3 seconds
+    const speedMultiplier = totalDelay > maxDuration ? maxDuration / totalDelay : 1;
+    
+    let frameIndex = 0;
+    const startTime = Date.now();
+    
+    // Render frames with timing
+    for (const frame of frames) {
+        const frameDelay = Math.max(50, frame.delay * speedMultiplier); // Minimum 50ms per frame
+        
+        // Clear temp canvas
+        tempCtx.clearRect(0, 0, originalWidth, originalHeight);
+        
+        // Create ImageData from frame
+        const imageData = tempCtx.createImageData(originalWidth, originalHeight);
+        imageData.data.set(frame.patch);
+        tempCtx.putImageData(imageData, 0, 0);
+        
+        // Clear main canvas
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        
+        // Draw frame to main canvas
+        if (gifMode === 'emoji') {
+            // Center the image in 100x100 square
+            const scale = Math.min(100 / originalWidth, 100 / originalHeight);
+            const scaledWidth = originalWidth * scale;
+            const scaledHeight = originalHeight * scale;
+            const x = (100 - scaledWidth) / 2;
+            const y = (100 - scaledHeight) / 2;
+            
+            ctx.drawImage(tempCanvas, x, y, scaledWidth, scaledHeight);
+        } else {
+            // Scale to fit canvas while preserving aspect ratio
+            ctx.drawImage(tempCanvas, 0, 0, canvasWidth, canvasHeight);
+        }
+        
+        // Wait for frame duration
+        await new Promise(resolve => setTimeout(resolve, frameDelay));
+        
+        frameIndex++;
+        
+        // Update progress
+        const progress = (frameIndex / frames.length) * 100;
+        updateProgress(progress);
+    }
+    
+    // Hold the last frame for a moment
+    await new Promise(resolve => setTimeout(resolve, 200));
+}
+
+// Update progress
+function updateProgress(percent) {
+    const status = document.getElementById('status');
+    if (status.classList.contains('processing')) {
+        status.innerHTML = `<span class="spinner"></span>Converting to WebM... ${Math.round(percent)}%`;
+    }
+}
+
+// Utility functions
 function sanitizeFilename(filename) {
     const name = filename.replace(/\.[^/.]+$/, '');
     const sanitized = name
@@ -296,7 +365,6 @@ function sanitizeFilename(filename) {
     return sanitized || 'converted_video';
 }
 
-// Download file
 function downloadFile(blob, filename) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -308,7 +376,6 @@ function downloadFile(blob, filename) {
     URL.revokeObjectURL(url);
 }
 
-// Show status message
 function showStatus(message, type, filename = null) {
     const status = document.getElementById('status');
     
@@ -331,20 +398,11 @@ function showStatus(message, type, filename = null) {
     }
 }
 
-// Clear status
 function clearStatusOnNewFile() {
     const status = document.getElementById('status');
     if (!status.classList.contains('processing')) {
         status.classList.remove('show');
         status.innerHTML = '';
-    }
-}
-
-// Update progress
-function updateProgress(percent) {
-    const status = document.getElementById('status');
-    if (status.classList.contains('processing')) {
-        status.innerHTML = `<span class="spinner"></span>Converting GIF to WebM... ${percent.toFixed(0)}%`;
     }
 }
 

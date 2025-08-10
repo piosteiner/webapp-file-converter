@@ -21,10 +21,6 @@
             <a href="png-converter.html">PNG → JPEG</a>
         </div>
 
-        <div id="ffmpegStatus" class="ffmpeg-status">
-            <span class="spinner"></span>Loading FFmpeg.wasm...
-        </div>
-
         <div class="controls">
             <div class="control-group">
                 <label class="control-label">Conversion Mode</label>
@@ -45,7 +41,7 @@
             </div>
 
             <div class="control-group">
-                <label class="control-label" for="crf">Quality (CRF)</label>
+                <label class="control-label" for="crf">Quality</label>
                 <input type="range" id="crf" class="control-input" min="20" max="63" value="35">
                 <div class="control-value" id="crfValue">35 (High)</div>
             </div>
@@ -54,7 +50,7 @@
         <div class="drop-zone" id="dropZone">
             <div class="drop-icon">🎬</div>
             <div class="drop-text">Drop your GIF file here</div>
-            <div class="drop-subtext">or click to browse • Max 3s duration, 30 FPS</div>
+            <div class="drop-subtext">or click to browse • Browser-based conversion</div>
         </div>
 
         <input type="file" id="fileInput" accept=".gif,image/gif" class="hidden">
@@ -62,8 +58,8 @@
         <div class="status" id="status"></div>
     </div>
 
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js" crossorigin="anonymous"></script>
+    <!-- Lightweight GIF parsing library -->
+    <script src="https://unpkg.com/gifuct-js@2.1.2/dist/gifuct-js.umd.js"></script>
     <script src="../js/gif-converter.js"></script>
 </body>
 </html>
