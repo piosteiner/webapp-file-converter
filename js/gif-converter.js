@@ -67,7 +67,8 @@ async function checkServerHealth() {
     }
 
     try {
-        const response = await fetch(`${SERVER_URL}/api/health`);
+        const response = await fetch(`${SERVER_URL}/api/health`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         
         if (data.status === 'healthy') {
@@ -144,7 +145,10 @@ async function processFiles(files) {
     dropZone.classList.add('processing');
 
     // Filter to GIF files only
-    const gifFiles = files.filter(file => file.type.includes('gif'));
+    const gifFiles = files.filter(f =>
+    (f.type && f.type.toLowerCase().includes('gif')) ||
+    f.name.toLowerCase().endsWith('.gif')
+    );
     
     if (gifFiles.length === 0) {
         finishProcessing('❌ No GIF files found. Please select GIF files only.', 'error', []);
@@ -294,7 +298,7 @@ async function convertMultipleFiles(files) {
 // Download converted file from server
 async function downloadConvertedFile(downloadId, filename) {
     try {
-        const response = await fetch(`${SERVER_URL}/api/download/${downloadId}`);
+        const response = await fetch(`${SERVER_URL}/api/download/${downloadId}`, { cache: 'no-store' });
         
         if (response.ok) {
             const blob = await response.blob();
