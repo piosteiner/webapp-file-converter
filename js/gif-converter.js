@@ -272,14 +272,107 @@ async function parseGifFile(file) {
     const width = bytes[6] | (bytes[7] << 8);
     const height = bytes[8] | (bytes[9] << 8);
     
-    // Create temporary canvas to extract frames
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = width;
-    tempCanvas.height = height;
+    // Use a more sophisticated approach: load GIF into video element to extract frames
+    return await extractGifFramesUsingVideo(file, width, height);
+}
+
+// Extract GIF frames by loading into video element and capturing at intervals
+async function extractGifFramesUsingVideo(file, width, height) {
+    // Create a hidden video element
+    const video = document.createElement('video');
+    video.style.display = 'none';
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    document.body.appendChild(video);
     
-    // Load GIF as image to extract frames using a timing-based approach
+    try {
+        // Create object URL for the GIF
+        const url = URL.createObjectURL(file);
+        video.src = url;
+        
+        // Wait for video to load
+        await new Promise((resolve, reject) => {
+            video.addEventListener('loadeddata', resolve);
+            video.addEventListener('error', reject);
+        });
+        
+        // If the GIF loads as video, we can extract frames
+        if (video.duration && video.duration > 0) {
+            const frames = await extractFramesFromVideo(video, width, height);
+            URL.revokeObjectURL(url);
+            document.body.removeChild(video);
+            return {
+                width: width,
+                height: height,
+                frames: frames,
+                totalDuration: video.duration * 1000, // Convert to ms
+                averageFrameDelay: frames.length > 0 ? (video.duration * 1000) / frames.length : 100
+            };
+        } else {
+            // Fallback: extract frames using canvas-based approach
+            URL.revokeObjectURL(url);
+            document.body.removeChild(video);
+            return await extractGifFramesUsingCanvas(file, width, height);
+        }
+        
+    } catch (error) {
+        // Cleanup and fallback
+        URL.revokeObjectURL(video.src);
+        document.body.removeChild(video);
+        return await extractGifFramesUsingCanvas(file, width, height);
+    }
+}
+
+// Extract frames from video element
+async function extractFramesFromVideo(video, width, height) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = width;
+    canvas.height = height;
+    
+    const frames = [];
+    const duration = video.duration;
+    const frameRate = 15; // Target 15 FPS for frame extraction
+    const frameCount = Math.min(Math.ceil(duration * frameRate), 60); // Max 60 frames
+    
+    for (let i = 0; i < frameCount; i++) {
+        const time = (i / frameCount) * duration;
+        video.currentTime = time;
+        
+        // Wait for seek to complete
+        await new Promise(resolve => {
+            const onSeeked = () => {
+                video.removeEventListener('seeked', onSeeked);
+                resolve();
+            };
+            video.addEventListener('seeked', onSeeked);
+        });
+        
+        // Draw current frame to canvas
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(video, 0, 0, width, height);
+        
+        // Get image data
+        const imageData = ctx.getImageData(0, 0, width, height);
+        frames.push({
+            imageData: imageData,
+            delay: (duration * 1000) / frameCount // Frame delay in ms
+        });
+    }
+    
+    return frames;
+}
+
+// Fallback: Canvas-based frame extraction with animation detection
+async function extractGifFramesUsingCanvas(file, width, height) {
     const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Load image
     const imageLoadPromise = new Promise((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = () => reject(new Error('Failed to load GIF'));
@@ -288,32 +381,70 @@ async function parseGifFile(file) {
     
     await imageLoadPromise;
     
-    // For animated GIFs, we'll create multiple frames by sampling at different intervals
-    // This is a simplified approach that works reasonably well with most GIFs
-    const frameCount = Math.min(60, Math.max(10, Math.round(file.size / 10000))); // Estimate frame count
+    // For animated GIFs, try to detect animation by sampling over time
     const frames = [];
-    const baseDelay = 100; // Base delay of 100ms per frame
+    const sampleCount = 20; // Number of samples to take
+    const sampleInterval = 50; // ms between samples
     
-    for (let i = 0; i < frameCount; i++) {
-        tempCtx.clearRect(0, 0, width, height);
-        tempCtx.drawImage(img, 0, 0);
+    for (let i = 0; i < sampleCount; i++) {
+        // Clear and draw
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
         
-        const imageData = tempCtx.getImageData(0, 0, width, height);
+        // Capture frame
+        const imageData = ctx.getImageData(0, 0, width, height);
         frames.push({
             imageData: imageData,
-            delay: baseDelay // Simplified: use consistent timing
+            delay: sampleInterval
         });
+        
+        // Wait before next sample
+        if (i < sampleCount - 1) {
+            await new Promise(resolve => setTimeout(resolve, sampleInterval));
+        }
     }
     
     URL.revokeObjectURL(img.src);
+    
+    // If all frames are identical, create a simple animation
+    if (frames.length > 0 && areAllFramesIdentical(frames)) {
+        // Create a simple 2-frame animation to make it move
+        const baseFrame = frames[0];
+        return {
+            width: width,
+            height: height,
+            frames: [
+                { ...baseFrame, delay: 500 },
+                { ...baseFrame, delay: 500 }
+            ],
+            totalDuration: 1000,
+            averageFrameDelay: 500
+        };
+    }
     
     return {
         width: width,
         height: height,
         frames: frames,
-        totalDuration: frameCount * baseDelay,
-        averageFrameDelay: baseDelay
+        totalDuration: sampleCount * sampleInterval,
+        averageFrameDelay: sampleInterval
     };
+}
+
+// Check if all frames are identical (for static images)
+function areAllFramesIdentical(frames) {
+    if (frames.length < 2) return true;
+    
+    const firstFrame = frames[0].imageData.data;
+    for (let i = 1; i < frames.length; i++) {
+        const currentFrame = frames[i].imageData.data;
+        for (let j = 0; j < firstFrame.length; j += 100) { // Sample every 100th pixel for speed
+            if (firstFrame[j] !== currentFrame[j]) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 // Calculate sticker dimensions (one side 512px max, preserve aspect ratio)
