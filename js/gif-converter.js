@@ -1,14 +1,13 @@
-// FFmpeg.wasm GIF to WebM Converter - Direct translation of Python script
-// Uses FFmpeg.wasm with exact same logic as your Python code
+// Server-Side GIF to WebM Converter - Client
+// Uploads files to Flask server for processing
 
-let ffmpeg = null;
-let ffmpegLoaded = false;
 let isProcessing = false;
+const SERVER_URL = 'http://localhost:5000'; // Change this to your server URL
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initializeConverter();
-    loadFFmpegWasm();
+    checkServerHealth();
 });
 
 function initializeConverter() {
@@ -24,7 +23,7 @@ function initializeConverter() {
         maxSizeValue.textContent = e.target.value + ' KB';
     });
 
-    // Update CRF display (same as Python)
+    // Update CRF display
     crfSlider.addEventListener('input', (e) => {
         const crf = parseInt(e.target.value);
         let quality = 'Ultra High';
@@ -37,7 +36,7 @@ function initializeConverter() {
 
     // Click to browse
     dropZone.addEventListener('click', () => {
-        if (!isProcessing && ffmpegLoaded) {
+        if (!isProcessing) {
             fileInput.click();
         }
     });
@@ -53,11 +52,62 @@ function initializeConverter() {
     setupDragDrop(dropZone, handleGifFile);
 }
 
+// Check if server is running
+async function checkServerHealth() {
+    const statusEl = document.getElementById('serverStatus');
+    if (!statusEl) {
+        // Create status element
+        const container = document.querySelector('.container');
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'serverStatus';
+        statusDiv.className = 'ffmpeg-status';
+        statusDiv.innerHTML = '<span class="spinner"></span>Checking server connection...';
+        container.insertBefore(statusDiv, document.querySelector('.controls'));
+    }
+
+    try {
+        const response = await fetch(`${SERVER_URL}/api/health`);
+        const data = await response.json();
+        
+        if (data.status === 'healthy') {
+            const statusEl = document.getElementById('serverStatus');
+            if (data.ffmpeg_available && data.converter_available) {
+                statusEl.innerHTML = '✅ Server ready for GIF conversion!';
+                statusEl.classList.add('loaded');
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 3000);
+            } else {
+                statusEl.innerHTML = '⚠️ Server running but FFmpeg/converter not available';
+                statusEl.style.background = 'rgba(255, 152, 0, 0.1)';
+                statusEl.style.borderColor = 'rgba(255, 152, 0, 0.3)';
+                statusEl.style.color = '#ff9800';
+            }
+        } else {
+            throw new Error('Server unhealthy');
+        }
+    } catch (error) {
+        console.error('Server health check failed:', error);
+        const statusEl = document.getElementById('serverStatus');
+        statusEl.innerHTML = `
+            ❌ Server not available<br>
+            <small>Please start the Flask server</small><br>
+            <button onclick="checkServerHealth()" style="
+                margin-top: 10px; padding: 8px 16px; background: #667eea; color: white;
+                border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
+            ">Retry Connection</button>
+        `;
+        statusEl.style.background = 'rgba(244, 67, 54, 0.1)';
+        statusEl.style.borderColor = 'rgba(244, 67, 54, 0.3)';
+        statusEl.style.color = '#f44336';
+    }
+}
+
 // Drag and drop setup
 function setupDragDrop(dropZone, handler) {
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        if (!isProcessing && ffmpegLoaded) {
+        if (!isProcessing) {
             dropZone.classList.add('dragover');
         }
     });
@@ -71,7 +121,7 @@ function setupDragDrop(dropZone, handler) {
         e.preventDefault();
         dropZone.classList.remove('dragover');
         
-        if (!isProcessing && ffmpegLoaded) {
+        if (!isProcessing) {
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handler(files[0]);
@@ -80,96 +130,10 @@ function setupDragDrop(dropZone, handler) {
     });
 }
 
-// Load FFmpeg.wasm properly
-async function loadFFmpegWasm() {
-    const statusEl = document.getElementById('ffmpegStatus');
-    if (!statusEl) {
-        // Create status element if it doesn't exist
-        const container = document.querySelector('.container');
-        const statusDiv = document.createElement('div');
-        statusDiv.id = 'ffmpegStatus';
-        statusDiv.className = 'ffmpeg-status';
-        statusDiv.innerHTML = '<span class="spinner"></span>Loading FFmpeg.wasm...';
-        container.insertBefore(statusDiv, document.querySelector('.controls'));
-    }
-    
-    try {
-        console.log('Loading FFmpeg.wasm...');
-        
-        // Check if FFmpeg is available from CDN
-        if (typeof FFmpeg === 'undefined' || !FFmpeg.FFmpeg) {
-            throw new Error('FFmpeg library not loaded. Please check your internet connection.');
-        }
-        
-        if (typeof FFmpegUtil === 'undefined' || !FFmpegUtil.fetchFile) {
-            throw new Error('FFmpeg utilities not loaded. Please check your internet connection.');
-        }
-        
-        // Use UMD version - access the classes directly
-        ffmpeg = new FFmpeg.FFmpeg();
-        
-        // Set up progress and logging
-        ffmpeg.on('log', ({ message }) => {
-            console.log('FFmpeg:', message);
-        });
-        
-        ffmpeg.on('progress', ({ progress }) => {
-            if (isProcessing) {
-                updateProgress(progress * 100);
-            }
-        });
-        
-        // Load FFmpeg with explicit core URLs
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-        await ffmpeg.load({
-            coreURL: await FFmpegUtil.fetchFile(`${baseURL}/ffmpeg-core.js`),
-            wasmURL: await FFmpegUtil.fetchFile(`${baseURL}/ffmpeg-core.wasm`),
-        });
-        
-        ffmpegLoaded = true;
-        console.log('FFmpeg.wasm loaded successfully!');
-        
-        // Update status
-        const statusEl = document.getElementById('ffmpegStatus');
-        statusEl.innerHTML = '✅ FFmpeg.wasm ready for GIF conversion!';
-        statusEl.classList.add('loaded');
-        
-        // Hide after 3 seconds
-        setTimeout(() => {
-            statusEl.style.display = 'none';
-        }, 3000);
-        
-        // Store fetchFile globally
-        window.fetchFile = FFmpegUtil.fetchFile;
-        
-    } catch (error) {
-        console.error('FFmpeg loading error:', error);
-        ffmpegLoaded = false;
-        
-        const statusEl = document.getElementById('ffmpegStatus');
-        statusEl.innerHTML = `
-            ❌ Failed to load FFmpeg.wasm<br>
-            <small>${error.message}</small><br>
-            <button onclick="location.reload()" style="
-                margin-top: 10px; padding: 8px 16px; background: #667eea; color: white;
-                border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
-            ">Retry</button>
-        `;
-        statusEl.style.background = 'rgba(244, 67, 54, 0.1)';
-        statusEl.style.borderColor = 'rgba(244, 67, 54, 0.3)';
-        statusEl.style.color = '#f44336';
-    }
-}
-
 // Handle GIF file
 function handleGifFile(file) {
     if (isProcessing) {
         showStatus('❌ Please wait for current conversion to complete.', 'error');
-        return;
-    }
-
-    if (!ffmpegLoaded) {
-        showStatus('❌ FFmpeg is still loading. Please wait and try again.', 'error');
         return;
     }
 
@@ -186,175 +150,111 @@ function handleGifFile(file) {
         return;
     }
 
-    convertGifToWebm(file);
+    if (file.size === 0) {
+        showStatus('❌ File appears to be empty. Please try another file.', 'error');
+        return;
+    }
+
+    convertGifOnServer(file);
 }
 
-// Convert GIF to WebM - Direct translation of Python script logic
-async function convertGifToWebm(file) {
+// Convert GIF using server-side processing
+async function convertGifOnServer(file) {
     isProcessing = true;
     const dropZone = document.getElementById('dropZone');
     const maxSizeKB = parseInt(document.getElementById('maxSize').value);
-    const startingCRF = parseInt(document.getElementById('crf').value);
+    const crf = parseInt(document.getElementById('crf').value);
     
     dropZone.classList.add('processing');
-    showStatus('<span class="spinner"></span>Analyzing GIF...', 'processing');
+    showStatus('<span class="spinner"></span>Uploading GIF to server...', 'processing');
 
     try {
-        // Write input file
-        console.log('Writing input file...');
-        await ffmpeg.writeFile('input.gif', await window.fetchFile(file));
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('max_size', maxSizeKB);
+        formData.append('mode', 'sticker'); // Always sticker mode
+        formData.append('crf', crf);
+
+        // Upload and convert
+        showStatus('<span class="spinner"></span>Converting on server...', 'processing');
         
-        // Get video info (equivalent to Python's get_video_info)
-        showStatus('<span class="spinner"></span>Getting video information...', 'processing');
-        
-        let videoInfo;
-        try {
-            await ffmpeg.exec(['-i', 'input.gif', '-f', 'null', '-']);
-        } catch (e) {
-            // FFmpeg writes info to stderr, which causes "error" but is normal
-            console.log('Info extraction completed');
-        }
-        
-        // Try different CRF values until size requirement is met (same as Python)
-        const maxSizeBytes = maxSizeKB * 1024;
-        const crfValues = [startingCRF, 40, 45, 50, 55, 60, 63]; // Same progression as Python
-        
-        for (let i = 0; i < crfValues.length; i++) {
-            const crf = crfValues[i];
-            console.log(`Trying CRF ${crf}...`);
-            showStatus(`<span class="spinner"></span>Converting with CRF ${crf}... (attempt ${i + 1}/${crfValues.length})`, 'processing');
+        const response = await fetch(`${SERVER_URL}/api/convert`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            // Success! Download the converted file
+            showStatus('<span class="spinner"></span>Downloading converted file...', 'processing');
             
-            try {
-                // Calculate scale filter (same logic as Python)
-                const scaleFilter = "scale=512:512:force_original_aspect_ratio=decrease";
-                
-                // Build video filter chain (same as Python)
-                const videoFilter = `${scaleFilter},fps=fps=min(30\\,source_fps)`;
-                
-                // Build FFmpeg command (exact translation of Python command)
-                const ffmpegArgs = [
-                    '-i', 'input.gif',
-                    '-t', '3',                          // Limit duration to 3 seconds
-                    '-c:v', 'libvpx-vp9',               // VP9 codec
-                    '-crf', crf.toString(),             // Quality setting
-                    '-b:v', '0',                        // Use CRF mode
-                    '-an',                              // Remove audio stream
-                    '-pix_fmt', 'yuva420p',             // Support transparency
-                    '-vf', videoFilter,                 // Video filters
-                    '-f', 'webm',                       // Force WebM format
-                    '-y',                               // Overwrite output
-                    'output.webm'
-                ];
-                
-                console.log('FFmpeg command:', ffmpegArgs.join(' '));
-                await ffmpeg.exec(ffmpegArgs);
-                
-                // Check if output file exists and get size
-                const data = await ffmpeg.readFile('output.webm');
-                const fileSize = data.length;
-                
-                console.log(`CRF ${crf}: ${fileSize} bytes (${(fileSize/1024).toFixed(1)} KB)`);
-                
-                if (fileSize <= maxSizeBytes) {
-                    // Success! File meets size requirement (same as Python logic)
-                    const blob = new Blob([data], { type: 'video/webm' });
-                    const sanitizedName = sanitizeFilename(file.name);
-                    const outputFilename = `${sanitizedName}_sticker.webm`;
-                    
-                    downloadFile(blob, outputFilename);
-                    
-                    dropZone.classList.remove('processing');
-                    showStatus(
-                        `✅ GIF converted to WebM sticker successfully!<br>` +
-                        `<strong>Output:</strong> ${outputFilename}<br>` +
-                        `<strong>Size:</strong> ${(fileSize/1024).toFixed(1)} KB<br>` +
-                        `<strong>CRF:</strong> ${crf}<br>` +
-                        `<strong>Max side:</strong> 512px<br>` +
-                        `<strong>Codec:</strong> VP9<br>` +
-                        `<strong>Format:</strong> WebM`,
-                        'success',
-                        outputFilename
-                    );
-                    
-                    // Cleanup
-                    await cleanupFiles();
-                    document.getElementById('fileInput').value = '';
-                    return;
-                } else {
-                    console.log(`File too large (${(fileSize/1024).toFixed(1)} KB > ${maxSizeKB} KB), trying higher CRF...`);
-                }
-                
-            } catch (error) {
-                console.error(`CRF ${crf} failed:`, error);
-                continue;
-            }
+            await downloadConvertedFile(result.download_id, result.output_filename);
+            
+            dropZone.classList.remove('processing');
+            showStatus(
+                `✅ GIF converted to WebM sticker successfully!<br>` +
+                `<strong>Output:</strong> ${result.output_filename}<br>` +
+                `<strong>Original:</strong> ${result.original_size_kb} KB → <strong>Final:</strong> ${result.output_size_kb} KB<br>` +
+                `<strong>Compression:</strong> ${result.compression_ratio}% reduction<br>` +
+                `<strong>Dimensions:</strong> ${result.original_width || '?'}×${result.original_height || '?'} → ${result.output_width || '?'}×${result.output_height || '?'}<br>` +
+                `<strong>Duration:</strong> ${(result.output_duration || 0).toFixed(1)}s<br>` +
+                `<strong>Processing:</strong> Server-side FFmpeg`,
+                'success',
+                result.output_filename
+            );
+            
+        } else {
+            // Server returned an error
+            dropZone.classList.remove('processing');
+            const errorMessage = result.error || 'Unknown server error';
+            showStatus(`❌ Conversion failed: ${errorMessage}`, 'error');
         }
-        
-        // If we get here, couldn't meet size requirement (same as Python)
-        dropZone.classList.remove('processing');
-        showStatus(
-            `❌ Could not create file under ${maxSizeKB} KB limit!<br>` +
-            `Try using a smaller GIF or increase the file size limit.`,
-            'error'
-        );
-        
+
     } catch (error) {
         console.error('Conversion error:', error);
         dropZone.classList.remove('processing');
-        showStatus(`❌ Conversion failed: ${error.message}`, 'error');
+        
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            showStatus('❌ Cannot connect to server. Please ensure the Flask server is running.', 'error');
+        } else {
+            showStatus(`❌ Conversion failed: ${error.message}`, 'error');
+        }
     } finally {
-        await cleanupFiles();
         isProcessing = false;
         document.getElementById('fileInput').value = '';
     }
 }
 
-// Cleanup temporary files
-async function cleanupFiles() {
+// Download converted file from server
+async function downloadConvertedFile(downloadId, filename) {
     try {
-        await ffmpeg.deleteFile('input.gif');
-        await ffmpeg.deleteFile('output.webm');
-    } catch (e) {
-        console.warn('Cleanup warning:', e);
-    }
-}
-
-// Update progress
-function updateProgress(percent) {
-    const status = document.getElementById('status');
-    if (status.classList.contains('processing')) {
-        const currentText = status.innerHTML;
-        if (currentText.includes('Converting with CRF')) {
-            const baseText = currentText.split('<br>')[0];
-            status.innerHTML = `${baseText}<br>Progress: ${Math.round(percent)}%`;
+        const response = await fetch(`${SERVER_URL}/api/download/${downloadId}`);
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+        } else {
+            throw new Error('Download failed');
         }
+    } catch (error) {
+        console.error('Download error:', error);
+        showStatus(`❌ Download failed: ${error.message}`, 'error');
     }
 }
 
 // Utility functions
-function sanitizeFilename(filename) {
-    const name = filename.replace(/\.[^/.]+$/, '');
-    const sanitized = name
-        .replace(/[<>:"/\\|?*]/g, '_')
-        .replace(/\s+/g, '_')
-        .replace(/,/g, '_')
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '')
-        .slice(0, 100);
-    return sanitized || 'converted_sticker';
-}
-
-function downloadFile(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
 function showStatus(message, type, filename = null) {
     const status = document.getElementById('status');
     
