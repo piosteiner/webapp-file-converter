@@ -1,5 +1,5 @@
-// GIF to WebM Converter - Using stable FFmpeg.wasm v0.11
-// This version uses the older, more reliable API
+// GIF to WebM Converter - Updated for FFmpeg.wasm v0.12+
+// This version uses the new v0.12+ API
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -84,38 +84,47 @@ function setupDragDrop(dropZone, handler) {
     });
 }
 
-// Load FFmpeg.wasm using v0.11 API
+// Load FFmpeg.wasm using v0.12+ API
 async function loadFFmpeg() {
     const statusEl = document.getElementById('ffmpegStatus');
     
     try {
-        console.log('Initializing FFmpeg v0.11...');
+        console.log('Initializing FFmpeg v0.12+...');
         
         // Check if FFmpeg is available
         if (typeof FFmpeg === 'undefined') {
             throw new Error('FFmpeg library not loaded. Please check your internet connection.');
         }
         
-        // Use the v0.11 API
-        const { createFFmpeg, fetchFile } = FFmpeg;
+        // Use the v0.12+ API
+        const { FFmpeg } = FFmpeg;
+        const { fetchFile } = FFmpegUtil;
         
-        // Create FFmpeg instance with v0.11 API
-        ffmpeg = createFFmpeg({
-            log: true, // Enable logging for debugging
-            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-            progress: ({ ratio }) => {
-                updateProgress(ratio * 100);
-            }
-        });
+        // Create FFmpeg instance with v0.12+ API
+        ffmpeg = new FFmpeg();
         
         // Store fetchFile globally for later use
         window.fetchFile = fetchFile;
         
+        // Set up logging
+        ffmpeg.on('log', ({ message }) => {
+            console.log('FFmpeg:', message);
+        });
+        
+        // Set up progress tracking
+        ffmpeg.on('progress', ({ progress }) => {
+            updateProgress(progress * 100);
+        });
+        
         console.log('Loading FFmpeg core files...');
         statusEl.innerHTML = '<span class="spinner"></span>Loading FFmpeg core (this may take a moment)...';
         
-        // Load FFmpeg
-        await ffmpeg.load();
+        // Load FFmpeg with the correct base URL for v0.12+
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        await ffmpeg.load({
+            coreURL: await fetchFile(`${baseURL}/ffmpeg-core.js`),
+            wasmURL: await fetchFile(`${baseURL}/ffmpeg-core.wasm`),
+        });
         
         ffmpegLoaded = true;
         console.log('FFmpeg loaded successfully!');
@@ -182,7 +191,7 @@ function handleGifFile(file) {
     convertGifToWebm(file);
 }
 
-// Convert GIF to WebM using v0.11 API
+// Convert GIF to WebM using v0.12+ API
 async function convertGifToWebm(file) {
     const dropZone = document.getElementById('dropZone');
     const maxSize = parseInt(document.getElementById('maxSize').value) * 1024;
@@ -192,9 +201,9 @@ async function convertGifToWebm(file) {
     showStatus('<span class="spinner"></span>Converting GIF to WebM...', 'processing');
 
     try {
-        // Write input file using v0.11 API
+        // Write input file using v0.12+ API
         console.log('Writing input file...');
-        ffmpeg.FS('writeFile', 'input.gif', await window.fetchFile(file));
+        await ffmpeg.writeFile('input.gif', await window.fetchFile(file));
 
         // Calculate scale filter based on mode
         let scaleFilter;
@@ -205,9 +214,9 @@ async function convertGifToWebm(file) {
             scaleFilter = 'scale=512:512:force_original_aspect_ratio=decrease';
         }
 
-        // FFmpeg command arguments for v0.11
+        // FFmpeg command arguments for v0.12+
         console.log('Running FFmpeg conversion...');
-        await ffmpeg.run(
+        await ffmpeg.exec([
             '-i', 'input.gif',
             '-t', '3',                              // Limit to 3 seconds
             '-c:v', 'libvpx-vp9',                   // VP9 codec
@@ -218,12 +227,12 @@ async function convertGifToWebm(file) {
             '-vf', `${scaleFilter},fps=30`,         // Scale and limit FPS to 30
             '-auto-alt-ref', '0',                   // Better compatibility
             'output.webm'
-        );
+        ]);
         
-        // Read output file using v0.11 API
+        // Read output file using v0.12+ API
         console.log('Reading output file...');
-        const data = ffmpeg.FS('readFile', 'output.webm');
-        const blob = new Blob([data.buffer], { type: 'video/webm' });
+        const data = await ffmpeg.readFile('output.webm');
+        const blob = new Blob([data], { type: 'video/webm' });
         
         console.log(`Conversion complete. Size: ${blob.size} bytes (${(blob.size/1024).toFixed(1)} KB)`);
 
@@ -257,10 +266,10 @@ async function convertGifToWebm(file) {
             );
         }
 
-        // Cleanup using v0.11 API
+        // Cleanup using v0.12+ API
         try {
-            ffmpeg.FS('unlink', 'input.gif');
-            ffmpeg.FS('unlink', 'output.webm');
+            await ffmpeg.deleteFile('input.gif');
+            await ffmpeg.deleteFile('output.webm');
         } catch (e) {
             console.warn('Cleanup warning:', e);
         }
