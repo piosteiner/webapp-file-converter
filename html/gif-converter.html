@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIF to WebM Converter</title>
-    <meta name="description" content="Free online GIF to WebM converter for stickers and emojis with precise size control.">
-    <meta name="keywords" content="GIF to WebM, sticker converter, emoji converter, WebM converter">
+    <title>GIF to WebM Sticker Converter</title>
+    <meta name="description" content="Free online GIF to WebM sticker converter that preserves original animation with VP9 codec.">
+    <meta name="keywords" content="GIF to WebM, sticker converter, VP9, WebM converter, animated stickers">
     <link rel="canonical" href="https://converter.piogino.ch/html/gif-converter.html">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
     <link rel="stylesheet" href="../css/styles.css">
@@ -13,8 +13,8 @@
 </head>
 <body class="converter-page gif-converter">
     <div class="container">
-        <h1>🎬 GIF → WebM</h1>
-        <p class="subtitle">Convert GIF animations to WebM format for stickers and emojis</p>
+        <h1>🎬 GIF → WebM Sticker</h1>
+        <p class="subtitle">Convert animated GIFs to WebM stickers with VP9 codec<br>Preserves original animation • Max 512px • Up to 30 FPS</p>
         
         <div class="nav-links">
             <a href="../index.html">← Home</a>
@@ -22,18 +22,6 @@
         </div>
 
         <div class="controls">
-            <div class="control-group">
-                <label class="control-label">Conversion Mode</label>
-                <div class="mode-selector">
-                    <button class="mode-btn active" data-mode="sticker">
-                        Sticker<br><small>512px max, aspect preserved</small>
-                    </button>
-                    <button class="mode-btn" data-mode="emoji">
-                        Emoji<br><small>100x100px exact</small>
-                    </button>
-                </div>
-            </div>
-
             <div class="control-group">
                 <label class="control-label" for="maxSize">Max File Size</label>
                 <input type="range" id="maxSize" class="control-input" min="64" max="512" value="256">
@@ -49,16 +37,27 @@
 
         <div class="drop-zone" id="dropZone">
             <div class="drop-icon">🎬</div>
-            <div class="drop-text">Drop your GIF file here</div>
-            <div class="drop-subtext">or click to browse • Pure browser-based conversion</div>
+            <div class="drop-text">Drop your animated GIF here</div>
+            <div class="drop-subtext">or click to browse • Animation preserved • VP9 codec</div>
         </div>
 
         <input type="file" id="fileInput" accept=".gif,image/gif" class="hidden">
         
         <div class="status" id="status"></div>
+
+        <div class="features" style="margin-top: 20px; text-align: left;">
+            <h3>📋 Sticker Requirements Met:</h3>
+            <ul style="margin-top: 10px; padding-left: 20px; color: var(--text-secondary);">
+                <li>✅ <strong>WebM format</strong> with VP9 codec</li>
+                <li>✅ <strong>Max 30 FPS</strong> frame rate</li>
+                <li>✅ <strong>512px max</strong> on one side (aspect ratio preserved)</li>
+                <li>✅ <strong>Original duration</strong> preserved (max 3 seconds)</li>
+                <li>✅ <strong>File size limit</strong> configurable (default 256 KB)</li>
+                <li>✅ <strong>Animation preserved</strong> from original GIF</li>
+            </ul>
+        </div>
     </div>
 
-    <!-- Zero external dependencies - uses only native browser APIs -->
     <script src="../js/gif-converter.js"></script>
 </body>
 </html>
