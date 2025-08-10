@@ -269,6 +269,112 @@ def not_found(e):
 def internal_error(e):
     return jsonify({'error': 'Internal server error'}), 500
 
+@app.route('/api/convert-bulk', methods=['POST'])
+def convert_bulk():
+    """Convert multiple GIF files to WebM"""
+    cleanup_old_files()
+    
+    try:
+        if not HAS_CONVERTER:
+            return jsonify({'error': 'Conversion module not available'}), 500
+        
+        if not check_ffmpeg():
+            return jsonify({'error': 'FFmpeg not found on server'}), 500
+        
+        # Get files from request
+        files = request.files.getlist('files')
+        
+        if not files or len(files) == 0:
+            return jsonify({'error': 'No files provided'}), 400
+        
+        # Get conversion parameters
+        max_size_kb = int(request.form.get('max_size', 256))
+        mode = request.form.get('mode', 'sticker')
+        
+        results = []
+        successful = 0
+        failed = 0
+        
+        for file in files:
+            if file.filename == '':
+                continue
+            
+            if not allowed_file(file.filename):
+                results.append({
+                    'filename': file.filename,
+                    'success': False,
+                    'error': 'Not a GIF file'
+                })
+                failed += 1
+                continue
+            
+            # Generate unique filenames
+            file_id = str(uuid.uuid4())
+            secure_name = secure_filename(file.filename)
+            input_filename = f"{file_id}_{secure_name}"
+            input_path = os.path.join(UPLOAD_FOLDER, input_filename)
+            
+            file.save(input_path)
+            
+            output_filename = f"{file_id}_output.webm"
+            output_path = os.path.join(UPLOAD_FOLDER, output_filename)
+            
+            print(f"Converting {secure_name} (bulk)")
+            
+            original_size = os.path.getsize(input_path)
+            
+            # Perform conversion
+            success = convert_gif_to_webm(
+                input_path=input_path,
+                output_path=output_path,
+                mode=mode,
+                max_size_kb=max_size_kb
+            )
+            
+            if success and os.path.exists(output_path):
+                output_size = os.path.getsize(output_path)
+                
+                results.append({
+                    'filename': secure_name,
+                    'success': True,
+                    'output_filename': f"{Path(secure_name).stem}_{mode}.webm",
+                    'original_size_kb': round(original_size / 1024, 1),
+                    'output_size_kb': round(output_size / 1024, 1),
+                    'compression_ratio': round((1 - output_size / original_size) * 100, 1),
+                    'download_id': file_id
+                })
+                successful += 1
+                
+                try:
+                    os.remove(input_path)
+                except:
+                    pass
+            else:
+                results.append({
+                    'filename': secure_name,
+                    'success': False,
+                    'error': f'Could not compress under {max_size_kb}KB'
+                })
+                failed += 1
+                
+                try:
+                    os.remove(input_path)
+                    if os.path.exists(output_path):
+                        os.remove(output_path)
+                except:
+                    pass
+        
+        return jsonify({
+            'total': len(files),
+            'successful': successful,
+            'failed': failed,
+            'results': results
+        })
+    
+    except Exception as e:
+        print(f"Bulk conversion error: {str(e)}")
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 if __name__ == '__main__':
     print("🚀 Starting GIF to WebM Converter Server...")
     print(f"📁 Upload folder: {os.path.abspath(UPLOAD_FOLDER)}")
