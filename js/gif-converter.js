@@ -2,7 +2,7 @@
 // Uploads multiple files to Flask server for processing
 
 let isProcessing = false;
-const SERVER_URL = 'http://83.228.207.199:5000'; // Update with your server URL
+const SERVER_URL = 'https://api.piogino.ch'; // Update with your server URL
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
