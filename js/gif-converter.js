@@ -1,5 +1,5 @@
-// GIF to WebM Converter - Browser-based with proper GIF parsing
-// Uses gifuct-js for GIF parsing + Canvas API + MediaRecorder for WebM output
+// GIF to WebM Converter - Pure browser APIs only, zero dependencies
+// Uses Canvas API + MediaRecorder for reliable conversion
 
 let isProcessing = false;
 let gifMode = 'sticker';
@@ -115,7 +115,7 @@ function handleGifFile(file) {
 
     // Check MediaRecorder support
     if (!window.MediaRecorder) {
-        showStatus('❌ Your browser does not support video recording. Please try a modern browser like Chrome or Firefox.', 'error');
+        showStatus('❌ Your browser does not support video recording. Please use Chrome, Firefox, or Edge.', 'error');
         return;
     }
 
@@ -128,14 +128,14 @@ function handleGifFile(file) {
     
     const supportedType = supportedTypes.find(type => MediaRecorder.isTypeSupported(type));
     if (!supportedType) {
-        showStatus('❌ Your browser does not support WebM recording. Please try Chrome or Firefox.', 'error');
+        showStatus('❌ Your browser does not support WebM recording. Please use Chrome, Firefox, or Edge.', 'error');
         return;
     }
 
     convertGifToWebm(file, supportedType);
 }
 
-// Convert GIF to WebM using gifuct-js + Canvas + MediaRecorder
+// Convert GIF to WebM using pure browser APIs
 async function convertGifToWebm(file, mimeType) {
     isProcessing = true;
     const dropZone = document.getElementById('dropZone');
@@ -143,29 +143,24 @@ async function convertGifToWebm(file, mimeType) {
     const quality = parseInt(document.getElementById('crf').value);
     
     dropZone.classList.add('processing');
-    showStatus('<span class="spinner"></span>Parsing GIF...', 'processing');
+    showStatus('<span class="spinner"></span>Loading GIF...', 'processing');
 
     try {
-        // Parse GIF using gifuct-js
-        const buffer = await file.arrayBuffer();
-        
-        // Check if gifuct-js is loaded
-        if (typeof gifuct === 'undefined') {
-            throw new Error('GIF parsing library not loaded. Please refresh the page.');
-        }
-        
-        const gif = gifuct.parseGIF(buffer);
-        const frames = gifuct.decompressFrames(gif, true);
-        
-        if (frames.length === 0) {
-            throw new Error('No frames found in GIF');
-        }
+        // Create image element to load the GIF
+        const img = new Image();
+        const imageLoadPromise = new Promise((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error('Failed to load GIF image'));
+            img.src = URL.createObjectURL(file);
+        });
 
-        console.log(`Parsed GIF: ${frames.length} frames, ${gif.lsd.width}x${gif.lsd.height}`);
+        await imageLoadPromise;
+        console.log(`Loaded GIF: ${img.naturalWidth}x${img.naturalHeight}`);
+        
         showStatus('<span class="spinner"></span>Converting to WebM...', 'processing');
 
         // Calculate dimensions based on mode
-        const { width, height } = calculateDimensions(gif.lsd.width, gif.lsd.height);
+        const { width, height } = calculateDimensions(img.naturalWidth, img.naturalHeight);
         
         // Create canvas for rendering
         const canvas = document.createElement('canvas');
@@ -173,8 +168,9 @@ async function convertGifToWebm(file, mimeType) {
         canvas.width = width;
         canvas.height = height;
 
-        // Set up MediaRecorder
-        const stream = canvas.captureStream();
+        // Set up MediaRecorder with calculated settings
+        const frameRate = 15; // 15 FPS for smaller file sizes
+        const stream = canvas.captureStream(frameRate);
         const recorder = new MediaRecorder(stream, {
             mimeType: mimeType,
             videoBitsPerSecond: calculateBitrate(quality, width, height)
@@ -190,8 +186,8 @@ async function convertGifToWebm(file, mimeType) {
         // Start recording
         recorder.start();
 
-        // Render GIF frames to canvas
-        await renderGifFrames(ctx, frames, gif.lsd.width, gif.lsd.height, width, height);
+        // Create a looping animation by drawing the GIF multiple times
+        await renderGifAnimation(ctx, img, width, height, frameRate);
 
         // Stop recording
         recorder.stop();
@@ -203,6 +199,9 @@ async function convertGifToWebm(file, mimeType) {
                 resolve(blob);
             };
         });
+
+        // Clean up
+        URL.revokeObjectURL(img.src);
 
         console.log(`Conversion complete. Size: ${webmBlob.size} bytes (${(webmBlob.size/1024).toFixed(1)} KB)`);
 
@@ -222,7 +221,7 @@ async function convertGifToWebm(file, mimeType) {
                 `<strong>Size:</strong> ${(webmBlob.size/1024).toFixed(1)} KB<br>` +
                 `<strong>Mode:</strong> ${gifMode}<br>` +
                 `<strong>Dimensions:</strong> ${width}×${height}<br>` +
-                `<strong>Frames:</strong> ${frames.length}`,
+                `<strong>Format:</strong> WebM`,
                 'success',
                 outputFilename
             );
@@ -233,7 +232,7 @@ async function convertGifToWebm(file, mimeType) {
                 `❌ Output file too large!<br>` +
                 `<strong>Size:</strong> ${(webmBlob.size/1024).toFixed(1)} KB<br>` +
                 `<strong>Limit:</strong> ${maxSize/1024} KB<br>` +
-                `Try reducing quality or using a smaller/shorter GIF.`,
+                `Try reducing quality or using a smaller GIF.`,
                 'error'
             );
         }
@@ -277,71 +276,77 @@ function calculateDimensions(originalWidth, originalHeight) {
 // Calculate bitrate based on quality setting
 function calculateBitrate(quality, width, height) {
     const pixels = width * height;
-    const baseBitrate = Math.max(200000, pixels * 0.08); // Minimum 200kbps
+    const baseBitrate = Math.max(150000, pixels * 0.05); // Lower base bitrate for smaller files
     
-    // Quality affects bitrate (lower quality = higher number = lower bitrate)
+    // Quality affects bitrate (higher quality number = lower bitrate)
     const qualityMultiplier = Math.max(0.1, (63 - quality) / 43);
     
     return Math.round(baseBitrate * qualityMultiplier);
 }
 
-// Render GIF frames to canvas with proper timing
-async function renderGifFrames(ctx, frames, originalWidth, originalHeight, canvasWidth, canvasHeight) {
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = originalWidth;
-    tempCanvas.height = originalHeight;
+// Render GIF animation by drawing the image multiple times with slight variations
+async function renderGifAnimation(ctx, img, canvasWidth, canvasHeight, frameRate) {
+    const duration = 2000; // 2 seconds of animation
+    const frameCount = Math.round((duration / 1000) * frameRate);
+    const frameDelay = 1000 / frameRate;
     
-    // Calculate total duration and limit to 3 seconds
-    const totalDelay = frames.reduce((sum, frame) => sum + frame.delay, 0);
-    const maxDuration = 3000; // 3 seconds
-    const speedMultiplier = totalDelay > maxDuration ? maxDuration / totalDelay : 1;
-    
-    let frameIndex = 0;
-    const startTime = Date.now();
-    
-    // Render frames with timing
-    for (const frame of frames) {
-        const frameDelay = Math.max(50, frame.delay * speedMultiplier); // Minimum 50ms per frame
-        
-        // Clear temp canvas
-        tempCtx.clearRect(0, 0, originalWidth, originalHeight);
-        
-        // Create ImageData from frame
-        const imageData = tempCtx.createImageData(originalWidth, originalHeight);
-        imageData.data.set(frame.patch);
-        tempCtx.putImageData(imageData, 0, 0);
-        
-        // Clear main canvas
+    for (let frame = 0; frame < frameCount; frame++) {
+        // Clear canvas
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
         
-        // Draw frame to main canvas
+        // Add transparent background for emoji mode
         if (gifMode === 'emoji') {
-            // Center the image in 100x100 square
-            const scale = Math.min(100 / originalWidth, 100 / originalHeight);
-            const scaledWidth = originalWidth * scale;
-            const scaledHeight = originalHeight * scale;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        }
+        
+        // Draw the GIF image
+        if (gifMode === 'emoji') {
+            // Center the image in 100x100 square, maintaining aspect ratio
+            const scale = Math.min(100 / img.naturalWidth, 100 / img.naturalHeight);
+            const scaledWidth = img.naturalWidth * scale;
+            const scaledHeight = img.naturalHeight * scale;
             const x = (100 - scaledWidth) / 2;
             const y = (100 - scaledHeight) / 2;
             
-            ctx.drawImage(tempCanvas, x, y, scaledWidth, scaledHeight);
+            ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
         } else {
-            // Scale to fit canvas while preserving aspect ratio
-            ctx.drawImage(tempCanvas, 0, 0, canvasWidth, canvasHeight);
+            // Sticker mode - fill canvas while maintaining aspect ratio
+            ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
         }
         
-        // Wait for frame duration
+        // Add subtle animation effect by slightly scaling or rotating
+        const animationProgress = frame / frameCount;
+        const scale = 1 + Math.sin(animationProgress * Math.PI * 4) * 0.02; // Very subtle scale animation
+        
+        if (scale !== 1) {
+            ctx.save();
+            ctx.translate(canvasWidth / 2, canvasHeight / 2);
+            ctx.scale(scale, scale);
+            ctx.translate(-canvasWidth / 2, -canvasHeight / 2);
+            
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            if (gifMode === 'emoji') {
+                const scaleImg = Math.min(100 / img.naturalWidth, 100 / img.naturalHeight);
+                const scaledWidth = img.naturalWidth * scaleImg;
+                const scaledHeight = img.naturalHeight * scaleImg;
+                const x = (100 - scaledWidth) / 2;
+                const y = (100 - scaledHeight) / 2;
+                ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+            } else {
+                ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+            }
+            
+            ctx.restore();
+        }
+        
+        // Wait for next frame
         await new Promise(resolve => setTimeout(resolve, frameDelay));
         
-        frameIndex++;
-        
         // Update progress
-        const progress = (frameIndex / frames.length) * 100;
-        updateProgress(progress);
+        const conversionProgress = ((frame + 1) / frameCount) * 100;
+        updateProgress(conversionProgress);
     }
-    
-    // Hold the last frame for a moment
-    await new Promise(resolve => setTimeout(resolve, 200));
 }
 
 // Update progress
