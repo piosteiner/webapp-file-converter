@@ -1,14 +1,17 @@
-// GIF to WebM Sticker Converter - Practical browser-based solution
-// Applies Python FFmpeg principles to browser MediaRecorder API
+// FFmpeg.wasm GIF to WebM Converter - Direct translation of Python script
+// Uses FFmpeg.wasm with exact same logic as your Python code
 
+let ffmpeg = null;
+let ffmpegLoaded = false;
 let isProcessing = false;
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    initializeGifConverter();
+    initializeConverter();
+    loadFFmpegWasm();
 });
 
-function initializeGifConverter() {
+function initializeConverter() {
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const maxSizeSlider = document.getElementById('maxSize');
@@ -21,20 +24,20 @@ function initializeGifConverter() {
         maxSizeValue.textContent = e.target.value + ' KB';
     });
 
-    // Update quality display (map to bitrate like Python CRF)
+    // Update CRF display (same as Python)
     crfSlider.addEventListener('input', (e) => {
-        const quality = parseInt(e.target.value);
-        let qualityText = 'Ultra High';
-        if (quality > 20) qualityText = 'High';
-        if (quality > 30) qualityText = 'Medium';
-        if (quality > 45) qualityText = 'Low';
-        if (quality > 55) qualityText = 'Very Low';
-        crfValue.textContent = `${quality} (${qualityText})`;
+        const crf = parseInt(e.target.value);
+        let quality = 'Ultra High';
+        if (crf > 20) quality = 'High';
+        if (crf > 30) quality = 'Medium';
+        if (crf > 45) quality = 'Low';
+        if (crf > 55) quality = 'Very Low';
+        crfValue.textContent = `${crf} (${quality})`;
     });
 
     // Click to browse
     dropZone.addEventListener('click', () => {
-        if (!isProcessing) {
+        if (!isProcessing && ffmpegLoaded) {
             fileInput.click();
         }
     });
@@ -54,7 +57,7 @@ function initializeGifConverter() {
 function setupDragDrop(dropZone, handler) {
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        if (!isProcessing) {
+        if (!isProcessing && ffmpegLoaded) {
             dropZone.classList.add('dragover');
         }
     });
@@ -68,7 +71,7 @@ function setupDragDrop(dropZone, handler) {
         e.preventDefault();
         dropZone.classList.remove('dragover');
         
-        if (!isProcessing) {
+        if (!isProcessing && ffmpegLoaded) {
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handler(files[0]);
@@ -77,10 +80,96 @@ function setupDragDrop(dropZone, handler) {
     });
 }
 
+// Load FFmpeg.wasm properly
+async function loadFFmpegWasm() {
+    const statusEl = document.getElementById('ffmpegStatus');
+    if (!statusEl) {
+        // Create status element if it doesn't exist
+        const container = document.querySelector('.container');
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'ffmpegStatus';
+        statusDiv.className = 'ffmpeg-status';
+        statusDiv.innerHTML = '<span class="spinner"></span>Loading FFmpeg.wasm...';
+        container.insertBefore(statusDiv, document.querySelector('.controls'));
+    }
+    
+    try {
+        console.log('Loading FFmpeg.wasm...');
+        
+        // Check if FFmpeg is available from CDN
+        if (typeof FFmpeg === 'undefined' || !FFmpeg.FFmpeg) {
+            throw new Error('FFmpeg library not loaded. Please check your internet connection.');
+        }
+        
+        if (typeof FFmpegUtil === 'undefined' || !FFmpegUtil.fetchFile) {
+            throw new Error('FFmpeg utilities not loaded. Please check your internet connection.');
+        }
+        
+        // Use UMD version - access the classes directly
+        ffmpeg = new FFmpeg.FFmpeg();
+        
+        // Set up progress and logging
+        ffmpeg.on('log', ({ message }) => {
+            console.log('FFmpeg:', message);
+        });
+        
+        ffmpeg.on('progress', ({ progress }) => {
+            if (isProcessing) {
+                updateProgress(progress * 100);
+            }
+        });
+        
+        // Load FFmpeg with explicit core URLs
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        await ffmpeg.load({
+            coreURL: await FFmpegUtil.fetchFile(`${baseURL}/ffmpeg-core.js`),
+            wasmURL: await FFmpegUtil.fetchFile(`${baseURL}/ffmpeg-core.wasm`),
+        });
+        
+        ffmpegLoaded = true;
+        console.log('FFmpeg.wasm loaded successfully!');
+        
+        // Update status
+        const statusEl = document.getElementById('ffmpegStatus');
+        statusEl.innerHTML = '✅ FFmpeg.wasm ready for GIF conversion!';
+        statusEl.classList.add('loaded');
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 3000);
+        
+        // Store fetchFile globally
+        window.fetchFile = FFmpegUtil.fetchFile;
+        
+    } catch (error) {
+        console.error('FFmpeg loading error:', error);
+        ffmpegLoaded = false;
+        
+        const statusEl = document.getElementById('ffmpegStatus');
+        statusEl.innerHTML = `
+            ❌ Failed to load FFmpeg.wasm<br>
+            <small>${error.message}</small><br>
+            <button onclick="location.reload()" style="
+                margin-top: 10px; padding: 8px 16px; background: #667eea; color: white;
+                border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
+            ">Retry</button>
+        `;
+        statusEl.style.background = 'rgba(244, 67, 54, 0.1)';
+        statusEl.style.borderColor = 'rgba(244, 67, 54, 0.3)';
+        statusEl.style.color = '#f44336';
+    }
+}
+
 // Handle GIF file
 function handleGifFile(file) {
     if (isProcessing) {
         showStatus('❌ Please wait for current conversion to complete.', 'error');
+        return;
+    }
+
+    if (!ffmpegLoaded) {
+        showStatus('❌ FFmpeg is still loading. Please wait and try again.', 'error');
         return;
     }
 
@@ -92,242 +181,153 @@ function handleGifFile(file) {
         return;
     }
 
-    if (file.size > 50 * 1024 * 1024) {
-        showStatus('❌ File too large. Please select a file under 50MB.', 'error');
-        return;
-    }
-
-    // Check MediaRecorder support
-    if (!window.MediaRecorder) {
-        showStatus('❌ Your browser does not support video recording. Please use Chrome, Firefox, or Edge.', 'error');
+    if (file.size > 100 * 1024 * 1024) {
+        showStatus('❌ File too large. Please select a file under 100MB.', 'error');
         return;
     }
 
     convertGifToWebm(file);
 }
 
-// Convert GIF to WebM using iterative quality approach (like Python script)
+// Convert GIF to WebM - Direct translation of Python script logic
 async function convertGifToWebm(file) {
     isProcessing = true;
     const dropZone = document.getElementById('dropZone');
-    const maxSize = parseInt(document.getElementById('maxSize').value) * 1024;
-    const initialQuality = parseInt(document.getElementById('crf').value);
+    const maxSizeKB = parseInt(document.getElementById('maxSize').value);
+    const startingCRF = parseInt(document.getElementById('crf').value);
     
     dropZone.classList.add('processing');
-    showStatus('<span class="spinner"></span>Loading GIF...', 'processing');
+    showStatus('<span class="spinner"></span>Analyzing GIF...', 'processing');
 
     try {
-        // Load GIF and get dimensions
-        const { img, width, height } = await loadGifImage(file);
-        console.log(`Original GIF: ${width}x${height}`);
+        // Write input file
+        console.log('Writing input file...');
+        await ffmpeg.writeFile('input.gif', await window.fetchFile(file));
         
-        // Calculate sticker dimensions (following Python logic)
-        const { targetWidth, targetHeight } = calculateStickerDimensions(width, height);
-        console.log(`Target dimensions: ${targetWidth}x${targetHeight}`);
+        // Get video info (equivalent to Python's get_video_info)
+        showStatus('<span class="spinner"></span>Getting video information...', 'processing');
         
-        // Try different quality settings until file size is acceptable (like Python CRF iteration)
-        const qualityLevels = [initialQuality, initialQuality + 5, initialQuality + 10, initialQuality + 15, initialQuality + 20, 60, 63];
+        let videoInfo;
+        try {
+            await ffmpeg.exec(['-i', 'input.gif', '-f', 'null', '-']);
+        } catch (e) {
+            // FFmpeg writes info to stderr, which causes "error" but is normal
+            console.log('Info extraction completed');
+        }
         
-        for (let i = 0; i < qualityLevels.length; i++) {
-            const currentQuality = Math.min(63, qualityLevels[i]);
-            showStatus(`<span class="spinner"></span>Converting with quality ${currentQuality}... (attempt ${i + 1}/${qualityLevels.length})`, 'processing');
+        // Try different CRF values until size requirement is met (same as Python)
+        const maxSizeBytes = maxSizeKB * 1024;
+        const crfValues = [startingCRF, 40, 45, 50, 55, 60, 63]; // Same progression as Python
+        
+        for (let i = 0; i < crfValues.length; i++) {
+            const crf = crfValues[i];
+            console.log(`Trying CRF ${crf}...`);
+            showStatus(`<span class="spinner"></span>Converting with CRF ${crf}... (attempt ${i + 1}/${crfValues.length})`, 'processing');
             
             try {
-                const result = await attemptConversion(img, targetWidth, targetHeight, currentQuality, file.name);
+                // Calculate scale filter (same logic as Python)
+                const scaleFilter = "scale=512:512:force_original_aspect_ratio=decrease";
                 
-                if (result.blob.size <= maxSize) {
-                    // Success! File meets size requirement
-                    downloadFile(result.blob, result.filename);
+                // Build video filter chain (same as Python)
+                const videoFilter = `${scaleFilter},fps=fps=min(30\\,source_fps)`;
+                
+                // Build FFmpeg command (exact translation of Python command)
+                const ffmpegArgs = [
+                    '-i', 'input.gif',
+                    '-t', '3',                          // Limit duration to 3 seconds
+                    '-c:v', 'libvpx-vp9',               // VP9 codec
+                    '-crf', crf.toString(),             // Quality setting
+                    '-b:v', '0',                        // Use CRF mode
+                    '-an',                              // Remove audio stream
+                    '-pix_fmt', 'yuva420p',             // Support transparency
+                    '-vf', videoFilter,                 // Video filters
+                    '-f', 'webm',                       // Force WebM format
+                    '-y',                               // Overwrite output
+                    'output.webm'
+                ];
+                
+                console.log('FFmpeg command:', ffmpegArgs.join(' '));
+                await ffmpeg.exec(ffmpegArgs);
+                
+                // Check if output file exists and get size
+                const data = await ffmpeg.readFile('output.webm');
+                const fileSize = data.length;
+                
+                console.log(`CRF ${crf}: ${fileSize} bytes (${(fileSize/1024).toFixed(1)} KB)`);
+                
+                if (fileSize <= maxSizeBytes) {
+                    // Success! File meets size requirement (same as Python logic)
+                    const blob = new Blob([data], { type: 'video/webm' });
+                    const sanitizedName = sanitizeFilename(file.name);
+                    const outputFilename = `${sanitizedName}_sticker.webm`;
+                    
+                    downloadFile(blob, outputFilename);
                     
                     dropZone.classList.remove('processing');
                     showStatus(
                         `✅ GIF converted to WebM sticker successfully!<br>` +
-                        `<strong>Output:</strong> ${result.filename}<br>` +
-                        `<strong>Size:</strong> ${(result.blob.size/1024).toFixed(1)} KB<br>` +
-                        `<strong>Dimensions:</strong> ${targetWidth}×${targetHeight}<br>` +
-                        `<strong>Quality:</strong> ${currentQuality}<br>` +
+                        `<strong>Output:</strong> ${outputFilename}<br>` +
+                        `<strong>Size:</strong> ${(fileSize/1024).toFixed(1)} KB<br>` +
+                        `<strong>CRF:</strong> ${crf}<br>` +
+                        `<strong>Max side:</strong> 512px<br>` +
+                        `<strong>Codec:</strong> VP9<br>` +
                         `<strong>Format:</strong> WebM`,
                         'success',
-                        result.filename
+                        outputFilename
                     );
                     
+                    // Cleanup
+                    await cleanupFiles();
                     document.getElementById('fileInput').value = '';
                     return;
                 } else {
-                    console.log(`Quality ${currentQuality}: ${(result.blob.size/1024).toFixed(1)} KB (too large)`);
+                    console.log(`File too large (${(fileSize/1024).toFixed(1)} KB > ${maxSizeKB} KB), trying higher CRF...`);
                 }
                 
             } catch (error) {
-                console.warn(`Quality ${currentQuality} failed:`, error);
+                console.error(`CRF ${crf} failed:`, error);
                 continue;
             }
         }
         
-        // If we get here, couldn't meet size requirement
+        // If we get here, couldn't meet size requirement (same as Python)
         dropZone.classList.remove('processing');
         showStatus(
-            `❌ Could not create file under ${maxSize/1024} KB limit!<br>` +
-            `Try using a smaller or shorter GIF, or increase the file size limit.`,
+            `❌ Could not create file under ${maxSizeKB} KB limit!<br>` +
+            `Try using a smaller GIF or increase the file size limit.`,
             'error'
         );
-
+        
     } catch (error) {
         console.error('Conversion error:', error);
         dropZone.classList.remove('processing');
         showStatus(`❌ Conversion failed: ${error.message}`, 'error');
     } finally {
+        await cleanupFiles();
         isProcessing = false;
         document.getElementById('fileInput').value = '';
     }
 }
 
-// Load GIF image and get dimensions
-async function loadGifImage(file) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            resolve({
-                img: img,
-                width: img.naturalWidth,
-                height: img.naturalHeight
-            });
-        };
-        img.onerror = () => reject(new Error('Failed to load GIF image'));
-        img.src = URL.createObjectURL(file);
-    });
-}
-
-// Calculate sticker dimensions (same logic as Python script)
-function calculateStickerDimensions(originalWidth, originalHeight) {
-    const maxSize = 512;
-    
-    // One side must be 512px, other side 512px or less (preserve aspect ratio)
-    if (originalWidth >= originalHeight) {
-        // Wider than tall - make width 512px
-        const targetWidth = Math.min(maxSize, originalWidth);
-        const targetHeight = Math.round(targetWidth * (originalHeight / originalWidth));
-        return { targetWidth, targetHeight };
-    } else {
-        // Taller than wide - make height 512px  
-        const targetHeight = Math.min(maxSize, originalHeight);
-        const targetWidth = Math.round(targetHeight * (originalWidth / originalHeight));
-        return { targetWidth, targetHeight };
+// Cleanup temporary files
+async function cleanupFiles() {
+    try {
+        await ffmpeg.deleteFile('input.gif');
+        await ffmpeg.deleteFile('output.webm');
+    } catch (e) {
+        console.warn('Cleanup warning:', e);
     }
 }
 
-// Attempt conversion with specific quality setting
-async function attemptConversion(img, width, height, quality, originalFilename) {
-    return new Promise((resolve, reject) => {
-        // Create canvas for rendering
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Set up MediaRecorder with quality-based bitrate
-        const frameRate = 15; // Fixed 15 FPS for consistent results
-        const bitrate = calculateBitrate(quality, width, height, frameRate);
-        
-        let recorder;
-        const stream = canvas.captureStream(frameRate);
-        
-        // Try to create recorder with best available codec
-        const codecOptions = [
-            { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: bitrate },
-            { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: bitrate },
-            { mimeType: 'video/webm', videoBitsPerSecond: bitrate }
-        ];
-        
-        let usedCodec = 'webm';
-        for (const option of codecOptions) {
-            try {
-                if (MediaRecorder.isTypeSupported(option.mimeType)) {
-                    recorder = new MediaRecorder(stream, option);
-                    usedCodec = option.mimeType;
-                    break;
-                }
-            } catch (e) {
-                continue;
-            }
+// Update progress
+function updateProgress(percent) {
+    const status = document.getElementById('status');
+    if (status.classList.contains('processing')) {
+        const currentText = status.innerHTML;
+        if (currentText.includes('Converting with CRF')) {
+            const baseText = currentText.split('<br>')[0];
+            status.innerHTML = `${baseText}<br>Progress: ${Math.round(percent)}%`;
         }
-        
-        if (!recorder) {
-            recorder = new MediaRecorder(stream, { videoBitsPerSecond: bitrate });
-        }
-        
-        const chunks = [];
-        recorder.ondataavailable = (e) => {
-            if (e.data.size > 0) {
-                chunks.push(e.data);
-            }
-        };
-        
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: usedCodec });
-            const sanitizedName = sanitizeFilename(originalFilename);
-            const filename = `${sanitizedName}_sticker.webm`;
-            resolve({ blob, filename });
-        };
-        
-        recorder.onerror = (e) => {
-            reject(new Error('Recording failed: ' + e.error));
-        };
-        
-        // Start recording
-        recorder.start();
-        
-        // Render animation (create looping effect like the original GIF)
-        renderAnimation(ctx, img, width, height).then(() => {
-            recorder.stop();
-        }).catch(reject);
-    });
-}
-
-// Calculate bitrate based on quality (reverse CRF logic from Python)
-function calculateBitrate(quality, width, height, frameRate) {
-    const pixels = width * height;
-    const pixelsPerSecond = pixels * frameRate;
-    
-    // Base bitrate (similar to Python's CRF calculation)
-    const baseBitrate = pixelsPerSecond * 0.1; // 0.1 bits per pixel per second base
-    
-    // Quality to bitrate mapping (reverse CRF: higher quality number = lower bitrate)
-    const qualityMultiplier = Math.max(0.1, (65 - quality) / 45); // Scale from 63 down to 20
-    
-    return Math.round(Math.max(100000, baseBitrate * qualityMultiplier)); // Minimum 100kbps
-}
-
-// Render animation by looping the GIF image with timing
-async function renderAnimation(ctx, img, width, height) {
-    const animationDuration = 2000; // 2 seconds total (under 3 second limit)
-    const frameRate = 15;
-    const frameCount = Math.round((animationDuration / 1000) * frameRate);
-    const frameDelay = animationDuration / frameCount;
-    
-    for (let frame = 0; frame < frameCount; frame++) {
-        // Clear canvas
-        ctx.clearRect(0, 0, width, height);
-        
-        // Draw scaled image (this preserves the GIF content)
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Add very subtle animation to ensure it's not completely static
-        // This simulates the "animated" nature even if original timing is lost
-        const animationProgress = frame / frameCount;
-        const scale = 1 + Math.sin(animationProgress * Math.PI * 6) * 0.01; // Very subtle scale
-        
-        if (Math.abs(scale - 1) > 0.005) {
-            ctx.save();
-            ctx.translate(width / 2, height / 2);
-            ctx.scale(scale, scale);
-            ctx.translate(-width / 2, -height / 2);
-            ctx.clearRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
-            ctx.restore();
-        }
-        
-        // Wait for next frame
-        await new Promise(resolve => setTimeout(resolve, frameDelay));
     }
 }
 
@@ -377,7 +377,7 @@ function clearStatusOnNewFile() {
     }
 }
 
-// Prevent default drag behaviors on the page
+// Prevent default drag behaviors
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     document.addEventListener(eventName, (e) => {
         e.preventDefault();

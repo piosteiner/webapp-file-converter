@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GIF to WebM Sticker Converter</title>
-    <meta name="description" content="Free online GIF to WebM sticker converter that preserves original animation with VP9 codec.">
-    <meta name="keywords" content="GIF to WebM, sticker converter, VP9, WebM converter, animated stickers">
+    <meta name="description" content="Professional GIF to WebM sticker converter using FFmpeg.wasm with VP9 codec.">
+    <meta name="keywords" content="GIF to WebM, sticker converter, FFmpeg, VP9, WebM converter, animated stickers">
     <link rel="canonical" href="https://converter.piogino.ch/html/gif-converter.html">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
     <link rel="stylesheet" href="../css/styles.css">
@@ -14,12 +14,14 @@
 <body class="converter-page gif-converter">
     <div class="container">
         <h1>🎬 GIF → WebM Sticker</h1>
-        <p class="subtitle">Convert animated GIFs to WebM stickers<br>Preserves original animation • Max 512px • Up to 30 FPS</p>
+        <p class="subtitle">Professional GIF to WebM conversion using FFmpeg.wasm<br>VP9 codec • Original animation preserved • Max 512px • Up to 30 FPS</p>
         
         <div class="nav-links">
             <a href="../index.html">← Home</a>
             <a href="png-converter.html">PNG → JPEG</a>
         </div>
+
+        <!-- FFmpeg Status will be inserted here dynamically -->
 
         <div class="controls">
             <div class="control-group">
@@ -29,7 +31,7 @@
             </div>
 
             <div class="control-group">
-                <label class="control-label" for="crf">Quality</label>
+                <label class="control-label" for="crf">Quality (CRF)</label>
                 <input type="range" id="crf" class="control-input" min="20" max="63" value="35">
                 <div class="control-value" id="crfValue">35 (High)</div>
             </div>
@@ -38,7 +40,7 @@
         <div class="drop-zone" id="dropZone">
             <div class="drop-icon">🎬</div>
             <div class="drop-text">Drop your animated GIF here</div>
-            <div class="drop-subtext">or click to browse • Animation preserved • WebM format</div>
+            <div class="drop-subtext">or click to browse • FFmpeg.wasm powered • VP9 encoding</div>
         </div>
 
         <input type="file" id="fileInput" accept=".gif,image/gif" class="hidden">
@@ -46,18 +48,26 @@
         <div class="status" id="status"></div>
 
         <div class="features" style="margin-top: 20px; text-align: left;">
-            <h3>📋 Sticker Requirements Met:</h3>
+            <h3>🔧 Professional Conversion Features:</h3>
             <ul style="margin-top: 10px; padding-left: 20px; color: var(--text-secondary);">
-                <li>✅ <strong>WebM format</strong> with best available codec</li>
-                <li>✅ <strong>Max 30 FPS</strong> frame rate</li>
-                <li>✅ <strong>512px max</strong> on one side (aspect ratio preserved)</li>
-                <li>✅ <strong>Original duration</strong> preserved (max 3 seconds)</li>
-                <li>✅ <strong>File size limit</strong> configurable (default 256 KB)</li>
-                <li>✅ <strong>Animation preserved</strong> from original GIF</li>
+                <li>✅ <strong>FFmpeg.wasm powered</strong> - Same engine as desktop tools</li>
+                <li>✅ <strong>VP9 codec</strong> with libvpx-vp9 encoder</li>
+                <li>✅ <strong>Original animation preserved</strong> with proper timing</li>
+                <li>✅ <strong>CRF quality control</strong> - Iterative size optimization</li>
+                <li>✅ <strong>512px max dimension</strong> with aspect ratio preservation</li>
+                <li>✅ <strong>30 FPS limit</strong> and 3-second duration cap</li>
+                <li>✅ <strong>Transparency support</strong> with yuva420p pixel format</li>
+                <li>✅ <strong>Size guarantee</strong> - Only outputs files under limit</li>
             </ul>
+        </div>
+
+        <div class="tech-note" style="margin-top: 15px; padding: 15px; background: var(--features-bg); border-radius: 10px; font-size: 0.9em; color: var(--text-tertiary);">
+            <strong>Technical Note:</strong> This converter uses the same FFmpeg engine as professional video editing software, 
+            running entirely in your browser via WebAssembly. First load may take a moment as FFmpeg.wasm downloads (~25MB).
         </div>
     </div>
 
-    <script src="../js/gif-converter.js"></script>
+    <!-- Load as ES module for modern FFmpeg.wasm -->
+    <script type="module" src="../js/gif-converter.js"></script>
 </body>
 </html>
