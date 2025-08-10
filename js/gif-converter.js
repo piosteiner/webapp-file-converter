@@ -1,8 +1,8 @@
-// Server-Side GIF to WebM Converter - Client
-// Uploads files to Flask server for processing
+// Server-Side GIF to WebM Converter with BULK SUPPORT
+// Uploads multiple files to Flask server for processing
 
 let isProcessing = false;
-const SERVER_URL = 'http://localhost:5000'; // Change this to your server URL
+const SERVER_URL = 'http://83.228.207.199:5000'; // Update with your server URL
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -41,22 +41,23 @@ function initializeConverter() {
         }
     });
 
-    // File input change
+    // File input change - NOW HANDLES MULTIPLE FILES
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
-            handleGifFile(e.target.files[0]);
+            const files = Array.from(e.target.files);
+            console.log('Selected files:', files.length);
+            processFiles(files);
         }
     });
 
-    // Drag and drop events
-    setupDragDrop(dropZone, handleGifFile);
+    // Drag and drop events - NOW HANDLES MULTIPLE FILES
+    setupDragDrop(dropZone);
 }
 
 // Check if server is running
 async function checkServerHealth() {
     const statusEl = document.getElementById('serverStatus');
     if (!statusEl) {
-        // Create status element
         const container = document.querySelector('.container');
         const statusDiv = document.createElement('div');
         statusDiv.id = 'serverStatus';
@@ -83,15 +84,13 @@ async function checkServerHealth() {
                 statusEl.style.borderColor = 'rgba(255, 152, 0, 0.3)';
                 statusEl.style.color = '#ff9800';
             }
-        } else {
-            throw new Error('Server unhealthy');
         }
     } catch (error) {
         console.error('Server health check failed:', error);
         const statusEl = document.getElementById('serverStatus');
         statusEl.innerHTML = `
             ❌ Server not available<br>
-            <small>Please start the Flask server</small><br>
+            <small>Make sure the Flask server is running</small><br>
             <button onclick="checkServerHealth()" style="
                 margin-top: 10px; padding: 8px 16px; background: #667eea; color: white;
                 border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
@@ -104,7 +103,7 @@ async function checkServerHealth() {
 }
 
 // Drag and drop setup
-function setupDragDrop(dropZone, handler) {
+function setupDragDrop(dropZone) {
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         if (!isProcessing) {
@@ -122,61 +121,69 @@ function setupDragDrop(dropZone, handler) {
         dropZone.classList.remove('dragover');
         
         if (!isProcessing) {
-            const files = e.dataTransfer.files;
+            const files = Array.from(e.dataTransfer.files);
+            console.log('Dropped files:', files.length);
             if (files.length > 0) {
-                handler(files[0]);
+                processFiles(files);
             }
         }
     });
 }
 
-// Handle GIF file
-function handleGifFile(file) {
+// Process multiple files
+async function processFiles(files) {
     if (isProcessing) {
-        showStatus('❌ Please wait for current conversion to complete.', 'error');
+        addMessage('❌ Please wait for current conversion to complete.', 'error');
         return;
     }
 
-    clearStatusOnNewFile();
-    console.log('Processing GIF file:', file.name, 'Size:', file.size, 'Type:', file.type);
+    console.log(`Starting processing of ${files.length} files`);
+    isProcessing = true;
 
-    if (!file.type.includes('gif')) {
-        showStatus('❌ Please select a GIF file only.', 'error');
+    const dropZone = document.getElementById('dropZone');
+    dropZone.classList.add('processing');
+
+    // Filter to GIF files only
+    const gifFiles = files.filter(file => file.type.includes('gif'));
+    
+    if (gifFiles.length === 0) {
+        finishProcessing('❌ No GIF files found. Please select GIF files only.', 'error', []);
         return;
     }
 
-    if (file.size > 100 * 1024 * 1024) {
-        showStatus('❌ File too large. Please select a file under 100MB.', 'error');
+    if (gifFiles.length !== files.length) {
+        console.log(`Filtered to ${gifFiles.length} GIF files from ${files.length} total files`);
+    }
+
+    // Check for oversized files
+    const oversizedFiles = gifFiles.filter(f => f.size > 100 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+        finishProcessing('❌ Some files are over 100MB. Please use smaller files.', 'error', []);
         return;
     }
 
-    if (file.size === 0) {
-        showStatus('❌ File appears to be empty. Please try another file.', 'error');
-        return;
+    // Single file or bulk?
+    if (gifFiles.length === 1) {
+        await convertSingleFile(gifFiles[0]);
+    } else {
+        await convertMultipleFiles(gifFiles);
     }
-
-    convertGifOnServer(file);
 }
 
-// Convert GIF using server-side processing
-async function convertGifOnServer(file) {
-    isProcessing = true;
-    const dropZone = document.getElementById('dropZone');
+// Convert single file (existing logic)
+async function convertSingleFile(file) {
     const maxSizeKB = parseInt(document.getElementById('maxSize').value);
     const crf = parseInt(document.getElementById('crf').value);
     
-    dropZone.classList.add('processing');
     showStatus('<span class="spinner"></span>Uploading GIF to server...', 'processing');
 
     try {
-        // Create form data
         const formData = new FormData();
         formData.append('file', file);
         formData.append('max_size', maxSizeKB);
-        formData.append('mode', 'sticker'); // Always sticker mode
+        formData.append('mode', 'sticker');
         formData.append('crf', crf);
 
-        // Upload and convert
         showStatus('<span class="spinner"></span>Converting on server...', 'processing');
         
         const response = await fetch(`${SERVER_URL}/api/convert`, {
@@ -187,43 +194,100 @@ async function convertGifOnServer(file) {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // Success! Download the converted file
             showStatus('<span class="spinner"></span>Downloading converted file...', 'processing');
             
             await downloadConvertedFile(result.download_id, result.output_filename);
             
-            dropZone.classList.remove('processing');
-            showStatus(
+            const now = new Date().toLocaleString();
+            finishProcessing(
                 `✅ GIF converted to WebM sticker successfully!<br>` +
                 `<strong>Output:</strong> ${result.output_filename}<br>` +
                 `<strong>Original:</strong> ${result.original_size_kb} KB → <strong>Final:</strong> ${result.output_size_kb} KB<br>` +
                 `<strong>Compression:</strong> ${result.compression_ratio}% reduction<br>` +
-                `<strong>Dimensions:</strong> ${result.original_width || '?'}×${result.original_height || '?'} → ${result.output_width || '?'}×${result.output_height || '?'}<br>` +
-                `<strong>Duration:</strong> ${(result.output_duration || 0).toFixed(1)}s<br>` +
-                `<strong>Processing:</strong> Server-side FFmpeg`,
+                `<strong>Downloaded:</strong> ${now}`,
                 'success',
-                result.output_filename
+                [{original: file.name, converted: result.output_filename}]
             );
-            
         } else {
-            // Server returned an error
-            dropZone.classList.remove('processing');
-            const errorMessage = result.error || 'Unknown server error';
-            showStatus(`❌ Conversion failed: ${errorMessage}`, 'error');
+            finishProcessing(`❌ Conversion failed: ${result.error || 'Unknown error'}`, 'error', []);
         }
-
     } catch (error) {
         console.error('Conversion error:', error);
-        dropZone.classList.remove('processing');
+        finishProcessing(`❌ Conversion failed: ${error.message}`, 'error', []);
+    }
+}
+
+// Convert multiple files using bulk endpoint
+async function convertMultipleFiles(files) {
+    const maxSizeKB = parseInt(document.getElementById('maxSize').value);
+    const crf = parseInt(document.getElementById('crf').value);
+    
+    showStatus(`<span class="spinner"></span>Uploading ${files.length} GIF files to server...`, 'processing');
+
+    try {
+        const formData = new FormData();
+        files.forEach(file => {
+            formData.append('files', file);
+        });
+        formData.append('max_size', maxSizeKB);
+        formData.append('mode', 'sticker');
+        formData.append('crf', crf);
+
+        showStatus(`<span class="spinner"></span>Converting ${files.length} files on server...`, 'processing');
         
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            showStatus('❌ Cannot connect to server. Please ensure the Flask server is running.', 'error');
+        const response = await fetch(`${SERVER_URL}/api/convert-bulk`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Process results
+            const successfulFiles = [];
+            let statusMessage = '';
+            
+            if (result.successful > 0) {
+                // Download each successful file
+                for (const fileResult of result.results) {
+                    if (fileResult.success) {
+                        showStatus(`<span class="spinner"></span>Downloading ${fileResult.output_filename}...`, 'processing');
+                        await downloadConvertedFile(fileResult.download_id, fileResult.output_filename);
+                        successfulFiles.push({
+                            original: fileResult.filename,
+                            converted: fileResult.output_filename
+                        });
+                    }
+                }
+            }
+
+            const now = new Date().toLocaleString();
+            
+            if (result.successful === result.total) {
+                statusMessage = `✅ Successfully converted all ${result.successful} GIF files!<br><strong>Completed:</strong> ${now}`;
+            } else if (result.successful > 0) {
+                statusMessage = `⚠️ Converted ${result.successful} out of ${result.total} files<br><strong>Completed:</strong> ${now}`;
+                
+                // Show failed files
+                const failedFiles = result.results.filter(r => !r.success);
+                if (failedFiles.length > 0) {
+                    statusMessage += '<br><strong>Failed files:</strong><br>';
+                    failedFiles.forEach(f => {
+                        statusMessage += `• ${f.filename}: ${f.error}<br>`;
+                    });
+                }
+            } else {
+                statusMessage = '❌ No files were successfully converted.';
+            }
+            
+            finishProcessing(statusMessage, result.successful > 0 ? 'success' : 'error', successfulFiles);
+            
         } else {
-            showStatus(`❌ Conversion failed: ${error.message}`, 'error');
+            finishProcessing(`❌ Bulk conversion failed: ${result.error || 'Unknown error'}`, 'error', []);
         }
-    } finally {
-        isProcessing = false;
-        document.getElementById('fileInput').value = '';
+    } catch (error) {
+        console.error('Bulk conversion error:', error);
+        finishProcessing(`❌ Bulk conversion failed: ${error.message}`, 'error', []);
     }
 }
 
@@ -235,7 +299,6 @@ async function downloadConvertedFile(downloadId, filename) {
         if (response.ok) {
             const blob = await response.blob();
             
-            // Create download link
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
@@ -244,36 +307,84 @@ async function downloadConvertedFile(downloadId, filename) {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            
         } else {
             throw new Error('Download failed');
         }
     } catch (error) {
         console.error('Download error:', error);
-        showStatus(`❌ Download failed: ${error.message}`, 'error');
+        throw error;
     }
 }
 
-// Utility functions
-function showStatus(message, type, filename = null) {
-    const status = document.getElementById('status');
+// Finish processing and cleanup
+function finishProcessing(message, type, successfulFiles) {
+    isProcessing = false;
+    const dropZone = document.getElementById('dropZone');
+    dropZone.classList.remove('processing');
+    document.getElementById('fileInput').value = '';
     
-    if (type === 'success' && filename) {
-        const now = new Date();
-        const timeString = now.toLocaleString();
-        status.innerHTML = message + `<br><strong>Downloaded:</strong> ${timeString}`;
+    addMessage(message, type, successfulFiles);
+}
+
+// Add message to status (with file list if applicable)
+function addMessage(message, type, successfulFiles = []) {
+    const statusContainer = document.getElementById('status');
+    
+    // Clear processing messages
+    const processingMessages = statusContainer.querySelectorAll('.status-message.processing');
+    processingMessages.forEach(msg => msg.remove());
+    
+    // Create new message element
+    const messageElement = document.createElement('div');
+    messageElement.className = `status-message show ${type}`;
+    
+    let messageContent = message;
+    
+    // Add list of successful files if any
+    if (successfulFiles.length > 0) {
+        messageContent += '<br><strong>Converted files:</strong><br>';
+        successfulFiles.forEach(file => {
+            messageContent += `• ${file.original} → ${file.converted}<br>`;
+        });
+    }
+    
+    messageElement.innerHTML = messageContent;
+    
+    // Insert at the top
+    if (statusContainer.firstChild) {
+        statusContainer.insertBefore(messageElement, statusContainer.firstChild);
     } else {
-        status.innerHTML = message;
+        statusContainer.appendChild(messageElement);
     }
     
-    status.className = `status show ${type}`;
+    // Keep only last 5 messages
+    const allMessages = statusContainer.querySelectorAll('.status-message');
+    if (allMessages.length > 5) {
+        for (let i = 5; i < allMessages.length; i++) {
+            allMessages[i].remove();
+        }
+    }
 }
 
-function clearStatusOnNewFile() {
-    const status = document.getElementById('status');
-    if (!status.classList.contains('processing')) {
-        status.classList.remove('show');
-        status.innerHTML = '';
+// Show status (simple wrapper for compatibility)
+function showStatus(message, type) {
+    const statusContainer = document.getElementById('status');
+    
+    // For processing messages, update or create
+    if (type === 'processing') {
+        let processingMsg = statusContainer.querySelector('.status-message.processing');
+        if (!processingMsg) {
+            processingMsg = document.createElement('div');
+            processingMsg.className = 'status-message show processing';
+            if (statusContainer.firstChild) {
+                statusContainer.insertBefore(processingMsg, statusContainer.firstChild);
+            } else {
+                statusContainer.appendChild(processingMsg);
+            }
+        }
+        processingMsg.innerHTML = message;
+    } else {
+        addMessage(message, type);
     }
 }
 
