@@ -4,6 +4,20 @@
 let isProcessing = false;
 const SERVER_URL = 'https://api.piogino.ch'; // Update with your server URL
 
+// NEW: helpers ---------------------------------------------------------------
+function withTimeout(ms) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, clear: () => clearTimeout(id) };
+}
+
+async function safeJson(response) {
+  const text = await response.text();
+  try { return JSON.parse(text); }
+  catch { return { error: text || `HTTP ${response.status}` }; }
+}
+// ---------------------------------------------------------------------------
+
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initializeConverter();
@@ -66,8 +80,10 @@ async function checkServerHealth() {
         container.insertBefore(statusDiv, document.querySelector('.controls'));
     }
 
+    // NEW: add timeout + no-store cache
+    const t = withTimeout(8000);
     try {
-        const response = await fetch(`${SERVER_URL}/api/health`, { cache: 'no-store' });
+        const response = await fetch(`${SERVER_URL}/api/health`, { cache: 'no-store', signal: t.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         
@@ -91,7 +107,7 @@ async function checkServerHealth() {
         const statusEl = document.getElementById('serverStatus');
         statusEl.innerHTML = `
             ❌ Server not available<br>
-            <small>Make sure the Flask server is running</small><br>
+            <small>${error.name === 'AbortError' ? 'Request timed out' : 'Make sure the Flask server is running'}</small><br>
             <button onclick="checkServerHealth()" style="
                 margin-top: 10px; padding: 8px 16px; background: #667eea; color: white;
                 border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
@@ -100,6 +116,8 @@ async function checkServerHealth() {
         statusEl.style.background = 'rgba(244, 67, 54, 0.1)';
         statusEl.style.borderColor = 'rgba(244, 67, 54, 0.3)';
         statusEl.style.color = '#f44336';
+    } finally {
+        t.clear();
     }
 }
 
@@ -144,10 +162,10 @@ async function processFiles(files) {
     const dropZone = document.getElementById('dropZone');
     dropZone.classList.add('processing');
 
-    // Filter to GIF files only
+    // Filter to GIF files only (MIME OR filename)
     const gifFiles = files.filter(f =>
-    (f.type && f.type.toLowerCase().includes('gif')) ||
-    f.name.toLowerCase().endsWith('.gif')
+        (f.type && f.type.toLowerCase().includes('gif')) ||
+        f.name.toLowerCase().endsWith('.gif')
     );
     
     if (gifFiles.length === 0) {
@@ -174,12 +192,15 @@ async function processFiles(files) {
     }
 }
 
-// Convert single file (existing logic)
+// Convert single file
 async function convertSingleFile(file) {
     const maxSizeKB = parseInt(document.getElementById('maxSize').value);
     const crf = parseInt(document.getElementById('crf').value);
     
     showStatus('<span class="spinner"></span>Uploading GIF to server...', 'processing');
+
+    // NEW: timeout for conversion (90s)
+    const t = withTimeout(90_000);
 
     try {
         const formData = new FormData();
@@ -192,14 +213,15 @@ async function convertSingleFile(file) {
         
         const response = await fetch(`${SERVER_URL}/api/convert`, {
             method: 'POST',
-            body: formData
+            body: formData,
+            signal: t.signal
         });
 
-        const result = await response.json();
+        // NEW: safe JSON parsing
+        const result = await safeJson(response);
 
         if (response.ok && result.success) {
             showStatus('<span class="spinner"></span>Downloading converted file...', 'processing');
-            
             await downloadConvertedFile(result.download_id, result.output_filename);
             
             const now = new Date().toLocaleString();
@@ -213,11 +235,13 @@ async function convertSingleFile(file) {
                 [{original: file.name, converted: result.output_filename}]
             );
         } else {
-            finishProcessing(`❌ Conversion failed: ${result.error || 'Unknown error'}`, 'error', []);
+            finishProcessing(`❌ Conversion failed: ${result.error || `HTTP ${response.status}`}`, 'error', []);
         }
     } catch (error) {
         console.error('Conversion error:', error);
-        finishProcessing(`❌ Conversion failed: ${error.message}`, 'error', []);
+        finishProcessing(`❌ Conversion failed: ${error.name === 'AbortError' ? 'Request timed out' : error.message}`, 'error', []);
+    } finally {
+        t.clear();
     }
 }
 
@@ -228,11 +252,12 @@ async function convertMultipleFiles(files) {
     
     showStatus(`<span class="spinner"></span>Uploading ${files.length} GIF files to server...`, 'processing');
 
+    // NEW: longer timeout for bulk (180s)
+    const t = withTimeout(180_000);
+
     try {
         const formData = new FormData();
-        files.forEach(file => {
-            formData.append('files', file);
-        });
+        files.forEach(file => formData.append('files', file));
         formData.append('max_size', maxSizeKB);
         formData.append('mode', 'sticker');
         formData.append('crf', crf);
@@ -241,10 +266,12 @@ async function convertMultipleFiles(files) {
         
         const response = await fetch(`${SERVER_URL}/api/convert-bulk`, {
             method: 'POST',
-            body: formData
+            body: formData,
+            signal: t.signal
         });
 
-        const result = await response.json();
+        // NEW: safe JSON parsing
+        const result = await safeJson(response);
 
         if (response.ok) {
             // Process results
@@ -287,18 +314,22 @@ async function convertMultipleFiles(files) {
             finishProcessing(statusMessage, result.successful > 0 ? 'success' : 'error', successfulFiles);
             
         } else {
-            finishProcessing(`❌ Bulk conversion failed: ${result.error || 'Unknown error'}`, 'error', []);
+            finishProcessing(`❌ Bulk conversion failed: ${result.error || `HTTP ${response.status}`}`, 'error', []);
         }
     } catch (error) {
         console.error('Bulk conversion error:', error);
-        finishProcessing(`❌ Bulk conversion failed: ${error.message}`, 'error', []);
+        finishProcessing(`❌ Bulk conversion failed: ${error.name === 'AbortError' ? 'Request timed out' : error.message}`, 'error', []);
+    } finally {
+        t.clear();
     }
 }
 
 // Download converted file from server
 async function downloadConvertedFile(downloadId, filename) {
+    // NEW: timeout for download (60s) + no-store
+    const t = withTimeout(60_000);
     try {
-        const response = await fetch(`${SERVER_URL}/api/download/${downloadId}`, { cache: 'no-store' });
+        const response = await fetch(`${SERVER_URL}/api/download/${downloadId}`, { cache: 'no-store', signal: t.signal });
         
         if (response.ok) {
             const blob = await response.blob();
@@ -316,7 +347,9 @@ async function downloadConvertedFile(downloadId, filename) {
         }
     } catch (error) {
         console.error('Download error:', error);
-        throw error;
+        throw new Error(error.name === 'AbortError' ? 'Download timed out' : error.message);
+    } finally {
+        t.clear();
     }
 }
 
