@@ -102,23 +102,34 @@ function handleGifFile(file) {
         return;
     }
 
-    // Check MediaRecorder support with VP9
+    // Check MediaRecorder support
     if (!window.MediaRecorder) {
         showStatus('❌ Your browser does not support video recording. Please use Chrome, Firefox, or Edge.', 'error');
         return;
     }
 
-    // Check VP9 support specifically
-    if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
-        showStatus('❌ Your browser does not support VP9 codec. Please use a modern version of Chrome, Firefox, or Edge.', 'error');
-        return;
+    // Try to find the best codec, but don't fail if none are explicitly supported
+    const preferredCodecs = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs="vp09.00.10.08"',
+        'video/webm;codecs=vp8',
+        'video/webm'
+    ];
+    
+    let selectedCodec = 'video/webm'; // Default fallback
+    for (const codec of preferredCodecs) {
+        if (MediaRecorder.isTypeSupported(codec)) {
+            selectedCodec = codec;
+            break;
+        }
     }
 
-    convertGifToWebm(file);
+    console.log('Using codec:', selectedCodec);
+    convertGifToWebm(file, selectedCodec);
 }
 
 // Convert GIF to WebM using proper GIF parsing
-async function convertGifToWebm(file) {
+async function convertGifToWebm(file, mimeType) {
     isProcessing = true;
     const dropZone = document.getElementById('dropZone');
     const maxSize = parseInt(document.getElementById('maxSize').value) * 1024;
@@ -152,13 +163,29 @@ async function convertGifToWebm(file) {
         const actualDuration = Math.min(gifData.totalDuration, maxDuration);
         const speedMultiplier = gifData.totalDuration > maxDuration ? maxDuration / gifData.totalDuration : 1;
 
-        // Set up MediaRecorder with VP9 codec and 30 FPS max
+        // Set up MediaRecorder with best available codec and 30 FPS max
         const frameRate = Math.min(30, Math.round(1000 / (gifData.averageFrameDelay * speedMultiplier)));
         const stream = canvas.captureStream(frameRate);
-        const recorder = new MediaRecorder(stream, {
-            mimeType: 'video/webm;codecs=vp9',
-            videoBitsPerSecond: calculateBitrate(quality, width, height, frameRate)
-        });
+        
+        let recorder;
+        try {
+            // Try with the selected codec first
+            recorder = new MediaRecorder(stream, {
+                mimeType: mimeType,
+                videoBitsPerSecond: calculateBitrate(quality, width, height, frameRate)
+            });
+        } catch (e) {
+            console.warn('Failed to create recorder with codec, trying basic setup:', e);
+            // Fallback: let browser choose codec automatically
+            try {
+                recorder = new MediaRecorder(stream, {
+                    videoBitsPerSecond: calculateBitrate(quality, width, height, frameRate)
+                });
+                mimeType = 'video/webm'; // Update mime type for output
+            } catch (e2) {
+                throw new Error('MediaRecorder not supported with any configuration');
+            }
+        }
 
         const chunks = [];
         recorder.ondataavailable = (e) => {
@@ -179,7 +206,7 @@ async function convertGifToWebm(file) {
         // Wait for recording to finish
         const webmBlob = await new Promise((resolve) => {
             recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm;codecs=vp9' });
+                const blob = new Blob(chunks, { type: mimeType });
                 resolve(blob);
             };
         });
@@ -202,6 +229,7 @@ async function convertGifToWebm(file) {
                 `<strong>Dimensions:</strong> ${width}×${height}<br>` +
                 `<strong>Duration:</strong> ${(actualDuration/1000).toFixed(1)}s<br>` +
                 `<strong>Frame Rate:</strong> ${frameRate} FPS<br>` +
+                `<strong>Format:</strong> WebM<br>` +
                 `<strong>Frames:</strong> ${gifData.frames.length}`,
                 'success',
                 outputFilename
