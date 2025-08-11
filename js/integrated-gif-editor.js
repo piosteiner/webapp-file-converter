@@ -15,10 +15,10 @@ class IntegratedGifEditor {
         this.dragType = null;
         this.dragStartX = 0;
         this.dragStartTime = 0;
-        
+
         // Server URL (same as main converter)
-        this.SERVER_URL = 'https://api.piogino.ch';
-        
+        this.SERVER_URL = (window.SERVER_URL || 'https://api.piogino.ch');
+
         // UI elements
         this.editorDropZone = document.getElementById('editorDropZone');
         this.editorFileInput = document.getElementById('editorFileInput');
@@ -34,8 +34,14 @@ class IntegratedGifEditor {
     }
 
     initializeEditor() {
-        // File upload for editor
-        this.editorDropZone.addEventListener('click', () => {
+        // Button wiring (editor section)
+        document.getElementById('openEditorBtn')?.addEventListener('click', () => {
+            this.editorContainer?.classList.remove('hidden');
+            this.editorContainer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        // Replace file
+        document.getElementById('replaceGifBtn')?.addEventListener('click', () => {
             if (!this.isProcessing) this.editorFileInput.click();
         });
         
@@ -50,9 +56,10 @@ class IntegratedGifEditor {
 
         // Video controls
         document.getElementById('playPauseBtn').addEventListener('click', () => this.togglePlayback());
-        document.getElementById('restartBtn').addEventListener('click', () => this.restart());
+        document.getElementById('restartBtn').addEventListener('click', () => this.seekTo(this.startTime));
+        document.getElementById('loopBtn').addEventListener('click', () => this.toggleLoop());
 
-        // Timeline controls
+        // Timeline handles & area
         this.startHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'start'));
         this.endHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'end'));
         this.selectionArea.addEventListener('mousedown', (e) => this.startDrag(e, 'area'));
@@ -68,122 +75,72 @@ class IntegratedGifEditor {
 
         // Video event listeners
         this.previewVideo.addEventListener('loadedmetadata', () => this.onVideoLoaded());
-        this.previewVideo.addEventListener('timeupdate', () => this.updatePlayhead());
+        this.previewVideo.addEventListener('timeupdate', () => this.updateTimelineDisplay());
 
         // Global mouse events for dragging
         document.addEventListener('mousemove', (e) => this.handleDrag(e));
         document.addEventListener('mouseup', () => this.endDrag());
 
-        console.log('Integrated GIF Editor initialized');
+        console.log('Editor initialized.');
     }
 
-    setupEditorDragDrop() {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            this.editorDropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-
-        this.editorDropZone.addEventListener('dragover', () => {
-            if (!this.isProcessing) this.editorDropZone.classList.add('dragover');
-        });
-
-        this.editorDropZone.addEventListener('dragleave', () => {
-            this.editorDropZone.classList.remove('dragover');
-        });
-
-        this.editorDropZone.addEventListener('drop', (e) => {
-            this.editorDropZone.classList.remove('dragover');
-            if (!this.isProcessing) {
-                const files = Array.from(e.dataTransfer.files);
-                const gifFile = files.find(f => f.type.includes('gif'));
-                if (gifFile) {
-                    this.loadGifForEditing(gifFile);
-                }
-            }
-        });
+    showEditorStatus(message, type = 'info') {
+        const el = document.getElementById('editorStatus');
+        if (!el) return;
+        el.textContent = message;
+        el.className = `status ${type}`;
     }
 
     async loadGifForEditing(file) {
-        if (this.isProcessing) {
-            this.showEditorStatus('❌ Please wait for current processing to complete.', 'error');
-            return;
-        }
+        if (!file) return;
 
-        if (!file.type.includes('gif')) {
-            this.showEditorStatus('❌ Please select a GIF file for editing.', 'error');
-            return;
-        }
+        // Reset state
+        this.originalGifBlob = file;
+        this.previewVideoUrl && URL.revokeObjectURL(this.previewVideoUrl);
+        this.previewVideoUrl = null;
+        this.previewVideo.src = '';
+        this.videoDuration = 0;
+        this.startTime = 0;
+        this.endTime = 0;
 
-        this.isProcessing = true;
-        this.editorDropZone.classList.add('processing');
-        
+        // Upload GIF -> server converts to WebM for preview
         try {
-            this.originalGifBlob = file;
-            
-            this.showEditorStatus('📡 Converting GIF to video for editing...', 'processing');
-            
-            // Convert GIF to WebM for video preview
-            const webmBlob = await this.convertGifToWebmForPreview(file);
-            
-            // Create video URL and load
-            if (this.previewVideoUrl) {
-                URL.revokeObjectURL(this.previewVideoUrl);
+            this.isProcessing = true;
+            this.showEditorStatus('⏳ Uploading GIF for preview...', 'info');
+
+            const formData = new FormData();
+            formData.append('file', file, file.name);
+
+            const uploadResponse = await fetch(`${this.SERVER_URL}/convert/gif-to-webm`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
             }
+
+            this.showEditorStatus('✅ Uploaded. Preparing preview...', 'success');
+
+            // Server returns a temporary WebM; stream it
+            const webmBlob = await uploadResponse.blob();
             this.previewVideoUrl = URL.createObjectURL(webmBlob);
             this.previewVideo.src = this.previewVideoUrl;
-            
-            // Show editor interface
-            this.editorContainer.style.display = 'block';
-            
-            this.showEditorStatus(
-                `✅ GIF loaded for editing! <br>
-                <strong>File:</strong> ${file.name}<br>
-                <strong>Size:</strong> ${(file.size / 1024).toFixed(0)}KB<br>
-                <strong>Tip:</strong> Use video controls to find perfect trim points`, 
-                'success'
-            );
-            
-        } catch (error) {
-            console.error('Error loading GIF for editing:', error);
-            this.showEditorStatus(`❌ Failed to load GIF: ${error.message}`, 'error');
-            this.editorContainer.style.display = 'none';
+            this.previewVideo.load();
+
+            document.getElementById('loadedFilename').textContent = file.name;
+        } catch (err) {
+            console.error(err);
+            this.showEditorStatus('❌ Failed to upload/prepare preview.', 'error');
         } finally {
             this.isProcessing = false;
-            this.editorDropZone.classList.remove('processing');
-            this.editorFileInput.value = '';
         }
     }
 
-    async convertGifToWebmForPreview(gifFile) {
-        const formData = new FormData();
-        formData.append('file', gifFile);
-        formData.append('max_size', '2048'); // Higher quality for editing preview
-        formData.append('mode', 'preview'); // Special mode for editing
-        formData.append('crf', '25'); // High quality
-
-        const response = await fetch(`${this.SERVER_URL}/api/convert`, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error(`Conversion failed: HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
-        if (!result.success) {
-            throw new Error(result.error || 'Conversion failed');
-        }
-
-        // Download the converted WebM
-        const downloadResponse = await fetch(`${this.SERVER_URL}/api/download/${result.download_id}`);
-        if (!downloadResponse.ok) {
-            throw new Error('Failed to download preview video');
-        }
-
-        return await downloadResponse.blob();
+    async downloadProcessed(url) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+        return await res.blob();
     }
 
     onVideoLoaded() {
@@ -198,6 +155,8 @@ class IntegratedGifEditor {
         this.createTimeline();
         this.updateTimelineSelection();
         this.updateTimeDisplay();
+        this.updateTimelineDisplay();
+        this.updateDurationPill();
         
         console.log(`Video loaded: ${this.videoDuration.toFixed(1)}s duration`);
     }
@@ -214,29 +173,12 @@ class IntegratedGifEditor {
             if (i === 0 || i === markerCount) marker.classList.add('major-marker');
             marker.style.left = `${(i / markerCount) * 100}%`;
             marker.innerHTML = `<span class="time-label">${time.toFixed(1)}s</span>`;
-            
             this.timelineTrack.appendChild(marker);
         }
     }
 
-    togglePlayback() {
-        if (this.previewVideo.paused) {
-            this.previewVideo.play();
-            document.getElementById('playPauseBtn').textContent = '⏸️';
-        } else {
-            this.previewVideo.pause();
-            document.getElementById('playPauseBtn').textContent = '▶️';
-        }
-    }
-
-    restart() {
-        this.previewVideo.currentTime = this.startTime;
-        this.previewVideo.pause();
-        document.getElementById('playPauseBtn').textContent = '▶️';
-    }
-
     handleTimelineClick(event) {
-        if (this.isDragging || this.videoDuration === 0) return;
+        if (this.videoDuration === 0) return;
         
         const rect = this.timelineTrack.getBoundingClientRect();
         const clickX = event.clientX - rect.left;
@@ -272,6 +214,8 @@ class IntegratedGifEditor {
 
         this.updateTimelineSelection();
         this.updateTimeDisplay();
+        this.updateTimelineDisplay();
+        this.updateDurationPill();
         
         // Seek to start of selection
         this.previewVideo.currentTime = this.startTime;
@@ -315,6 +259,7 @@ class IntegratedGifEditor {
             
             let newStart = this.dragStartTime + deltaTime;
             
+            // Clamp
             if (newStart < 0) newStart = 0;
             if (newStart + duration > this.videoDuration) {
                 newStart = this.videoDuration - duration;
@@ -326,6 +271,8 @@ class IntegratedGifEditor {
 
         this.updateTimelineSelection();
         this.updateTimeDisplay();
+        this.updateTimelineDisplay();
+        this.updateDurationPill();
     }
 
     endDrag() {
@@ -374,6 +321,15 @@ class IntegratedGifEditor {
         document.getElementById('trimDuration').textContent = `${(this.endTime - this.startTime).toFixed(1)}s`;
     }
 
+    updateDurationPill() {
+        const pill = document.getElementById('durationPill');
+        if (!pill) return;
+        const totalSec = this.videoDuration || 0;
+        const sel = Math.max(0, (this.endTime || 0) - (this.startTime || 0));
+        const pct = totalSec > 0 ? Math.round((sel / totalSec) * 100) : 0;
+        pill.textContent = `🎯 ${sel.toFixed(1)}s | IN SELECTION (${pct}%)`;
+    }
+
     async exportTrimmedGif() {
         if (!this.originalGifBlob) {
             this.showEditorStatus('❌ No GIF loaded for export.', 'error');
@@ -391,108 +347,105 @@ class IntegratedGifEditor {
         exportBtn.disabled = true;
         progressContainer.style.display = 'block';
         this.isProcessing = true;
-        
+
         try {
-            document.getElementById('progressText').textContent = 'Trimming GIF on server...';
-            document.getElementById('progressFill').style.width = '30%';
-            
-            // Send trim request to server
-            const formData = new FormData();
-            formData.append('file', this.originalGifBlob);
-            formData.append('start_time', this.startTime.toString());
-            formData.append('end_time', this.endTime.toString());
-            formData.append('ping_pong', document.getElementById('pingPongMode').checked.toString());
-            
-            const response = await fetch(`${this.SERVER_URL}/api/trim-gif`, {
+            // Ask server to trim the original GIF with current start/end
+            this.showEditorStatus('✂️ Trimming on server...', 'info');
+
+            const form = new FormData();
+            form.append('file', this.originalGifBlob, this.originalGifBlob.name);
+            form.append('start', String(this.startTime));
+            form.append('end', String(this.endTime));
+
+            const res = await fetch(`${this.SERVER_URL}/edit/trim-gif`, {
                 method: 'POST',
-                body: formData
+                body: form
             });
 
-            document.getElementById('progressFill').style.width = '70%';
-            
-            if (!response.ok) {
-                throw new Error(`Trim failed: HTTP ${response.status}`);
-            }
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
-            const result = await response.json();
-            if (!result.success) {
-                throw new Error(result.error || 'Trim failed');
-            }
+            const outBlob = await res.blob();
+            const outUrl = URL.createObjectURL(outBlob);
 
-            document.getElementById('progressText').textContent = 'Downloading trimmed GIF...';
-            document.getElementById('progressFill').style.width = '90%';
+            // Trigger download
+            const a = document.createElement('a');
+            a.href = outUrl;
+            a.download = this.makeOutputName(this.originalGifBlob.name, '_trimmed');
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
 
-            // Download the trimmed GIF
-            const downloadResponse = await fetch(`${this.SERVER_URL}/api/download/${result.download_id}`);
-            if (!downloadResponse.ok) {
-                throw new Error('Download failed');
-            }
+            URL.revokeObjectURL(outUrl);
 
-            const blob = await downloadResponse.blob();
-            
-            document.getElementById('progressFill').style.width = '100%';
-            document.getElementById('progressText').textContent = 'Download complete!';
-            
-            // Create download
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-            const filename = `trimmed-gif_${this.startTime.toFixed(1)}s-to-${this.endTime.toFixed(1)}s_${timestamp}.gif`;
-            this.downloadFile(blob, filename);
-            
-            this.showEditorStatus(
-                `✅ GIF trimmed and exported! <br>
-                <strong>Trimmed:</strong> ${this.startTime.toFixed(1)}s to ${this.endTime.toFixed(1)}s<br>
-                <strong>Duration:</strong> ${(this.endTime - this.startTime).toFixed(1)}s<br>
-                <strong>Tip:</strong> Now you can convert this to WebM using the converter above!`, 
-                'success'
-            );
-            
-        } catch (error) {
-            console.error('Export error:', error);
-            this.showEditorStatus(`❌ Export failed: ${error.message}`, 'error');
+            this.showEditorStatus('✅ Trimmed GIF downloaded.', 'success');
+        } catch (err) {
+            console.error(err);
+            this.showEditorStatus('❌ Export failed.', 'error');
         } finally {
+            this.isProcessing = false;
             exportBtn.disabled = false;
             progressContainer.style.display = 'none';
-            this.isProcessing = false;
         }
     }
 
-    downloadFile(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+    makeOutputName(name, suffix) {
+        const dot = name.lastIndexOf('.');
+        if (dot <= 0) return name + suffix + '.gif';
+        return name.slice(0, dot) + suffix + name.slice(dot);
     }
 
-    showEditorStatus(message, type) {
-        const statusContainer = document.getElementById('editorStatus');
-        
-        // Create new message element
-        const messageElement = document.createElement('div');
-        messageElement.className = `status-message show ${type}`;
-        messageElement.innerHTML = message;
-        
-        // Clear previous messages and add new one
-        statusContainer.innerHTML = '';
-        statusContainer.appendChild(messageElement);
-        
-        // Auto-hide non-processing messages
-        if (type !== 'processing') {
-            setTimeout(() => {
-                if (statusContainer.contains(messageElement)) {
-                    messageElement.remove();
-                }
-            }, 7000);
+    togglePlayback() {
+        if (this.previewVideo.paused) {
+            this.previewVideo.play();
+            document.getElementById('playPauseBtn').textContent = 'Pause';
+        } else {
+            this.previewVideo.pause();
+            document.getElementById('playPauseBtn').textContent = 'Play';
         }
+    }
+
+    seekTo(t) {
+        if (this.videoDuration === 0) return;
+        this.previewVideo.currentTime = Math.max(0, Math.min(this.videoDuration, t));
+    }
+
+    toggleLoop() {
+        const btn = document.getElementById('loopBtn');
+        const looping = btn.classList.toggle('active');
+        this.previewVideo.loop = looping;
+        btn.textContent = looping ? 'Loop: ON' : 'Loop: OFF';
+    }
+
+    setupEditorDragDrop() {
+        if (!this.editorDropZone) return;
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            this.editorDropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        this.editorDropZone.addEventListener('dragover', () => {
+            if (!this.isProcessing) this.editorDropZone.classList.add('dragover');
+        });
+
+        this.editorDropZone.addEventListener('dragleave', () => {
+            this.editorDropZone.classList.remove('dragover');
+        });
+
+        this.editorDropZone.addEventListener('drop', (e) => {
+            this.editorDropZone.classList.remove('dragover');
+            if (!this.isProcessing && e.dataTransfer?.files?.length) {
+                const file = e.dataTransfer.files[0];
+                if (file && /gif$/i.test(file.name)) this.loadGifForEditing(file);
+            }
+        });
     }
 }
 
-// Initialize the integrated GIF editor when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    // Wait a bit to ensure the main converter is initialized first
+// Boot
+window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         new IntegratedGifEditor();
     }, 100);

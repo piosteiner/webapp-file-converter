@@ -568,6 +568,13 @@ h1 {
     transform: scale(1.2);
 }
 
+/* Firefox: style the range TRACK for parity */
+.control-input::-moz-range-track {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--slider-bg);
+}
+
 .control-value {
     margin-top: 5px;
     color: var(--text-accent);
@@ -1045,9 +1052,9 @@ h1 {
 /* Status pill above the timeline bar */
 .duration-pill {
   position: absolute;
-  top: 0;                      /* anchor to top of container */
+  top: 0;
   left: 50%;
-  transform: translate(-50%, -130%); /* float above the bar */
+  transform: translate(-50%, -130%);
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 12px;
@@ -1057,6 +1064,7 @@ h1 {
   border: 1px solid var(--timeline-handle);
   white-space: nowrap;
   pointer-events: none;
+  z-index: 30; /* ensure above selection & playhead */
 }
 
 /* Timeline Section */
@@ -1174,7 +1182,7 @@ h1 {
     font-weight: bold;
 }
 
-/* Timeline Container - Enhanced for better scrolling */
+/* Timeline Container - adjusted to let pill/labels overflow */
 .timeline-container {
     position: relative;
     background: var(--timeline-bg);
@@ -1183,28 +1191,30 @@ h1 {
     margin-bottom: 15px;
     min-height: 80px;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible; /* allow pill/time labels to render outside */
 }
 
+/* Track holds overlays; overflow visible so labels/handles aren't clipped */
 .timeline-track {
-    display: flex;
     position: relative;
     background: var(--timeline-track-bg);
     border-radius: 6px;
     padding: 5px;
     min-height: 50px;
-    overflow: hidden;
     cursor: pointer;
+    overflow: visible;
 }
 
+/* Time markers */
 .time-marker {
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: 5px;
+    bottom: 5px;
     width: 1px;
     background: var(--timeline-handle);
     opacity: 0.2;
     pointer-events: none;
+    z-index: 1;
 }
 
 .time-marker.major-marker {
@@ -1229,6 +1239,7 @@ h1 {
     border-radius: 3px;
     white-space: nowrap;
     font-weight: 500;
+    z-index: 2;
 }
 
 /* Hide unused frame thumbnail styles */
@@ -1239,14 +1250,11 @@ h1 {
     display: none;
 }
 
-/* Timeline Selection - Fixed positioning */
+/* Timeline Selection (mounted inside .timeline-track) */
 .timeline-selection {
     position: absolute;
-    top: 15px;
-    left: 15px;
-    right: 15px;
-    height: 60px;
-    pointer-events: none;
+    inset: 5px; /* respect the track's 5px padding on all sides */
+    pointer-events: none; /* selection-area handles pointer events */
     z-index: 10;
 }
 
@@ -1258,7 +1266,7 @@ h1 {
     height: 100%;
     pointer-events: all;
     cursor: grab;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease; /* smoother while dragging */
     min-width: 20px;
 }
 
@@ -1303,16 +1311,16 @@ h1 {
     right: -6px;
 }
 
-/* Timeline Playhead */
+/* Timeline Playhead (mounted inside .timeline-track) */
 .timeline-playhead {
     position: absolute;
-    top: 15px;
+    top: 5px;
+    bottom: 5px;
     width: 3px;
-    height: 60px;
     background: var(--timeline-playhead);
     border-radius: 2px;
     pointer-events: none;
-    z-index: 3;
+    z-index: 20;
     transition: left 0.1s ease;
 }
 
