@@ -93,6 +93,99 @@ def run_ffmpeg_command(cmd):
         print(f"FFmpeg command failed: {e}")
         return False
 
+def convert_gif_to_webm_full_length(input_path, output_path, max_size_mb=50):
+    """Convert GIF to WebM preserving FULL original length for editor preview"""
+    try:
+        print(f"Converting full-length GIF for preview: {input_path} -> {output_path}")
+        
+        # Get original GIF info to preserve dimensions and timing
+        probe_cmd = [
+            'ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', input_path
+        ]
+        
+        probe_result = subprocess.run(probe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if probe_result.returncode != 0:
+            print(f"FFprobe failed: {probe_result.stderr}")
+            return False
+        
+        info = json.loads(probe_result.stdout)
+        
+        # Get original dimensions and duration
+        original_duration = None
+        original_width = None
+        original_height = None
+        
+        for stream in info.get('streams', []):
+            if stream.get('codec_type') == 'video':
+                original_width = stream.get('width')
+                original_height = stream.get('height')
+                break
+        
+        format_info = info.get('format', {})
+        original_duration = float(format_info.get('duration', 0))
+        
+        print(f"Original GIF: {original_width}x{original_height}, {original_duration:.2f}s")
+        
+        # Calculate target dimensions (max 800px for preview)
+        max_dimension = 800
+        if original_width and original_height:
+            if original_width > original_height:
+                if original_width > max_dimension:
+                    target_width = max_dimension
+                    target_height = int((original_height * max_dimension) / original_width)
+                else:
+                    target_width = original_width
+                    target_height = original_height
+            else:
+                if original_height > max_dimension:
+                    target_height = max_dimension
+                    target_width = int((original_width * max_dimension) / original_height)
+                else:
+                    target_width = original_width
+                    target_height = original_height
+            
+            # Ensure even dimensions for WebM
+            target_width = target_width if target_width % 2 == 0 else target_width - 1
+            target_height = target_height if target_height % 2 == 0 else target_height - 1
+        else:
+            target_width = 512
+            target_height = 512
+        
+        # FFmpeg command for full-length conversion
+        cmd = [
+            'ffmpeg', '-y',
+            '-i', input_path,
+            '-c:v', 'libvpx-vp9',
+            '-crf', '35',  # Good quality for preview
+            '-b:v', '0',   # Use CRF mode
+            '-vf', f'scale={target_width}:{target_height}:flags=lanczos',
+            '-f', 'webm',
+            '-an',  # No audio
+            output_path
+        ]
+        
+        # Execute conversion
+        success = run_ffmpeg_command(cmd)
+        
+        if success and os.path.exists(output_path):
+            output_size = os.path.getsize(output_path)
+            output_size_mb = output_size / (1024 * 1024)
+            
+            print(f"Preview conversion successful: {output_size_mb:.1f}MB")
+            
+            # Check if file is too large for practical use
+            if output_size_mb > max_size_mb:
+                print(f"Warning: Preview file is large ({output_size_mb:.1f}MB), but keeping for editor")
+            
+            return True
+        else:
+            print("Preview conversion failed")
+            return False
+            
+    except Exception as e:
+        print(f"Preview conversion error: {e}")
+        return False
+
 @app.route('/')
 def index():
     """Serve a simple test page"""
@@ -203,17 +296,12 @@ def convert_gif():
         original_info = get_video_info(input_path)
         original_size = os.path.getsize(input_path)
         
-        # For preview mode, use higher quality settings
+        # For preview mode, use direct FFmpeg without 3-second limit
         if mode == 'preview':
-            # Higher quality for editing preview
-            success = convert_gif_to_webm(
-                input_path=input_path,
-                output_path=output_path,
-                mode='sticker',  # Use sticker mode internally
-                max_size_kb=max_size_kb  # But allow larger size for preview
-            )
+            # Convert full-length GIF to WebM for editing preview
+            success = convert_gif_to_webm_full_length(input_path, output_path)
         else:
-            # Normal conversion
+            # Normal conversion with 3-second limit for stickers
             success = convert_gif_to_webm(
                 input_path=input_path,
                 output_path=output_path,

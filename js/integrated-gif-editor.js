@@ -159,9 +159,9 @@ class IntegratedGifEditor {
     async convertGifToWebmForPreview(gifFile) {
         const formData = new FormData();
         formData.append('file', gifFile);
-        formData.append('max_size', '1024'); // Reduced size for compatibility
-        formData.append('mode', 'sticker'); // Use existing mode instead of 'preview'
-        formData.append('crf', '30'); // Good quality
+        formData.append('max_size', '1024'); // Size limit for preview
+        formData.append('mode', 'preview'); // Special full-length preview mode
+        formData.append('crf', '35'); // Good quality
 
         const response = await fetch(`${this.SERVER_URL}/api/convert`, {
             method: 'POST',
