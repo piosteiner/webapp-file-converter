@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIF Editor - Trim & Loop Creator</title>
+    <meta name="description" content="Professional GIF editor for trimming, looping, and creating perfect ping-pong animations.">
+    <meta name="keywords" content="GIF editor, GIF trimmer, GIF loop, ping-pong animation, browser-based editor">
+    <link rel="canonical" href="https://converter.piogino.ch/html/gif-editor.html">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂️</text></svg>">
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="../js/theme-switcher.js"></script>
+</head>
+<body class="converter-page gif-editor">
+    <div class="container">
+        <h1>✂️ GIF Editor</h1>
+        <p class="subtitle">Trim, loop, and create perfect ping-pong animations<br>Professional timeline editor • Browser-based • No uploads</p>
+        
+        <div class="nav-links">
+            <a href="../index.html">← Home</a>
+            <a href="png-converter.html">PNG → JPEG</a>
+            <a href="gif-converter.html">GIF → WebM</a>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-icon">✂️</div>
+            <div class="drop-text">Drop your GIF here to start editing</div>
+            <div class="drop-subtext">or click to browse • Browser-based processing • No server uploads</div>
+        </div>
+        <input type="file" id="fileInput" accept=".gif,image/gif" class="hidden">
+
+        <!-- Editor Section (initially hidden) -->
+        <div class="gif-editor-container" id="editorContainer" style="display: none;">
+            
+            <!-- Preview Section -->
+            <div class="preview-section">
+                <div class="preview-controls">
+                    <button id="playPauseBtn" class="control-btn">⏸️</button>
+                    <button id="restartBtn" class="control-btn">⏮️</button>
+                    <span class="preview-info" id="previewInfo">Frame 1 of 10</span>
+                </div>
+                <div class="preview-container">
+                    <canvas id="previewCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Timeline Section -->
+            <div class="timeline-section">
+                <div class="timeline-controls">
+                    <div class="preset-buttons">
+                        <button class="preset-btn" data-duration="1.5">1.5s</button>
+                        <button class="preset-btn" data-duration="3">3s</button>
+                        <button class="preset-btn" data-duration="full">Full</button>
+                    </div>
+                    <div class="loop-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="pingPongMode">
+                            <span class="checkmark"></span>
+                            Ping-Pong Loop
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="repeatMode">
+                            <span class="checkmark"></span>
+                            Repeat if &lt; 1.5s
+                        </label>
+                    </div>
+                </div>
+
+                <div class="timeline-container" id="timelineContainer">
+                    <div class="timeline-track" id="timelineTrack">
+                        <!-- Frame thumbnails will be inserted here -->
+                    </div>
+                    <div class="timeline-selection" id="timelineSelection">
+                        <div class="selection-handle left" id="startHandle"></div>
+                        <div class="selection-area" id="selectionArea"></div>
+                        <div class="selection-handle right" id="endHandle"></div>
+                    </div>
+                    <div class="timeline-playhead" id="playhead"></div>
+                </div>
+
+                <div class="timeline-info">
+                    <div class="time-display">
+                        <span>Start: <span id="startTime">0.0s</span></span>
+                        <span>End: <span id="endTime">0.0s</span></span>
+                        <span>Duration: <span id="duration">0.0s</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Section -->
+            <div class="export-section">
+                <div class="export-controls">
+                    <div class="export-options">
+                        <label class="control-label">Output Quality</label>
+                        <div class="quality-selector">
+                            <button class="quality-btn active" data-quality="high">High</button>
+                            <button class="quality-btn" data-quality="medium">Medium</button>
+                            <button class="quality-btn" data-quality="low">Low</button>
+                        </div>
+                    </div>
+                    <button id="exportBtn" class="export-btn">
+                        <span class="export-icon">💾</span>
+                        Export Edited GIF
+                    </button>
+                </div>
+                
+                <div class="export-progress" id="exportProgress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Preparing frames...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="status" id="status"></div>
+
+        <!-- Features -->
+        <div class="features" style="margin-top: 20px;">
+            <h3>✨ GIF Editor Features:</h3>
+            <div class="features-grid">
+                <div class="feature">
+                    <div class="feature-icon">✂️</div>
+                    <div class="feature-text"><strong>Timeline Trimming:</strong> Precise start/end point control like Twitch Clips editor</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <div class="feature-text"><strong>Ping-Pong Loops:</strong> Auto-reverse for seamless looping animations</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-text"><strong>Browser-Based:</strong> All processing happens locally - no uploads required</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎯</div>
+                    <div class="feature-text"><strong>Smart Presets:</strong> Quick 1.5s and 3s selections with manual fine-tuning</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifuct-js/2.1.2/gifuct.js"></script>
+    <script src="../js/gif-editor.js"></script>
+</body>
+</html>

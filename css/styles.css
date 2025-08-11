@@ -75,6 +75,26 @@
     --shadow-color: rgba(0, 0, 0, 0.1);
     --backdrop-blur: blur(10px);
     
+    /* GIF Editor specific colors */
+    --timeline-bg: rgba(102, 126, 234, 0.05);
+    --timeline-track-bg: rgba(102, 126, 234, 0.1);
+    --timeline-selection: rgba(102, 126, 234, 0.3);
+    --timeline-selection-border: #667eea;
+    --timeline-handle: #667eea;
+    --timeline-handle-hover: #764ba2;
+    --timeline-playhead: #ff4444;
+    --frame-thumbnail-border: rgba(102, 126, 234, 0.2);
+    --frame-thumbnail-active: #667eea;
+    --control-btn-bg: rgba(102, 126, 234, 0.1);
+    --control-btn-hover: rgba(102, 126, 234, 0.2);
+    --export-btn-bg: #667eea;
+    --export-btn-hover: #764ba2;
+    --quality-btn-bg: rgba(102, 126, 234, 0.1);
+    --quality-btn-active: #667eea;
+    --checkbox-bg: white;
+    --checkbox-border: #ddd;
+    --checkbox-check: #667eea;
+
     /* Theme Switcher */
     --theme-toggle-bg: rgba(255, 255, 255, 0.9);
     --theme-toggle-border: rgba(102, 126, 234, 0.2);
@@ -149,6 +169,26 @@
     /* Effects */
     --shadow-color: rgba(0, 0, 0, 0.3);
     --backdrop-blur: blur(15px);
+    
+    /* GIF Editor specific colors */
+    --timeline-bg: rgba(102, 126, 234, 0.05);
+    --timeline-track-bg: rgba(102, 126, 234, 0.1);
+    --timeline-selection: rgba(102, 126, 234, 0.3);
+    --timeline-selection-border: #667eea;
+    --timeline-handle: #667eea;
+    --timeline-handle-hover: #764ba2;
+    --timeline-playhead: #ff4444;
+    --frame-thumbnail-border: rgba(102, 126, 234, 0.2);
+    --frame-thumbnail-active: #667eea;
+    --control-btn-bg: rgba(102, 126, 234, 0.1);
+    --control-btn-hover: rgba(102, 126, 234, 0.2);
+    --export-btn-bg: #667eea;
+    --export-btn-hover: #764ba2;
+    --quality-btn-bg: rgba(102, 126, 234, 0.1);
+    --quality-btn-active: #667eea;
+    --checkbox-bg: white;
+    --checkbox-border: #ddd;
+    --checkbox-check: #667eea;
     
     /* Theme Switcher */
     --theme-toggle-bg: rgba(45, 55, 72, 0.9);
@@ -225,6 +265,26 @@
         /* Effects */
         --shadow-color: rgba(0, 0, 0, 0.3);
         --backdrop-blur: blur(15px);
+
+        /* GIF Editor specific colors */
+        --timeline-bg: rgba(102, 126, 234, 0.05);
+        --timeline-track-bg: rgba(102, 126, 234, 0.1);
+        --timeline-selection: rgba(102, 126, 234, 0.3);
+        --timeline-selection-border: #667eea;
+        --timeline-handle: #667eea;
+        --timeline-handle-hover: #764ba2;
+        --timeline-playhead: #ff4444;
+        --frame-thumbnail-border: rgba(102, 126, 234, 0.2);
+        --frame-thumbnail-active: #667eea;
+        --control-btn-bg: rgba(102, 126, 234, 0.1);
+        --control-btn-hover: rgba(102, 126, 234, 0.2);
+        --export-btn-bg: #667eea;
+        --export-btn-hover: #764ba2;
+        --quality-btn-bg: rgba(102, 126, 234, 0.1);
+        --quality-btn-active: #667eea;
+        --checkbox-bg: white;
+        --checkbox-border: #ddd;
+        --checkbox-check: #667eea;
         
         /* Theme Switcher */
         --theme-toggle-bg: rgba(45, 55, 72, 0.9);
@@ -744,7 +804,7 @@ h1 {
    ======================================== */
 
 .landing-page .container {
-    max-width: 600px;
+    max-width: 800px;  /* Changed from 600px */
     padding: 50px 40px;
 }
 
@@ -761,7 +821,7 @@ h1 {
 
 .converters {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 30px;
     margin-bottom: 40px;
 }
@@ -905,6 +965,369 @@ h1 {
 }
 
 /* ========================================
+   GIF EDITOR SPECIFIC STYLES
+   ======================================== */
+
+/* GIF Editor Container */
+.gif-editor-container {
+    margin-top: 30px;
+    text-align: left;
+}
+
+/* Preview Section */
+.preview-section {
+    margin-bottom: 30px;
+}
+
+.preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    justify-content: center;
+}
+
+.control-btn {
+    background: var(--control-btn-bg);
+    border: 1px solid var(--timeline-handle);
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+}
+
+.control-btn:hover {
+    background: var(--control-btn-hover);
+    transform: translateY(-1px);
+}
+
+.preview-info {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.preview-container {
+    display: flex;
+    justify-content: center;
+    background: var(--timeline-bg);
+    border-radius: 10px;
+    padding: 20px;
+    min-height: 200px;
+    align-items: center;
+}
+
+#previewCanvas {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    background: white;
+}
+
+/* Timeline Section */
+.timeline-section {
+    margin-bottom: 30px;
+}
+
+.timeline-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.preset-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.preset-btn {
+    background: var(--quality-btn-bg);
+    border: 1px solid var(--timeline-handle);
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.preset-btn:hover,
+.preset-btn.active {
+    background: var(--quality-btn-active);
+    color: white;
+}
+
+.loop-options {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--checkbox-border);
+    border-radius: 4px;
+    background: var(--checkbox-bg);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background: var(--checkbox-check);
+    border-color: var(--checkbox-check);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Timeline Container */
+.timeline-container {
+    position: relative;
+    background: var(--timeline-bg);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    min-height: 80px;
+}
+
+.timeline-track {
+    display: flex;
+    gap: 2px;
+    background: var(--timeline-track-bg);
+    border-radius: 6px;
+    padding: 5px;
+    overflow-x: auto;
+    min-height: 50px;
+    position: relative;
+}
+
+.frame-thumbnail {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--frame-thumbnail-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-size: cover;
+    background-position: center;
+}
+
+.frame-thumbnail.active {
+    border-color: var(--frame-thumbnail-active);
+    transform: scale(1.1);
+}
+
+.frame-thumbnail:hover {
+    border-color: var(--timeline-handle-hover);
+}
+
+/* Timeline Selection */
+.timeline-selection {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    height: 60px;
+    pointer-events: none;
+}
+
+.selection-area {
+    position: absolute;
+    background: var(--timeline-selection);
+    border: 2px solid var(--timeline-selection-border);
+    border-radius: 6px;
+    height: 100%;
+    pointer-events: all;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.selection-area:active {
+    cursor: grabbing;
+}
+
+.selection-handle {
+    position: absolute;
+    width: 12px;
+    height: 100%;
+    background: var(--timeline-handle);
+    border-radius: 6px;
+    cursor: ew-resize;
+    pointer-events: all;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.selection-handle:hover {
+    background: var(--timeline-handle-hover);
+    transform: scaleX(1.2);
+}
+
+.selection-handle.left {
+    left: -6px;
+}
+
+.selection-handle.right {
+    right: -6px;
+}
+
+/* Timeline Playhead */
+.timeline-playhead {
+    position: absolute;
+    top: 15px;
+    width: 3px;
+    height: 60px;
+    background: var(--timeline-playhead);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 3;
+    transition: left 0.1s ease;
+}
+
+.timeline-playhead::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -4px;
+    width: 11px;
+    height: 11px;
+    background: var(--timeline-playhead);
+    border-radius: 50%;
+}
+
+/* Timeline Info */
+.timeline-info {
+    display: flex;
+    justify-content: center;
+}
+
+.time-display {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Export Section */
+.export-section {
+    background: var(--controls-bg);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.export-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.export-options {
+    flex: 1;
+}
+
+.quality-selector {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.quality-btn {
+    background: var(--quality-btn-bg);
+    border: 1px solid var(--timeline-handle);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.quality-btn:hover,
+.quality-btn.active {
+    background: var(--quality-btn-active);
+    color: white;
+    border-color: var(--quality-btn-active);
+}
+
+.export-btn {
+    background: var(--export-btn-bg);
+    border: none;
+    border-radius: 10px;
+    padding: 15px 25px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    font-size: 16px;
+}
+
+.export-btn:hover {
+    background: var(--export-btn-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+.export-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.export-icon {
+    font-size: 18px;
+}
+
+.export-progress {
+    margin-top: 20px;
+}
+
+.progress-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 10px;
+    font-weight: 500;
+}
+
+/* ========================================
    ANIMATIONS
    ======================================== */
 
@@ -927,6 +1350,12 @@ h1 {
    RESPONSIVE DESIGN
    ======================================== */
 
+@media (max-width: 1024px) {
+    .converters {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .landing-page .container {
         padding: 40px 30px;
@@ -939,6 +1368,30 @@ h1 {
     .converters {
         grid-template-columns: 1fr;
         gap: 20px;
+    }
+
+    .timeline-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .loop-options {
+        justify-content: center;
+    }
+    
+    .export-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .export-btn {
+        justify-content: center;
+    }
+    
+    .time-display {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
     }
 
     .converter-card {
@@ -957,6 +1410,33 @@ h1 {
     .theme-toggle-container {
         top: 15px;
         right: 15px;
+    }
+}
+
+/* GIF Editor specific responsive */
+@media (max-width: 768px) {
+    .timeline-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .loop-options {
+        justify-content: center;
+    }
+    
+    .export-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .export-btn {
+        justify-content: center;
+    }
+    
+    .time-display {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
     }
 }
 
@@ -990,5 +1470,23 @@ h1 {
     .theme-toggle-container {
         top: 10px;
         right: 10px;
+    }
+}
+
+/* GIF Editor specific responsive */
+@media (max-width: 480px) {
+    .preset-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .loop-options {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .frame-thumbnail {
+        width: 35px;
+        height: 35px;
     }
 }
