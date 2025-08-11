@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIF to WebM Sticker Converter</title>
-    <meta name="description" content="Professional GIF to WebM sticker converter using server-side FFmpeg processing.">
-    <meta name="keywords" content="GIF to WebM, sticker converter, FFmpeg, VP9, WebM converter, animated stickers">
+    <title>GIF to WebM Sticker Converter + Editor</title>
+    <meta name="description" content="Professional GIF to WebM sticker converter with built-in editor for trimming and optimization.">
+    <meta name="keywords" content="GIF to WebM, sticker converter, GIF editor, FFmpeg, VP9, WebM converter, animated stickers, Telegram stickers">
     <link rel="canonical" href="https://converter.piogino.ch/html/gif-converter.html">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
     <link rel="stylesheet" href="../css/styles.css">
@@ -13,12 +13,13 @@
 </head>
 <body class="converter-page gif-converter">
     <div class="container">
-        <h1>🎬 GIF → WebM Sticker</h1>
+        <h1>🎬 GIF → WebM Sticker Converter</h1>
         <p class="subtitle">Professional GIF to WebM conversion using server-side FFmpeg<br>VP9 codec • Original animation preserved • Max 512px • Up to 30 FPS</p>
         
         <div class="nav-links">
             <a href="../index.html">← Home</a>
             <a href="png-converter.html">PNG → JPEG</a>
+            <a href="gif-editor.html">GIF Editor</a>
         </div>
 
         <!-- Server Status will be inserted here dynamically -->
@@ -47,25 +48,147 @@
         
         <div class="status" id="status"></div>
 
-        <div class="features" style="margin-top: 20px; text-align: left;">
-            <h3>🚀 Server-Side Processing Features:</h3>
+        <!-- ======================================== -->
+        <!--           GIF EDITOR SECTION            -->
+        <!-- ======================================== -->
+        
+        <div class="editor-separator" style="margin: 50px 0 40px 0; text-align: center;">
+            <div style="border-top: 2px solid var(--timeline-handle); position: relative;">
+                <span style="background: var(--container-bg); padding: 0 20px; color: var(--text-accent); font-weight: 600; position: relative; top: -12px;">
+                    ✂️ GIF EDITOR
+                </span>
+            </div>
+        </div>
+
+        <div class="editor-intro" style="margin-bottom: 30px; padding: 20px; background: var(--features-bg); border-radius: 15px; border-left: 4px solid var(--text-accent);">
+            <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 1.1em;">
+                📝 Edit your GIF before converting to WebM
+            </h3>
+            <p style="margin: 0; color: var(--text-secondary); line-height: 1.5;">
+                <strong>Advised for GIFs longer than 3 seconds.</strong> Telegram stickers have a 3-second limit, 
+                so use the editor below to trim your GIF to the perfect moment before converting to WebM.
+            </p>
+        </div>
+
+        <!-- GIF Editor Interface -->
+        <div class="gif-editor-section" id="gifEditorSection">
+            
+            <!-- Editor Upload Zone -->
+            <div class="drop-zone" id="editorDropZone" style="border-color: var(--timeline-handle); background: var(--timeline-bg);">
+                <div class="drop-icon">✂️</div>
+                <div class="drop-text">Drop GIF here to start editing</div>
+                <div class="drop-subtext">Perfect for trimming long GIFs to 3 seconds • Full video controls</div>
+            </div>
+            <input type="file" id="editorFileInput" accept=".gif,image/gif" class="hidden">
+
+            <!-- Editor Container (initially hidden) -->
+            <div class="gif-editor-container" id="editorContainer" style="display: none; margin-top: 30px;">
+                
+                <!-- Preview Section -->
+                <div class="preview-section">
+                    <div class="preview-controls">
+                        <button id="playPauseBtn" class="control-btn">⏸️</button>
+                        <button id="restartBtn" class="control-btn">⏮️</button>
+                        <span class="preview-info" id="previewInfo">Ready for editing</span>
+                    </div>
+                    <div class="preview-container">
+                        <video id="previewVideo" controls style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 15px var(--shadow-color); background: white;">
+                            Your browser does not support video playback.
+                        </video>
+                    </div>
+                </div>
+
+                <!-- Timeline Section -->
+                <div class="timeline-section">
+                    <div class="timeline-controls">
+                        <div class="preset-buttons">
+                            <button class="preset-btn" data-duration="1.5">1.5s</button>
+                            <button class="preset-btn" data-duration="3">3s</button>
+                            <button class="preset-btn" data-duration="full">Full</button>
+                        </div>
+                        <div class="duration-display">
+                            <span class="control-label">Duration: <span id="videoDuration">0.0s</span></span>
+                        </div>
+                        <div class="loop-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="pingPongMode">
+                                <span class="checkmark"></span>
+                                Ping-Pong Loop
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="timeline-container" id="timelineContainer">
+                        <div class="timeline-track" id="timelineTrack">
+                            <!-- Video timeline will be created here -->
+                        </div>
+                        <div class="timeline-selection" id="timelineSelection">
+                            <div class="selection-handle left" id="startHandle"></div>
+                            <div class="selection-area" id="selectionArea"></div>
+                            <div class="selection-handle right" id="endHandle"></div>
+                        </div>
+                        <div class="timeline-playhead" id="playhead"></div>
+                    </div>
+
+                    <div class="timeline-info">
+                        <div class="time-display">
+                            <span>Start: <span id="startTime">0.0s</span></span>
+                            <span>End: <span id="endTime">0.0s</span></span>
+                            <span>Duration: <span id="trimDuration">0.0s</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Section -->
+                <div class="export-section">
+                    <div class="export-controls">
+                        <div class="export-options">
+                            <label class="control-label">Export Quality</label>
+                            <div class="quality-selector">
+                                <button class="quality-btn active" data-quality="high">High</button>
+                                <button class="quality-btn" data-quality="medium">Medium</button>
+                                <button class="quality-btn" data-quality="low">Low</button>
+                            </div>
+                        </div>
+                        <button id="exportTrimmedBtn" class="export-btn">
+                            <span class="export-icon">💾</span>
+                            Export Trimmed GIF
+                        </button>
+                    </div>
+                    
+                    <div class="export-progress" id="exportProgress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">Preparing frames...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor Status -->
+        <div class="status" id="editorStatus"></div>
+
+        <!-- Original Features Section (Updated) -->
+        <div class="features" style="margin-top: 40px; text-align: left;">
+            <h3>🚀 Complete GIF to WebM Workflow:</h3>
             <ul style="margin-top: 10px; padding-left: 20px; color: var(--text-secondary);">
-                <li>✅ <strong>Full FFmpeg power</strong> - Uses your existing Python script</li>
-                <li>✅ <strong>VP9 codec</strong> with libvpx-vp9 encoder</li>
-                <li>✅ <strong>Original animation preserved</strong> with exact timing</li>
-                <li>✅ <strong>CRF iteration</strong> - Automatic quality optimization</li>
-                <li>✅ <strong>512px max dimension</strong> with perfect aspect ratio</li>
-                <li>✅ <strong>30 FPS limit</strong> and 3-second duration cap</li>
-                <li>✅ <strong>Transparency support</strong> with yuva420p pixel format</li>
-                <li>✅ <strong>Size guarantee</strong> - Only outputs files under limit</li>
-                <li>✅ <strong>Fast processing</strong> - Native FFmpeg speed</li>
+                <li>✂️ <strong>Built-in GIF Editor</strong> - Trim long GIFs to perfect 3-second clips</li>
+                <li>🎥 <strong>Full video controls</strong> - Pause, seek, and preview your selections</li>
+                <li>✅ <strong>Server-side FFmpeg</strong> - Professional VP9 encoding with transparency</li>
+                <li>📱 <strong>Telegram optimized</strong> - Perfect for animated stickers (3s limit)</li>
+                <li>⚡ <strong>Batch processing</strong> - Convert multiple files simultaneously</li>
+                <li>🔒 <strong>Privacy first</strong> - Files deleted automatically after download</li>
+                <li>🎯 <strong>Size optimization</strong> - Automatic quality adjustment to meet size limits</li>
             </ul>
         </div>
 
         <div class="tech-note" style="margin-top: 15px; padding: 15px; background: var(--features-bg); border-radius: 10px; font-size: 0.9em; color: var(--text-tertiary);">
-            <strong>How it works:</strong> Your GIF is uploaded to a Flask server that runs the same FFmpeg processing 
-            as your Python script. This ensures 100% compatibility and professional results. 
-            Files are automatically deleted after download for privacy.
+            <strong>Complete workflow:</strong> 
+            1) Upload your GIF to the editor if it's longer than 3 seconds
+            2) Trim it to the perfect moment using full video controls
+            3) Export the trimmed GIF
+            4) Use the converter above to create your WebM sticker for Telegram
         </div>
 
         <div class="server-setup" style="margin-top: 15px; padding: 15px; background: var(--controls-bg); border-radius: 10px; font-size: 0.9em;">
@@ -80,7 +203,8 @@
         </div>
     </div>
 
-    <!-- No external dependencies needed - pure client-side upload -->
+    <!-- Load both scripts -->
     <script src="../js/gif-converter.js"></script>
+    <script src="../js/integrated-gif-editor.js"></script>
 </body>
 </html>

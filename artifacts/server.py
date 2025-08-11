@@ -4,7 +4,13 @@ Flask Server for GIF to WebM Conversion
 Wraps the existing gif_to_webm.py functionality as a web API
 """
 
-from flask import Flask, request, jsonify, send_file, render_template_string
+from flask import (
+    Flask,
+    request,
+    jsonify,
+    send_file,
+    render_template_string,
+)
 from flask_cors import CORS
 import tempfile
 import os
@@ -26,7 +32,16 @@ except ImportError:
     HAS_CONVERTER = False
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend requests
+# Allow only your frontends to call the API
+ALLOWED_ORIGINS = [
+    "https://piogino.ch",
+    "https://www.piogino.ch",
+    "https://converter.piogino.ch",  # your GitHub Pages subdomain (the website)
+    # Add your GitHub Pages user domain if you ever use it directly, e.g.:
+    # "https://yourname.github.io",
+]
+CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB hard limit
 
 # Configuration
 UPLOAD_FOLDER = 'temp_uploads'
@@ -56,7 +71,11 @@ def cleanup_old_files():
 @app.route('/')
 def index():
     """Serve a simple test page"""
-    return """
+    # Only call check_ffmpeg() if the function is available (i.e., module imported)
+    ffmpeg_status = "✅ Available" if (HAS_CONVERTER and check_ffmpeg()) else ("❌ Not found" if HAS_CONVERTER else "⚠️ Unknown (converter module missing)")
+    converter_status = "✅ Available" if HAS_CONVERTER else "❌ Not found"
+
+    return f"""
     <!DOCTYPE html>
     <html>
     <head><title>GIF to WebM Converter API</title></head>
@@ -70,8 +89,8 @@ def index():
         </ul>
         <h2>Requirements Check:</h2>
         <ul>
-            <li>FFmpeg: """ + ("✅ Available" if check_ffmpeg() else "❌ Not found") + """</li>
-            <li>Converter: """ + ("✅ Available" if HAS_CONVERTER else "❌ Not found") + """</li>
+            <li>FFmpeg: {ffmpeg_status}</li>
+            <li>Converter: {converter_status}</li>
         </ul>
     </body>
     </html>
@@ -80,9 +99,10 @@ def index():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    ffmpeg_ok = check_ffmpeg() if HAS_CONVERTER else False
     return jsonify({
         'status': 'healthy',
-        'ffmpeg_available': check_ffmpeg() if HAS_CONVERTER else False,
+        'ffmpeg_available': ffmpeg_ok,
         'converter_available': HAS_CONVERTER
     })
 
@@ -113,7 +133,7 @@ def convert_gif():
             return jsonify({'error': 'Only GIF files are allowed'}), 400
         
         # Check file size
-        if request.content_length > MAX_FILE_SIZE:
+        if request.content_length is None or request.content_length > MAX_FILE_SIZE:
             return jsonify({'error': f'File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB'}), 400
         
         # Get conversion parameters
@@ -291,6 +311,13 @@ def convert_bulk():
         max_size_kb = int(request.form.get('max_size', 256))
         mode = request.form.get('mode', 'sticker')
         
+        # Validate parameters
+        if max_size_kb < 64 or max_size_kb > 2048:
+            return jsonify({'error': 'Invalid max_size. Must be between 64 and 2048 KB'}), 400
+        
+        if mode not in ['sticker', 'emoji']:
+            return jsonify({'error': 'Invalid mode. Must be "sticker" or "emoji"'}), 400
+        
         results = []
         successful = 0
         failed = 0
@@ -382,8 +409,8 @@ if __name__ == '__main__':
     print(f"🔧 FFmpeg available: {check_ffmpeg() if HAS_CONVERTER else 'Unknown'}")
     print(f"🔄 Converter available: {HAS_CONVERTER}")
     print()
-    print("🌐 Server will be available at: http://localhost:5000")
-    print("🔧 API endpoint: http://localhost:5000/api/convert")
+    print("🌐 Server will be available at: http://127.0.0.1:5000 (behind Nginx)")
+    print("🔧 Public API endpoint: https://api.piogino.ch/api/convert")
     print()
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='127.0.0.1', port=5000)
