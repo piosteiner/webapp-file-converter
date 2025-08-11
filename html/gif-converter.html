@@ -120,17 +120,17 @@
 
                     <!-- Timeline Status Info -->
                     <div class="timeline-status" style="text-align: center; margin-bottom: 10px; font-weight: 500; color: var(--text-accent);">
-                        <span id="timelineStatus">🎯 Ready for editing</span>
                     </div>
-
                     <div class="timeline-container" id="timelineContainer">
+                        <div id="durationPill" class="duration-pill">🎯 Ready</div>
                         <div class="timeline-track" id="timelineTrack">
+                        <div class="timeline-playhead" id="playhead"></div>
                             <!-- Video timeline will be created here -->
                         </div>
                         <div class="timeline-selection" id="timelineSelection">
-                            <div class="selection-handle left" id="startHandle"></div>
-                            <div class="selection-area" id="selectionArea"></div>
-                            <div class="selection-handle right" id="endHandle"></div>
+                            <div class="selection-area" id="selectionArea">
+                            <div class="selection-handle left" id="startHandle" aria-label="Start handle"></div>
+                            <div class="selection-handle right" id="endHandle" aria-label="End handle"></div>
                         </div>
                         <div class="timeline-playhead" id="playhead"></div>
                     </div>

@@ -1,510 +1,405 @@
-// Integrated GIF Editor for gif-converter.html
-// Provides video-based editing with WebM preview and GIF export
+// PNG to JPEG Converter with Working Bulk Support and Message History
+// Fixed version with proper async handling and file processing
 
-class IntegratedGifEditor {
-    constructor() {
-        this.originalGifBlob = null;
-        this.previewVideoUrl = null;
-        this.videoDuration = 0;
-        this.startTime = 0;
-        this.endTime = 0;
-        this.isProcessing = false;
-        
-        // Selection dragging state
-        this.isDragging = false;
-        this.dragType = null;
-        this.dragStartX = 0;
-        this.dragStartTime = 0;
-        
-        // Server URL (same as main converter)
-        this.SERVER_URL = 'https://api.piogino.ch';
-        
-        // UI elements
-        this.editorDropZone = document.getElementById('editorDropZone');
-        this.editorFileInput = document.getElementById('editorFileInput');
-        this.editorContainer = document.getElementById('editorContainer');
-        this.previewVideo = document.getElementById('previewVideo');
-        this.timelineTrack = document.getElementById('timelineTrack');
-        this.selectionArea = document.getElementById('selectionArea');
-        this.startHandle = document.getElementById('startHandle');
-        this.endHandle = document.getElementById('endHandle');
-        this.playhead = document.getElementById('playhead');
-        
-        this.initializeEditor();
-    }
+let isProcessing = false;
+let messageHistory = [];
 
-    initializeEditor() {
-        // File upload for editor
-        this.editorDropZone.addEventListener('click', () => {
-            if (!this.isProcessing) this.editorFileInput.click();
-        });
-        
-        this.editorFileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                this.loadGifForEditing(e.target.files[0]);
-            }
-        });
+document.addEventListener('DOMContentLoaded', () => {
+    initializePngConverter();
+});
 
-        // Drag and drop for editor
-        this.setupEditorDragDrop();
+function initializePngConverter() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const qualitySlider = document.getElementById('quality');
+    const qualityValue = document.getElementById('qualityValue');
 
-        // Video controls
-        document.getElementById('playPauseBtn').addEventListener('click', () => this.togglePlayback());
-        document.getElementById('restartBtn').addEventListener('click', () => this.restart());
+    // Update quality display
+    qualitySlider.addEventListener('input', (e) => {
+        qualityValue.textContent = e.target.value + '%';
+    });
 
-        // Timeline controls
-        this.startHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'start'));
-        this.endHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'end'));
-        this.selectionArea.addEventListener('mousedown', (e) => this.startDrag(e, 'area'));
-        this.timelineTrack.addEventListener('click', (e) => this.handleTimelineClick(e));
-
-        // Preset buttons
-        document.querySelectorAll('.preset-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.setPreset(e.target.dataset.duration));
-        });
-
-        // Export button
-        document.getElementById('exportTrimmedBtn').addEventListener('click', () => this.exportTrimmedGif());
-
-        // Video event listeners
-        this.previewVideo.addEventListener('loadedmetadata', () => this.onVideoLoaded());
-        this.previewVideo.addEventListener('timeupdate', () => this.updatePlayhead());
-
-        // Global mouse events for dragging
-        document.addEventListener('mousemove', (e) => this.handleDrag(e));
-        document.addEventListener('mouseup', () => this.endDrag());
-
-        console.log('Integrated GIF Editor initialized');
-    }
-
-    setupEditorDragDrop() {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            this.editorDropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-
-        this.editorDropZone.addEventListener('dragover', () => {
-            if (!this.isProcessing) this.editorDropZone.classList.add('dragover');
-        });
-
-        this.editorDropZone.addEventListener('dragleave', () => {
-            this.editorDropZone.classList.remove('dragover');
-        });
-
-        this.editorDropZone.addEventListener('drop', (e) => {
-            this.editorDropZone.classList.remove('dragover');
-            if (!this.isProcessing) {
-                const files = Array.from(e.dataTransfer.files);
-                const gifFile = files.find(f => f.type.includes('gif'));
-                if (gifFile) {
-                    this.loadGifForEditing(gifFile);
-                }
-            }
-        });
-    }
-
-    async loadGifForEditing(file) {
-        if (this.isProcessing) {
-            this.showEditorStatus('❌ Please wait for current processing to complete.', 'error');
-            return;
+    // Click to browse
+    dropZone.addEventListener('click', () => {
+        if (!isProcessing) {
+            fileInput.click();
         }
+    });
 
-        if (!file.type.includes('gif')) {
-            this.showEditorStatus('❌ Please select a GIF file for editing.', 'error');
-            return;
+    // File input change - NOW HANDLES MULTIPLE FILES
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            console.log('Selected files:', files.length);
+            processFiles(files);
         }
+    });
 
-        this.isProcessing = true;
-        this.editorDropZone.classList.add('processing');
+    // Drag and drop events - NOW HANDLES MULTIPLE FILES
+    setupDragDrop(dropZone);
+}
+
+// NEW: Simplified drag and drop setup
+function setupDragDrop(dropZone) {
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (!isProcessing) {
+            dropZone.classList.add('dragover');
+        }
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
         
+        if (!isProcessing) {
+            const files = Array.from(e.dataTransfer.files);
+            console.log('Dropped files:', files.length);
+            if (files.length > 0) {
+                processFiles(files);
+            }
+        }
+    });
+}
+
+// NEW: Main file processing function that handles both single and multiple files
+async function processFiles(files) {
+    if (isProcessing) {
+        addMessage('❌ Please wait for current conversion to complete.', 'error');
+        return;
+    }
+
+    console.log(`Starting processing of ${files.length} files`);
+    isProcessing = true;
+
+    const dropZone = document.getElementById('dropZone');
+    dropZone.classList.add('processing');
+
+    // Filter to PNG files only
+    const pngFiles = files.filter(file => file.type.includes('png'));
+    
+    if (pngFiles.length === 0) {
+        finishProcessing('❌ No PNG files found. Please select PNG files only.', 'error', []);
+        return;
+    }
+
+    if (pngFiles.length !== files.length) {
+        console.log(`Filtered to ${pngFiles.length} PNG files from ${files.length} total files`);
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+    let successfulFiles = []; // Track successful conversions
+
+    // Show initial status
+    if (pngFiles.length === 1) {
+        addMessage('<span class="spinner"></span>Converting PNG to JPEG...', 'processing', [], true);
+    } else {
+        addMessage(`<span class="spinner"></span>Converting ${pngFiles.length} PNG files to JPEG...<br>Starting conversion...`, 'processing', [], true);
+    }
+
+    // Process each file
+    for (let i = 0; i < pngFiles.length; i++) {
+        const file = pngFiles[i];
+        console.log(`Processing file ${i + 1}/${pngFiles.length}: ${file.name}`);
+        
+        // Update progress
+        updateProgress(pngFiles.length, i + 1, file.name);
+
         try {
-            this.originalGifBlob = file;
-            
-            this.showEditorStatus('📡 Converting GIF to video for editing...', 'processing');
-            
-            // Convert GIF to WebM for video preview
-            const webmBlob = await this.convertGifToWebmForPreview(file);
-            
-            // Create video URL and load
-            if (this.previewVideoUrl) {
-                URL.revokeObjectURL(this.previewVideoUrl);
+            // Validate file size
+            if (file.size > 50 * 1024 * 1024) {
+                console.warn(`Skipping ${file.name}: too large`);
+                errorCount++;
+                continue;
             }
-            this.previewVideoUrl = URL.createObjectURL(webmBlob);
-            this.previewVideo.src = this.previewVideoUrl;
-            
-            // Show editor interface
-            this.editorContainer.style.display = 'block';
-            
-            this.showEditorStatus(
-                `✅ GIF loaded for editing! <br>
-                <strong>File:</strong> ${file.name}<br>
-                <strong>Size:</strong> ${(file.size / 1024).toFixed(0)}KB<br>
-                <strong>Tip:</strong> Use video controls to find perfect trim points`, 
-                'success'
-            );
-            
+
+            if (file.size === 0) {
+                console.warn(`Skipping ${file.name}: empty file`);
+                errorCount++;
+                continue;
+            }
+
+            // Validate PNG signature
+            const isValidPng = await isPngFile(file);
+            if (!isValidPng) {
+                console.warn(`Skipping ${file.name}: not a valid PNG`);
+                errorCount++;
+                continue;
+            }
+
+            // Convert file
+            const blob = await convertPngToJpegBlob(file);
+            if (blob) {
+                const sanitizedName = sanitizeFilename(file.name);
+                const outputFilename = `${sanitizedName}.jpg`;
+                
+                // Download immediately
+                downloadFile(blob, outputFilename);
+                successCount++;
+                successfulFiles.push({
+                    original: file.name,
+                    converted: outputFilename
+                });
+                
+                console.log(`Successfully converted: ${file.name}`);
+            } else {
+                errorCount++;
+                console.error(`Failed to convert: ${file.name}`);
+            }
+
         } catch (error) {
-            console.error('Error loading GIF for editing:', error);
-            this.showEditorStatus(`❌ Failed to load GIF: ${error.message}`, 'error');
-            this.editorContainer.style.display = 'none';
-        } finally {
-            this.isProcessing = false;
-            this.editorDropZone.classList.remove('processing');
-            this.editorFileInput.value = '';
+            errorCount++;
+            console.error(`Error converting ${file.name}:`, error);
+        }
+
+        // Small delay between files
+        if (i < pngFiles.length - 1) {
+            await sleep(100);
         }
     }
 
-    async convertGifToWebmForPreview(gifFile) {
-        const formData = new FormData();
-        formData.append('file', gifFile);
-        formData.append('max_size', '2048'); // Higher quality for editing preview
-        formData.append('mode', 'preview'); // Special mode for editing
-        formData.append('crf', '25'); // High quality
+    // Show final status with all converted filenames
+    const now = new Date();
+    const timeString = now.toLocaleString();
 
-        const response = await fetch(`${this.SERVER_URL}/api/convert`, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error(`Conversion failed: HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
-        if (!result.success) {
-            throw new Error(result.error || 'Conversion failed');
-        }
-
-        // Download the converted WebM
-        const downloadResponse = await fetch(`${this.SERVER_URL}/api/download/${result.download_id}`);
-        if (!downloadResponse.ok) {
-            throw new Error('Failed to download preview video');
-        }
-
-        return await downloadResponse.blob();
-    }
-
-    onVideoLoaded() {
-        this.videoDuration = this.previewVideo.duration;
-        document.getElementById('videoDuration').textContent = `${this.videoDuration.toFixed(1)}s`;
-        
-        // Set initial selection to full video
-        this.startTime = 0;
-        this.endTime = this.videoDuration;
-        
-        // Create timeline and update display
-        this.createTimeline();
-        this.updateTimelineSelection();
-        this.updateTimeDisplay();
-        
-        console.log(`Video loaded: ${this.videoDuration.toFixed(1)}s duration`);
-    }
-
-    createTimeline() {
-        this.timelineTrack.innerHTML = '';
-        
-        const markerCount = Math.min(20, Math.max(5, Math.floor(this.videoDuration)));
-        
-        for (let i = 0; i <= markerCount; i++) {
-            const time = (i / markerCount) * this.videoDuration;
-            const marker = document.createElement('div');
-            marker.className = 'time-marker';
-            if (i === 0 || i === markerCount) marker.classList.add('major-marker');
-            marker.style.left = `${(i / markerCount) * 100}%`;
-            marker.innerHTML = `<span class="time-label">${time.toFixed(1)}s</span>`;
-            
-            this.timelineTrack.appendChild(marker);
-        }
-    }
-
-    togglePlayback() {
-        if (this.previewVideo.paused) {
-            this.previewVideo.play();
-            document.getElementById('playPauseBtn').textContent = '⏸️';
+    if (successCount > 0) {
+        if (pngFiles.length === 1) {
+            finishProcessing(`✅ PNG converted to JPEG successfully!<br><strong>Downloaded:</strong> ${timeString}`, 'success', successfulFiles);
+        } else if (errorCount > 0) {
+            finishProcessing(`⚠️ Converted ${successCount} out of ${pngFiles.length} PNG files<br><strong>Completed:</strong> ${timeString}`, 'success', successfulFiles);
         } else {
-            this.previewVideo.pause();
-            document.getElementById('playPauseBtn').textContent = '▶️';
+            finishProcessing(`✅ Successfully converted all ${successCount} PNG files to JPEG!<br><strong>Completed:</strong> ${timeString}`, 'success', successfulFiles);
         }
+    } else {
+        finishProcessing('❌ No files were successfully converted.', 'error', []);
     }
+}
 
-    restart() {
-        this.previewVideo.currentTime = this.startTime;
-        this.previewVideo.pause();
-        document.getElementById('playPauseBtn').textContent = '▶️';
-    }
-
-    handleTimelineClick(event) {
-        if (this.isDragging || this.videoDuration === 0) return;
-        
-        const rect = this.timelineTrack.getBoundingClientRect();
-        const clickX = event.clientX - rect.left;
-        const clickPercent = clickX / rect.width;
-        
-        // Seek to clicked position
-        const targetTime = clickPercent * this.videoDuration;
-        this.previewVideo.currentTime = Math.max(this.startTime, Math.min(this.endTime, targetTime));
-    }
-
-    setPreset(duration) {
-        if (this.videoDuration === 0) return;
-
-        // Update button states
-        document.querySelectorAll('.preset-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.duration === duration);
-        });
-
-        if (duration === 'full') {
-            this.startTime = 0;
-            this.endTime = this.videoDuration;
+// NEW: Update progress display (updates current processing message)
+function updateProgress(total, current, currentFileName) {
+    const statusContainer = document.getElementById('status');
+    const processingMessages = statusContainer.querySelectorAll('.status-message.processing');
+    
+    if (processingMessages.length > 0) {
+        const latestProcessingMessage = processingMessages[0]; // First one is newest
+        if (total === 1) {
+            latestProcessingMessage.innerHTML = `<span class="spinner"></span>Converting PNG to JPEG...<br>Processing: ${currentFileName}`;
         } else {
-            const durationNum = parseFloat(duration);
-            const maxStart = Math.max(0, this.videoDuration - durationNum);
-            
-            // Center the selection if possible
-            let start = Math.max(0, (this.videoDuration - durationNum) / 2);
-            if (start > maxStart) start = maxStart;
-            
-            this.startTime = start;
-            this.endTime = Math.min(start + durationNum, this.videoDuration);
-        }
-
-        this.updateTimelineSelection();
-        this.updateTimeDisplay();
-        
-        // Seek to start of selection
-        this.previewVideo.currentTime = this.startTime;
-    }
-
-    startDrag(event, type) {
-        event.preventDefault();
-        this.isDragging = true;
-        this.dragType = type;
-        this.dragStartX = event.clientX;
-        
-        if (type === 'area') {
-            this.dragStartTime = this.startTime;
-        } else {
-            this.dragStartTime = type === 'start' ? this.startTime : this.endTime;
-        }
-        
-        document.body.style.userSelect = 'none';
-        document.body.style.cursor = type === 'area' ? 'grabbing' : 'ew-resize';
-    }
-
-    handleDrag(event) {
-        if (!this.isDragging || this.videoDuration === 0) return;
-
-        const rect = this.timelineTrack.getBoundingClientRect();
-        const trackWidth = rect.width;
-        const mouseX = event.clientX - rect.left;
-        const mousePercent = Math.max(0, Math.min(1, mouseX / trackWidth));
-        const mouseTime = mousePercent * this.videoDuration;
-
-        if (this.dragType === 'start') {
-            const maxStart = this.endTime - 0.1;
-            this.startTime = Math.max(0, Math.min(maxStart, mouseTime));
-        } else if (this.dragType === 'end') {
-            const minEnd = this.startTime + 0.1;
-            this.endTime = Math.min(this.videoDuration, Math.max(minEnd, mouseTime));
-        } else if (this.dragType === 'area') {
-            const duration = this.endTime - this.startTime;
-            const deltaX = event.clientX - this.dragStartX;
-            const deltaTime = (deltaX / trackWidth) * this.videoDuration;
-            
-            let newStart = this.dragStartTime + deltaTime;
-            
-            if (newStart < 0) newStart = 0;
-            if (newStart + duration > this.videoDuration) {
-                newStart = this.videoDuration - duration;
-            }
-            
-            this.startTime = newStart;
-            this.endTime = newStart + duration;
-        }
-
-        this.updateTimelineSelection();
-        this.updateTimeDisplay();
-    }
-
-    endDrag() {
-        if (!this.isDragging) return;
-        
-        this.isDragging = false;
-        this.dragType = null;
-        document.body.style.userSelect = '';
-        document.body.style.cursor = '';
-    }
-
-    updateTimelineSelection() {
-        if (this.videoDuration === 0) return;
-        
-        const startPercent = (this.startTime / this.videoDuration) * 100;
-        const endPercent = (this.endTime / this.videoDuration) * 100;
-        
-        this.selectionArea.style.left = `${startPercent}%`;
-        this.selectionArea.style.width = `${endPercent - startPercent}%`;
-    }
-
-    updatePlayhead() {
-        if (this.videoDuration === 0) return;
-        
-        const currentTime = this.previewVideo.currentTime;
-        const percent = (currentTime / this.videoDuration) * 100;
-        this.playhead.style.left = `${percent}%`;
-        
-        // Update info
-        const isInSelection = currentTime >= this.startTime && currentTime <= this.endTime;
-        const progressInSelection = isInSelection ? 
-            ((currentTime - this.startTime) / (this.endTime - this.startTime)) * 100 : 0;
-        
-        const statusIcon = isInSelection ? '🎯' : '⏱️';
-        const statusText = isInSelection ? 
-            `IN SELECTION (${progressInSelection.toFixed(0)}%)` : 
-            'Outside selection';
-        
-        document.getElementById('previewInfo').textContent = 
-            `${statusIcon} ${currentTime.toFixed(1)}s | ${statusText}`;
-    }
-
-    updateTimeDisplay() {
-        document.getElementById('startTime').textContent = `${this.startTime.toFixed(1)}s`;
-        document.getElementById('endTime').textContent = `${this.endTime.toFixed(1)}s`;
-        document.getElementById('trimDuration').textContent = `${(this.endTime - this.startTime).toFixed(1)}s`;
-    }
-
-    async exportTrimmedGif() {
-        if (!this.originalGifBlob) {
-            this.showEditorStatus('❌ No GIF loaded for export.', 'error');
-            return;
-        }
-
-        if (this.isProcessing) {
-            this.showEditorStatus('❌ Please wait for current processing to complete.', 'error');
-            return;
-        }
-
-        const exportBtn = document.getElementById('exportTrimmedBtn');
-        const progressContainer = document.getElementById('exportProgress');
-        
-        exportBtn.disabled = true;
-        progressContainer.style.display = 'block';
-        this.isProcessing = true;
-        
-        try {
-            document.getElementById('progressText').textContent = 'Trimming GIF on server...';
-            document.getElementById('progressFill').style.width = '30%';
-            
-            // Send trim request to server
-            const formData = new FormData();
-            formData.append('file', this.originalGifBlob);
-            formData.append('start_time', this.startTime.toString());
-            formData.append('end_time', this.endTime.toString());
-            formData.append('ping_pong', document.getElementById('pingPongMode').checked.toString());
-            
-            const response = await fetch(`${this.SERVER_URL}/api/trim-gif`, {
-                method: 'POST',
-                body: formData
-            });
-
-            document.getElementById('progressFill').style.width = '70%';
-            
-            if (!response.ok) {
-                throw new Error(`Trim failed: HTTP ${response.status}`);
-            }
-
-            const result = await response.json();
-            if (!result.success) {
-                throw new Error(result.error || 'Trim failed');
-            }
-
-            document.getElementById('progressText').textContent = 'Downloading trimmed GIF...';
-            document.getElementById('progressFill').style.width = '90%';
-
-            // Download the trimmed GIF
-            const downloadResponse = await fetch(`${this.SERVER_URL}/api/download/${result.download_id}`);
-            if (!downloadResponse.ok) {
-                throw new Error('Download failed');
-            }
-
-            const blob = await downloadResponse.blob();
-            
-            document.getElementById('progressFill').style.width = '100%';
-            document.getElementById('progressText').textContent = 'Download complete!';
-            
-            // Create download
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-            const filename = `trimmed-gif_${this.startTime.toFixed(1)}s-to-${this.endTime.toFixed(1)}s_${timestamp}.gif`;
-            this.downloadFile(blob, filename);
-            
-            this.showEditorStatus(
-                `✅ GIF trimmed and exported! <br>
-                <strong>Trimmed:</strong> ${this.startTime.toFixed(1)}s to ${this.endTime.toFixed(1)}s<br>
-                <strong>Duration:</strong> ${(this.endTime - this.startTime).toFixed(1)}s<br>
-                <strong>Tip:</strong> Now you can convert this to WebM using the converter above!`, 
-                'success'
-            );
-            
-        } catch (error) {
-            console.error('Export error:', error);
-            this.showEditorStatus(`❌ Export failed: ${error.message}`, 'error');
-        } finally {
-            exportBtn.disabled = false;
-            progressContainer.style.display = 'none';
-            this.isProcessing = false;
-        }
-    }
-
-    downloadFile(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
-
-    showEditorStatus(message, type) {
-        const statusContainer = document.getElementById('editorStatus');
-        
-        // Create new message element
-        const messageElement = document.createElement('div');
-        messageElement.className = `status-message show ${type}`;
-        messageElement.innerHTML = message;
-        
-        // Clear previous messages and add new one
-        statusContainer.innerHTML = '';
-        statusContainer.appendChild(messageElement);
-        
-        // Auto-hide non-processing messages
-        if (type !== 'processing') {
-            setTimeout(() => {
-                if (statusContainer.contains(messageElement)) {
-                    messageElement.remove();
-                }
-            }, 7000);
+            const progress = Math.round((current / total) * 100);
+            latestProcessingMessage.innerHTML = `<span class="spinner"></span>Converting ${total} PNG files to JPEG...<br>Progress: ${current}/${total} (${progress}%)<br>Current: ${currentFileName}`;
         }
     }
 }
 
-// Initialize the integrated GIF editor when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    // Wait a bit to ensure the main converter is initialized first
-    setTimeout(() => {
-        new IntegratedGifEditor();
-    }, 100);
-});
+// NEW: Finish processing and cleanup
+function finishProcessing(message, type, successfulFiles) {
+    isProcessing = false;
+    const dropZone = document.getElementById('dropZone');
+    dropZone.classList.remove('processing');
+    document.getElementById('fileInput').value = '';
+    
+    // Remove any processing messages and add final result
+    removeProcessingMessages();
+    addMessage(message, type, successfulFiles);
+}
 
-// Prevent default drag behaviors (but don't interfere with main converter)
-['dragenter', 'dragover'].forEach(eventName => {
-    document.addEventListener(eventName, (e) => {
-        // Only prevent default if it's over the editor drop zone
-        if (e.target.closest('#editorDropZone')) {
-            e.preventDefault();
-            e.stopPropagation();
+// NEW: Remove processing messages
+function removeProcessingMessages() {
+    const statusContainer = document.getElementById('status');
+    const processingMessages = statusContainer.querySelectorAll('.status-message.processing');
+    processingMessages.forEach(msg => msg.remove());
+}
+
+// NEW: Promise-based sleep function
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// NEW: Add message to history (newest on top)
+function addMessage(message, type, successfulFiles = [], isProcessing = false) {
+    const statusContainer = document.getElementById('status');
+    
+    // Create new message element
+    const messageElement = document.createElement('div');
+    messageElement.className = `status-message show ${type}`;
+    
+    // Build message content
+    let messageContent = message;
+    
+    // Add list of successful files if any
+    if (successfulFiles.length > 0) {
+        messageContent += '<br><strong>Converted files:</strong><br>';
+        successfulFiles.forEach(file => {
+            messageContent += `• ${file.original} → ${file.converted}<br>`;
+        });
+    }
+    
+    messageElement.innerHTML = messageContent;
+    
+    // Insert at the top (newest first)
+    if (statusContainer.firstChild) {
+        statusContainer.insertBefore(messageElement, statusContainer.firstChild);
+    } else {
+        statusContainer.appendChild(messageElement);
+    }
+    
+    // Keep only last 5 messages to prevent overflow
+    const allMessages = statusContainer.querySelectorAll('.status-message');
+    if (allMessages.length > 5) {
+        for (let i = 5; i < allMessages.length; i++) {
+            allMessages[i].remove();
         }
+    }
+    
+    // Auto-hide processing messages after 30 seconds
+    if (type === 'processing') {
+        setTimeout(() => {
+            if (messageElement.classList.contains('processing')) {
+                messageElement.remove();
+            }
+        }, 30000);
+    }
+}
+
+// UPDATED: Convert PNG to JPEG and return blob (no auto-download)
+function convertPngToJpegBlob(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    if (!ctx) {
+                        reject(new Error('Could not get canvas context'));
+                        return;
+                    }
+                    
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Check for reasonable dimensions
+                    if (img.width > 10000 || img.height > 10000) {
+                        reject(new Error('Image dimensions too large (max 10,000px)'));
+                        return;
+                    }
+                    
+                    // Fill with white background (removes PNG transparency)
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const quality = document.getElementById('quality').value / 100;
+                    
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Failed to create JPEG blob'));
+                        }
+                    }, 'image/jpeg', quality);
+                    
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            
+            img.onerror = () => {
+                reject(new Error('Could not load image'));
+            };
+            
+            img.src = e.target.result;
+        };
+        
+        reader.onerror = () => {
+            reject(new Error('Could not read file'));
+        };
+        
+        reader.readAsDataURL(file);
+    });
+}
+
+// Validate PNG file signature
+function isPngFile(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const arr = new Uint8Array(e.target.result);
+            // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+            const pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+            
+            if (arr.length < 8) {
+                resolve(false);
+                return;
+            }
+            
+            for (let i = 0; i < 8; i++) {
+                if (arr[i] !== pngSignature[i]) {
+                    resolve(false);
+                    return;
+                }
+            }
+            resolve(true);
+        };
+        reader.onerror = () => resolve(false);
+        reader.readAsArrayBuffer(file.slice(0, 8));
+    });
+}
+
+// Sanitize filename for safe downloading
+function sanitizeFilename(filename) {
+    // Remove file extension
+    const name = filename.replace(/\.[^/.]+$/, '');
+    
+    // Replace problematic characters with underscores
+    const sanitized = name
+        .replace(/[<>:"/\\|?*]/g, '_')  // Replace invalid characters
+        .replace(/\s+/g, '_')           // Replace spaces with underscores
+        .replace(/,/g, '_')             // Replace commas with underscores
+        .replace(/_+/g, '_')            // Replace multiple underscores with single
+        .replace(/^_|_$/g, '')          // Remove leading/trailing underscores
+        .slice(0, 100);                // Limit length to 100 characters
+    
+    return sanitized || 'converted_image'; // Fallback name if empty
+}
+
+// Download file
+function downloadFile(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+// DEPRECATED: Old status function (keeping for compatibility but not used)
+function showStatus(message, type, filename = null) {
+    addMessage(message, type, filename ? [{original: filename, converted: filename}] : []);
+}
+
+// DEPRECATED: Old clear function (keeping for compatibility but not used)
+function clearStatusOnNewFile() {
+    // No longer clearing messages - they persist as history
+}
+
+// Prevent default drag behaviors on the page
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    document.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
     });
 });

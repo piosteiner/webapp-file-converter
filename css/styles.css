@@ -1042,6 +1042,23 @@ h1 {
     background: white;
 }
 
+/* Status pill above the timeline bar */
+.duration-pill {
+  position: absolute;
+  top: 0;                      /* anchor to top of container */
+  left: 50%;
+  transform: translate(-50%, -130%); /* float above the bar */
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--controls-bg);
+  color: var(--text-accent);
+  border: 1px solid var(--timeline-handle);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* Timeline Section */
 .timeline-section {
     margin-bottom: 30px;
