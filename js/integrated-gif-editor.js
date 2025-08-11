@@ -68,9 +68,7 @@ class IntegratedGifEditor {
 
         // Video event listeners
         this.previewVideo.addEventListener('loadedmetadata', () => this.onVideoLoaded());
-        this.previewVideo.addEventListener('timeupdate', () => this.updateTimelineDisplay());
-        this.previewVideo.addEventListener('seeking', () => this.updateTimelineDisplay());
-        this.previewVideo.addEventListener('seeked', () => this.updateTimelineDisplay());
+        this.previewVideo.addEventListener('timeupdate', () => this.updatePlayhead());
 
         // Global mouse events for dragging
         document.addEventListener('mousemove', (e) => this.handleDrag(e));
@@ -161,9 +159,9 @@ class IntegratedGifEditor {
     async convertGifToWebmForPreview(gifFile) {
         const formData = new FormData();
         formData.append('file', gifFile);
-        formData.append('max_size', '1024'); // Size limit for preview
-        formData.append('mode', 'preview'); // Special full-length preview mode
-        formData.append('crf', '35'); // Good quality
+        formData.append('max_size', '2048'); // Higher quality for editing preview
+        formData.append('mode', 'preview'); // Special mode for editing
+        formData.append('crf', '25'); // High quality
 
         const response = await fetch(`${this.SERVER_URL}/api/convert`, {
             method: 'POST',
@@ -171,16 +169,7 @@ class IntegratedGifEditor {
         });
 
         if (!response.ok) {
-            // Get the actual error message from server
-            let errorMessage = `HTTP ${response.status}`;
-            try {
-                const errorResult = await response.json();
-                errorMessage = errorResult.error || errorMessage;
-            } catch (e) {
-                // If we can't parse JSON, use the status text
-                errorMessage = response.statusText || errorMessage;
-            }
-            throw new Error(`Conversion failed: ${errorMessage}`);
+            throw new Error(`Conversion failed: HTTP ${response.status}`);
         }
 
         const result = await response.json();
@@ -191,14 +180,7 @@ class IntegratedGifEditor {
         // Download the converted WebM
         const downloadResponse = await fetch(`${this.SERVER_URL}/api/download/${result.download_id}`);
         if (!downloadResponse.ok) {
-            let downloadErrorMessage = `HTTP ${downloadResponse.status}`;
-            try {
-                const downloadErrorResult = await downloadResponse.json();
-                downloadErrorMessage = downloadErrorResult.error || downloadErrorMessage;
-            } catch (e) {
-                downloadErrorMessage = downloadResponse.statusText || downloadErrorMessage;
-            }
-            throw new Error(`Failed to download preview video: ${downloadErrorMessage}`);
+            throw new Error('Failed to download preview video');
         }
 
         return await downloadResponse.blob();
@@ -216,7 +198,6 @@ class IntegratedGifEditor {
         this.createTimeline();
         this.updateTimelineSelection();
         this.updateTimeDisplay();
-        this.updateTimelineDisplay();
         
         console.log(`Video loaded: ${this.videoDuration.toFixed(1)}s duration`);
     }
@@ -291,7 +272,6 @@ class IntegratedGifEditor {
 
         this.updateTimelineSelection();
         this.updateTimeDisplay();
-        this.updateTimelineDisplay();
         
         // Seek to start of selection
         this.previewVideo.currentTime = this.startTime;
@@ -346,7 +326,6 @@ class IntegratedGifEditor {
 
         this.updateTimelineSelection();
         this.updateTimeDisplay();
-        this.updateTimelineDisplay();
     }
 
     endDrag() {
