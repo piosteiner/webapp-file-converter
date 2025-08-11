@@ -68,9 +68,7 @@ class IntegratedGifEditor {
 
         // Video event listeners
         this.previewVideo.addEventListener('loadedmetadata', () => this.onVideoLoaded());
-        this.previewVideo.addEventListener('timeupdate', () => this.updateTimelineDisplay());
-        this.previewVideo.addEventListener('seeking', () => this.updateTimelineDisplay());
-        this.previewVideo.addEventListener('seeked', () => this.updateTimelineDisplay());
+        this.previewVideo.addEventListener('timeupdate', () => this.updatePlayhead());
 
         // Global mouse events for dragging
         document.addEventListener('mousemove', (e) => this.handleDrag(e));
@@ -216,7 +214,6 @@ class IntegratedGifEditor {
         this.createTimeline();
         this.updateTimelineSelection();
         this.updateTimeDisplay();
-        this.updateTimelineDisplay();
         
         console.log(`Video loaded: ${this.videoDuration.toFixed(1)}s duration`);
     }
@@ -291,7 +288,6 @@ class IntegratedGifEditor {
 
         this.updateTimelineSelection();
         this.updateTimeDisplay();
-        this.updateTimelineDisplay();
         
         // Seek to start of selection
         this.previewVideo.currentTime = this.startTime;
@@ -346,7 +342,6 @@ class IntegratedGifEditor {
 
         this.updateTimelineSelection();
         this.updateTimeDisplay();
-        this.updateTimelineDisplay();
     }
 
     endDrag() {
