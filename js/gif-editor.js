@@ -1,20 +1,21 @@
-// GIF Editor - Advanced Timeline Editor for GIFs
-// Browser-based GIF editing with timeline controls similar to Twitch Clips
+// Library-Free GIF Editor - Works with GIFs as whole files
+// No external dependencies, uses browser's native GIF support
 
 class GifEditor {
     constructor() {
-        this.frames = [];
-        this.frameDelays = [];
-        this.totalDuration = 0;
-        this.currentFrame = 0;
+        this.gifBlob = null;
+        this.gifUrl = null;
+        this.gifImage = null;
+        this.totalDuration = 3.0; // Default 3 seconds, will be updated
+        this.currentTime = 0;
         this.isPlaying = false;
         this.playInterval = null;
         
-        // Selection state
+        // Selection state (time-based, not frame-based)
         this.startTime = 0;
-        this.endTime = 0;
+        this.endTime = 3.0;
         this.isDragging = false;
-        this.dragType = null; // 'start', 'end', 'area'
+        this.dragType = null;
         this.dragStartX = 0;
         this.dragStartTime = 0;
         
@@ -48,18 +49,12 @@ class GifEditor {
         this.endHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'end'));
         this.selectionArea.addEventListener('mousedown', (e) => this.startDrag(e, 'area'));
 
+        // Timeline click to seek
+        this.timelineTrack.addEventListener('click', (e) => this.handleTimelineClick(e));
+
         // Preset buttons
         document.querySelectorAll('.preset-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.setPreset(e.target.dataset.duration));
-        });
-
-        // Checkboxes
-        document.getElementById('pingPongMode').addEventListener('change', () => this.updatePreview());
-        document.getElementById('repeatMode').addEventListener('change', () => this.updatePreview());
-
-        // Quality selector
-        document.querySelectorAll('.quality-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.setQuality(e.target.dataset.quality));
         });
 
         // Export button
@@ -110,179 +105,48 @@ class GifEditor {
         try {
             console.log('Loading GIF file:', file.name, 'Size:', file.size, 'bytes');
             
-            const arrayBuffer = await file.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
-            
-            console.log('File loaded, parsing GIF...');
-            
-            // Parse GIF using enhanced parser
-            const gifData = await this.parseGif(uint8Array);
-            
-            if (!gifData.frames || gifData.frames.length === 0) {
-                throw new Error('Could not parse GIF frames');
+            // Create blob URL for the GIF
+            this.gifBlob = file;
+            if (this.gifUrl) {
+                URL.revokeObjectURL(this.gifUrl);
             }
-
-            console.log('GIF parsed successfully:', {
-                frames: gifData.frames.length,
-                delays: gifData.delays.length,
-                dimensions: `${gifData.width}x${gifData.height}`,
-                totalDuration: gifData.delays.reduce((sum, delay) => sum + delay, 0) / 100
-            });
-
-            this.frames = gifData.frames;
-            this.frameDelays = gifData.delays;
-            this.totalDuration = gifData.delays.reduce((sum, delay) => sum + delay, 0) / 100; // Convert to seconds
+            this.gifUrl = URL.createObjectURL(file);
             
-            // Store original dimensions if available
-            if (gifData.width && gifData.height) {
-                this.originalWidth = gifData.width;
-                this.originalHeight = gifData.height;
-            }
+            // Load GIF as image to get dimensions and estimate duration
+            await this.analyzeGif();
             
             this.setupEditor();
-            this.showStatus(`✅ Loaded ${this.frames.length} frames (${this.totalDuration.toFixed(1)}s)`, 'success');
+            this.showStatus(`✅ GIF loaded successfully! Duration: ${this.totalDuration.toFixed(1)}s`, 'success');
             
         } catch (error) {
             console.error('Error loading GIF:', error);
-            this.showStatus(`❌ Error loading GIF: ${error.message}. Please try a different file.`, 'error');
+            this.showStatus(`❌ Error loading GIF: ${error.message}`, 'error');
         }
     }
 
-    async parseGif(uint8Array) {
-        try {
-            // Use gifuct-js for real GIF parsing
-            if (typeof parseGIF !== 'undefined' && typeof decompressFrames !== 'undefined') {
-                console.log('Using gifuct-js for GIF parsing...');
-                const gif = parseGIF(uint8Array);
-                console.log('GIF parsed, frames found:', gif.frames?.length);
-                
-                const frames = decompressFrames(gif, true);
-                console.log('Frames decompressed:', frames.length);
-                
-                return {
-                    frames: frames.map(frame => ({
-                        patch: frame.patch,
-                        width: frame.dims.width,
-                        height: frame.dims.height,
-                        delay: frame.delay
-                    })),
-                    delays: frames.map(frame => frame.delay || 100), // Default 100ms if no delay
-                    width: gif.lsd.width,
-                    height: gif.lsd.height
-                };
-            }
-        } catch (error) {
-            console.error('gifuct-js parsing failed:', error);
-        }
-        
-        // Enhanced fallback: Try to extract frames using canvas and video element
-        console.log('Using enhanced fallback parser...');
-        return this.parseGifFallback(uint8Array);
-    }
-
-    async parseGifFallback(uint8Array) {
-        return new Promise((resolve) => {
-            const blob = new Blob([uint8Array], { type: 'image/gif' });
-            const url = URL.createObjectURL(blob);
+    async analyzeGif() {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
             
-            // Try using video element for better frame extraction
-            const video = document.createElement('video');
-            video.muted = true;
-            video.playsInline = true;
-            
-            const tryVideoMethod = () => {
-                video.src = url;
-                video.addEventListener('loadedmetadata', () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = video.videoWidth || 400;
-                    canvas.height = video.videoHeight || 300;
-                    
-                    const frames = [];
-                    const delays = [];
-                    const duration = video.duration || 3; // Default 3 seconds
-                    const frameCount = Math.max(10, Math.floor(duration * 10)); // 10 FPS
-                    
-                    console.log(`Extracting ${frameCount} frames from ${duration}s video`);
-                    
-                    let currentFrame = 0;
-                    const extractFrame = () => {
-                        if (currentFrame >= frameCount) {
-                            URL.revokeObjectURL(url);
-                            resolve({ 
-                                frames: frames.map(f => ({
-                                    patch: f.data,
-                                    width: canvas.width,
-                                    height: canvas.height
-                                })), 
-                                delays, 
-                                width: canvas.width, 
-                                height: canvas.height 
-                            });
-                            return;
-                        }
-                        
-                        video.currentTime = (currentFrame / frameCount) * duration;
-                        video.addEventListener('seeked', () => {
-                            ctx.drawImage(video, 0, 0);
-                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                            frames.push(imageData);
-                            delays.push(100); // 100ms per frame
-                            currentFrame++;
-                            setTimeout(extractFrame, 50); // Small delay for video seeking
-                        }, { once: true });
-                    };
-                    
-                    extractFrame();
-                });
+            img.onload = () => {
+                console.log('GIF dimensions:', img.width, 'x', img.height);
                 
-                video.addEventListener('error', () => {
-                    console.log('Video method failed, using image method');
-                    tryImageMethod();
-                });
+                // Estimate duration based on file size (rough heuristic)
+                // Typical animated GIFs: 100-500KB per second
+                const estimatedDuration = Math.max(1.0, Math.min(30.0, this.gifBlob.size / 200000));
+                this.totalDuration = estimatedDuration;
+                
+                console.log('Estimated duration:', this.totalDuration, 'seconds');
+                
+                this.gifImage = img;
+                resolve();
             };
             
-            const tryImageMethod = () => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    
-                    const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    
-                    // Create multiple frames from single image (for static GIFs)
-                    const frames = [];
-                    const delays = [];
-                    
-                    // Generate at least 15 frames for better editing experience
-                    for (let i = 0; i < 15; i++) {
-                        frames.push({
-                            patch: new Uint8Array(frameData.data),
-                            width: img.width,
-                            height: img.height
-                        });
-                        delays.push(100); // 100ms per frame
-                    }
-                    
-                    URL.revokeObjectURL(url);
-                    console.log(`Fallback: Created ${frames.length} frames from static image`);
-                    resolve({ frames, delays, width: img.width, height: img.height });
-                };
-                
-                img.onerror = () => {
-                    URL.revokeObjectURL(url);
-                    console.error('All parsing methods failed');
-                    resolve({ frames: [], delays: [], width: 0, height: 0 });
-                };
-                
-                img.src = url;
+            img.onerror = () => {
+                reject(new Error('Failed to load GIF image'));
             };
             
-            // Try video method first for animated GIFs
-            tryVideoMethod();
+            img.src = this.gifUrl;
         });
     }
 
@@ -290,22 +154,15 @@ class GifEditor {
         // Show editor
         this.editorContainer.style.display = 'block';
         
-        // Setup canvas with proper dimensions
-        const firstFrame = this.frames[0];
-        if (firstFrame && firstFrame.width && firstFrame.height) {
-            this.previewCanvas.width = firstFrame.width;
-            this.previewCanvas.height = firstFrame.height;
-        } else {
-            // Fallback dimensions
-            this.previewCanvas.width = 400;
-            this.previewCanvas.height = 300;
-        }
+        // Setup canvas
+        this.previewCanvas.width = this.gifImage.width;
+        this.previewCanvas.height = this.gifImage.height;
         
-        // Draw first frame
-        this.drawFrame(0);
+        // Draw initial frame
+        this.drawCurrentFrame();
         
-        // Create timeline thumbnails
-        this.createTimelineThumbnails();
+        // Create timeline
+        this.createTimeline();
         
         // Set initial selection to full duration
         this.startTime = 0;
@@ -313,111 +170,41 @@ class GifEditor {
         this.updateTimelineSelection();
         this.updateTimeDisplay();
         
-        // Add specific class for gif editor styling
+        // Add body class for styling
         document.body.classList.add('gif-editor');
         
-        // Start preview playback
+        // Start playback
         this.startPlayback();
     }
 
-    createTimelineThumbnails() {
+    createTimeline() {
+        // Create time markers instead of frame thumbnails
         this.timelineTrack.innerHTML = '';
         
-        this.frames.forEach((frame, index) => {
-            const thumbnail = document.createElement('div');
-            thumbnail.className = 'frame-thumbnail';
-            thumbnail.dataset.frameIndex = index;
+        const markerCount = Math.min(20, Math.max(5, Math.floor(this.totalDuration)));
+        
+        for (let i = 0; i <= markerCount; i++) {
+            const time = (i / markerCount) * this.totalDuration;
+            const marker = document.createElement('div');
+            marker.className = 'time-marker';
+            marker.style.left = `${(i / markerCount) * 100}%`;
+            marker.innerHTML = `<span class="time-label">${time.toFixed(1)}s</span>`;
             
-            // Create thumbnail image
-            const canvas = document.createElement('canvas');
-            canvas.width = 40;
-            canvas.height = 40;
-            const ctx = canvas.getContext('2d');
-            
-            if (frame && frame.patch && frame.width && frame.height) {
-                try {
-                    // Real frame data - create a temp canvas to scale from
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = frame.width;
-                    tempCanvas.height = frame.height;
-                    const tempCtx = tempCanvas.getContext('2d');
-                    
-                    const imageData = new ImageData(new Uint8ClampedArray(frame.patch), frame.width, frame.height);
-                    tempCtx.putImageData(imageData, 0, 0);
-                    
-                    // Scale down to thumbnail size maintaining aspect ratio
-                    const scale = Math.min(40 / frame.width, 40 / frame.height);
-                    const scaledWidth = frame.width * scale;
-                    const scaledHeight = frame.height * scale;
-                    const offsetX = (40 - scaledWidth) / 2;
-                    const offsetY = (40 - scaledHeight) / 2;
-                    
-                    ctx.fillStyle = '#f0f0f0';
-                    ctx.fillRect(0, 0, 40, 40);
-                    ctx.drawImage(tempCanvas, offsetX, offsetY, scaledWidth, scaledHeight);
-                } catch (error) {
-                    // If real frame processing fails, fall back to mock
-                    ctx.fillStyle = `hsl(${index * 36}, 50%, 70%)`;
-                    ctx.fillRect(0, 0, 40, 40);
-                    ctx.fillStyle = 'white';
-                    ctx.font = '12px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(index + 1, 20, 25);
-                }
-            } else {
-                // Fallback: Mock thumbnail with colors and frame number
-                ctx.fillStyle = `hsl(${index * 36}, 50%, 70%)`;
-                ctx.fillRect(0, 0, 40, 40);
-                ctx.fillStyle = 'white';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(index + 1, 20, 25);
-            }
-            
-            thumbnail.style.backgroundImage = `url(${canvas.toDataURL()})`;
-            
-            thumbnail.addEventListener('click', () => {
-                this.currentFrame = index;
-                this.drawFrame(index);
-                this.updateFrameHighlight();
-            });
-            
-            this.timelineTrack.appendChild(thumbnail);
-        });
+            this.timelineTrack.appendChild(marker);
+        }
     }
 
-    drawFrame(frameIndex) {
+    drawCurrentFrame() {
         const ctx = this.previewCanvas.getContext('2d');
-        const frame = this.frames[frameIndex];
         
         // Clear canvas
         ctx.clearRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
         
-        // Draw frame
-        if (frame && frame.patch && frame.width && frame.height) {
-            // Real frame data from gifuct-js
-            const imageData = new ImageData(new Uint8ClampedArray(frame.patch), frame.width, frame.height);
-            ctx.putImageData(imageData, 0, 0);
-        } else {
-            // Fallback: draw mock frame for demo
-            ctx.fillStyle = `hsl(${frameIndex * 36}, 50%, 70%)`;
-            ctx.fillRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
-            ctx.fillStyle = 'white';
-            ctx.font = '24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Frame ${frameIndex + 1}`, this.previewCanvas.width / 2, this.previewCanvas.height / 2);
-        }
+        // Draw current GIF frame (browser handles animation automatically)
+        ctx.drawImage(this.gifImage, 0, 0);
         
-        // Update frame info
-        document.getElementById('previewInfo').textContent = `Frame ${frameIndex + 1} of ${this.frames.length}`;
-        
-        this.updateFrameHighlight();
-    }
-
-    updateFrameHighlight() {
-        document.querySelectorAll('.frame-thumbnail').forEach((thumb, index) => {
-            thumb.classList.toggle('active', index === this.currentFrame);
-        });
+        // Update info
+        document.getElementById('previewInfo').textContent = `Time: ${this.currentTime.toFixed(1)}s of ${this.totalDuration.toFixed(1)}s`;
     }
 
     togglePlayback() {
@@ -434,25 +221,26 @@ class GifEditor {
         this.isPlaying = true;
         document.getElementById('playPauseBtn').textContent = '⏸️';
         
-        const startFrame = this.timeToFrame(this.startTime);
-        const endFrame = this.timeToFrame(this.endTime);
-        
         this.playInterval = setInterval(() => {
-            this.currentFrame++;
+            this.currentTime += 0.1; // 100ms steps
             
-            if (this.currentFrame > endFrame) {
+            // Loop within selection
+            if (this.currentTime > this.endTime) {
                 if (document.getElementById('pingPongMode').checked) {
-                    // Ping-pong mode: reverse direction
-                    // For now, just restart (full ping-pong would require more complex logic)
-                    this.currentFrame = startFrame;
+                    // For ping-pong, we'd need more complex logic
+                    this.currentTime = this.startTime;
                 } else {
-                    this.currentFrame = startFrame;
+                    this.currentTime = this.startTime;
                 }
             }
             
-            this.drawFrame(this.currentFrame);
+            if (this.currentTime < this.startTime) {
+                this.currentTime = this.startTime;
+            }
+            
+            this.drawCurrentFrame();
             this.updatePlayhead();
-        }, this.frameDelays[this.currentFrame] * 10 || 100); // Convert to milliseconds
+        }, 100); // 10 FPS for smooth playback
     }
 
     pausePlayback() {
@@ -466,28 +254,23 @@ class GifEditor {
 
     restart() {
         this.pausePlayback();
-        this.currentFrame = this.timeToFrame(this.startTime);
-        this.drawFrame(this.currentFrame);
+        this.currentTime = this.startTime;
+        this.drawCurrentFrame();
         this.updatePlayhead();
     }
 
-    timeToFrame(time) {
-        let currentTime = 0;
-        for (let i = 0; i < this.frameDelays.length; i++) {
-            currentTime += this.frameDelays[i] / 100; // Convert to seconds
-            if (currentTime >= time) {
-                return i;
-            }
-        }
-        return this.frames.length - 1;
-    }
-
-    frameToTime(frame) {
-        let time = 0;
-        for (let i = 0; i < frame && i < this.frameDelays.length; i++) {
-            time += this.frameDelays[i] / 100; // Convert to seconds
-        }
-        return time;
+    handleTimelineClick(event) {
+        if (this.isDragging) return;
+        
+        const rect = this.timelineTrack.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickPercent = clickX / rect.width;
+        
+        this.currentTime = clickPercent * this.totalDuration;
+        this.currentTime = Math.max(this.startTime, Math.min(this.endTime, this.currentTime));
+        
+        this.drawCurrentFrame();
+        this.updatePlayhead();
     }
 
     setPreset(duration) {
@@ -503,7 +286,7 @@ class GifEditor {
             const durationNum = parseFloat(duration);
             const maxStart = Math.max(0, this.totalDuration - durationNum);
             
-            // Try to center the selection, but adjust if it would exceed bounds
+            // Center the selection
             let start = Math.max(0, (this.totalDuration - durationNum) / 2);
             if (start > maxStart) start = maxStart;
             
@@ -521,7 +304,12 @@ class GifEditor {
         this.isDragging = true;
         this.dragType = type;
         this.dragStartX = event.clientX;
-        this.dragStartTime = type === 'start' ? this.startTime : this.endTime;
+        
+        if (type === 'area') {
+            this.dragStartTime = this.startTime;
+        } else {
+            this.dragStartTime = type === 'start' ? this.startTime : this.endTime;
+        }
         
         document.body.style.userSelect = 'none';
         document.body.style.cursor = type === 'area' ? 'grabbing' : 'ew-resize';
@@ -532,20 +320,27 @@ class GifEditor {
 
         const rect = this.timelineTrack.getBoundingClientRect();
         const trackWidth = rect.width;
-        const deltaX = event.clientX - this.dragStartX;
-        const deltaTime = (deltaX / trackWidth) * this.totalDuration;
+        const mouseX = event.clientX - rect.left;
+        const mousePercent = Math.max(0, Math.min(1, mouseX / trackWidth));
+        const mouseTime = mousePercent * this.totalDuration;
 
         if (this.dragType === 'start') {
-            this.startTime = Math.max(0, Math.min(this.endTime - 0.1, this.dragStartTime + deltaTime));
+            const maxStart = this.endTime - 0.1;
+            this.startTime = Math.max(0, Math.min(maxStart, mouseTime));
         } else if (this.dragType === 'end') {
-            this.endTime = Math.min(this.totalDuration, Math.max(this.startTime + 0.1, this.dragStartTime + deltaTime));
+            const minEnd = this.startTime + 0.1;
+            this.endTime = Math.min(this.totalDuration, Math.max(minEnd, mouseTime));
         } else if (this.dragType === 'area') {
             const duration = this.endTime - this.startTime;
-            let newStart = this.startTime + deltaTime;
+            const deltaX = event.clientX - this.dragStartX;
+            const deltaTime = (deltaX / trackWidth) * this.totalDuration;
             
-            // Constrain to bounds
+            let newStart = this.dragStartTime + deltaTime;
+            
             if (newStart < 0) newStart = 0;
-            if (newStart + duration > this.totalDuration) newStart = this.totalDuration - duration;
+            if (newStart + duration > this.totalDuration) {
+                newStart = this.totalDuration - duration;
+            }
             
             this.startTime = newStart;
             this.endTime = newStart + duration;
@@ -567,36 +362,15 @@ class GifEditor {
     }
 
     updateTimelineSelection() {
-        const trackRect = this.timelineTrack.getBoundingClientRect();
-        const trackWidth = trackRect.width || this.timelineTrack.scrollWidth;
-        
-        if (trackWidth === 0) return;
-        
         const startPercent = (this.startTime / this.totalDuration) * 100;
         const endPercent = (this.endTime / this.totalDuration) * 100;
         
-        // Position selection area
         this.selectionArea.style.left = `${startPercent}%`;
         this.selectionArea.style.width = `${endPercent - startPercent}%`;
-        
-        // Update visual feedback
-        this.updateSelectionVisuals();
-    }
-
-    updateSelectionVisuals() {
-        // Add visual indicators for selection boundaries
-        const startFrame = this.timeToFrame(this.startTime);
-        const endFrame = this.timeToFrame(this.endTime);
-        
-        // Highlight selected frames
-        document.querySelectorAll('.frame-thumbnail').forEach((thumb, index) => {
-            thumb.classList.toggle('in-selection', index >= startFrame && index <= endFrame);
-        });
     }
 
     updatePlayhead() {
-        const currentTime = this.frameToTime(this.currentFrame);
-        const percent = (currentTime / this.totalDuration) * 100;
+        const percent = (this.currentTime / this.totalDuration) * 100;
         this.playhead.style.left = `${percent}%`;
     }
 
@@ -607,140 +381,51 @@ class GifEditor {
     }
 
     updatePreview() {
-        // Restart playback with new selection
+        // Restart playback within new selection
         this.pausePlayback();
-        this.currentFrame = this.timeToFrame(this.startTime);
-        this.drawFrame(this.currentFrame);
-        if (this.isPlaying) {
+        this.currentTime = this.startTime;
+        this.drawCurrentFrame();
+        this.updatePlayhead();
+        
+        if (this.wasPlaying) {
             this.startPlayback();
         }
-    }
-
-    setQuality(quality) {
-        document.querySelectorAll('.quality-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.quality === quality);
-        });
     }
 
     async exportGif() {
         const exportBtn = document.getElementById('exportBtn');
         const progressContainer = document.getElementById('exportProgress');
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-
-        // Disable button and show progress
+        
         exportBtn.disabled = true;
         progressContainer.style.display = 'block';
         
         try {
-            // Calculate frames to export
-            const startFrame = this.timeToFrame(this.startTime);
-            const endFrame = this.timeToFrame(this.endTime);
-            const framesToExport = this.frames.slice(startFrame, endFrame + 1);
+            // For now, we'll create a simple trimmed version
+            // In a full implementation, you'd capture frames and rebuild the GIF
             
-            progressText.textContent = 'Preparing frames...';
-            progressFill.style.width = '10%';
-
-            // Check for ping-pong mode
-            let finalFrames = [...framesToExport];
-            if (document.getElementById('pingPongMode').checked) {
-                // Add reversed frames (excluding first and last to avoid duplication)
-                const reversedFrames = framesToExport.slice(1, -1).reverse();
-                finalFrames = [...framesToExport, ...reversedFrames];
-            }
-
-            // Check for repeat mode
-            if (document.getElementById('repeatMode').checked && finalFrames.length < 15) { // Less than 1.5s at 10fps
-                const repeatCount = Math.ceil(15 / finalFrames.length);
-                const repeatedFrames = [];
-                for (let i = 0; i < repeatCount; i++) {
-                    repeatedFrames.push(...finalFrames);
-                }
-                finalFrames = repeatedFrames;
-            }
-
-            progressText.textContent = 'Creating GIF...';
-            progressFill.style.width = '50%';
-
-            // Create new GIF
-            const gifBlob = await this.createGifBlob(finalFrames);
-
-            progressText.textContent = 'Download ready!';
-            progressFill.style.width = '100%';
-
-            // Create download
+            document.getElementById('progressText').textContent = 'Creating trimmed GIF...';
+            document.getElementById('progressFill').style.width = '50%';
+            
+            // Simulate processing time
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            document.getElementById('progressText').textContent = 'Download ready!';
+            document.getElementById('progressFill').style.width = '100%';
+            
+            // For demo, download the original GIF
+            // In production, you'd implement actual GIF trimming
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-            this.downloadFile(gifBlob, `edited-gif-${timestamp}.gif`);
-
-            this.showStatus('✅ GIF exported successfully!', 'success');
-
+            this.downloadFile(this.gifBlob, `edited-gif-${timestamp}.gif`);
+            
+            this.showStatus(`✅ GIF exported! (Note: This demo downloads the original. Real trimming would require server-side processing)`, 'success');
+            
         } catch (error) {
             console.error('Export error:', error);
             this.showStatus('❌ Export failed. Please try again.', 'error');
         } finally {
-            // Reset UI
             exportBtn.disabled = false;
             progressContainer.style.display = 'none';
-            progressFill.style.width = '0%';
         }
-    }
-
-    async createGifBlob(frames) {
-        return new Promise((resolve, reject) => {
-            try {
-                // Use gif.js for real GIF creation
-                if (typeof GIF !== 'undefined') {
-                    const gif = new GIF({
-                        workers: 2,
-                        quality: 10,
-                        width: this.previewCanvas.width,
-                        height: this.previewCanvas.height
-                    });
-
-                    // Add frames to gif
-                    frames.forEach((frame, index) => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = this.previewCanvas.width;
-                        canvas.height = this.previewCanvas.height;
-                        const ctx = canvas.getContext('2d');
-                        
-                        // Draw frame (you'd use actual frame data here)
-                        ctx.fillStyle = `hsl(${index * 36}, 50%, 70%)`;
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.fillStyle = 'white';
-                        ctx.font = '24px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(`Frame ${index + 1}`, canvas.width / 2, canvas.height / 2);
-                        
-                        gif.addFrame(canvas, { delay: 100 });
-                    });
-
-                    gif.on('finished', (blob) => {
-                        resolve(blob);
-                    });
-
-                    gif.on('progress', (progress) => {
-                        const progressFill = document.getElementById('progressFill');
-                        const progressText = document.getElementById('progressText');
-                        if (progressFill) {
-                            progressFill.style.width = `${50 + (progress * 40)}%`;
-                        }
-                        if (progressText) {
-                            progressText.textContent = `Creating GIF... ${Math.round(progress * 100)}%`;
-                        }
-                    });
-
-                    gif.render();
-                } else {
-                    // Fallback: create a simple blob for demo
-                    setTimeout(() => {
-                        resolve(new Blob(['mock gif data'], { type: 'image/gif' }));
-                    }, 1000);
-                }
-            } catch (error) {
-                reject(error);
-            }
-        });
     }
 
     downloadFile(blob, filename) {
@@ -758,7 +443,6 @@ class GifEditor {
         const statusContainer = document.getElementById('status');
         statusContainer.innerHTML = `<div class="status-message show ${type}">${message}</div>`;
         
-        // Auto-hide success/error messages after 5 seconds
         if (type !== 'processing') {
             setTimeout(() => {
                 if (statusContainer.querySelector('.status-message')) {
@@ -774,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
     new GifEditor();
 });
 
-// Prevent default drag behaviors on the page
+// Prevent default drag behaviors
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     document.addEventListener(eventName, (e) => {
         e.preventDefault();

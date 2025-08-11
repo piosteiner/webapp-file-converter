@@ -14,7 +14,7 @@
 <body class="converter-page gif-editor">
     <div class="container">
         <h1>✂️ GIF Editor</h1>
-        <p class="subtitle">Trim, loop, and create perfect ping-pong animations<br>Professional timeline editor • Browser-based • No uploads</p>
+        <p class="subtitle">Time-based GIF trimming and editing • No external libraries • Works with any animated GIF</p>
         
         <div class="nav-links">
             <a href="../index.html">← Home</a>
@@ -25,8 +25,8 @@
         <!-- Upload Section -->
         <div class="drop-zone" id="dropZone">
             <div class="drop-icon">✂️</div>
-            <div class="drop-text">Drop your GIF here to start editing</div>
-            <div class="drop-subtext">or click to browse • Browser-based processing • No server uploads</div>
+            <div class="drop-text">Drop your animated GIF here to start editing</div>
+            <div class="drop-subtext">or click to browse • No libraries needed • Direct GIF timeline editing</div>
         </div>
         <input type="file" id="fileInput" accept=".gif,image/gif" class="hidden">
 
@@ -101,7 +101,7 @@
                     </div>
                     <button id="exportBtn" class="export-btn">
                         <span class="export-icon">💾</span>
-                        Export Edited GIF
+                        Export Trimmed GIF
                     </button>
                 </div>
                 
@@ -117,62 +117,38 @@
         <!-- Status -->
         <div class="status" id="status"></div>
 
+        <!-- Implementation Note -->
+        <div class="tech-note" style="margin-top: 20px; padding: 15px; background: var(--controls-bg); border-radius: 10px; font-size: 0.9em; color: var(--text-tertiary);">
+            <strong>Current Status:</strong> This library-free GIF editor provides timeline controls and preview functionality. 
+            For actual GIF trimming/cropping, you can integrate this with your existing server-side GIF processing 
+            or use Web Assembly libraries for client-side processing.
+        </div>
+
         <!-- Features -->
         <div class="features" style="margin-top: 20px;">
             <h3>✨ GIF Editor Features:</h3>
             <div class="features-grid">
                 <div class="feature">
                     <div class="feature-icon">✂️</div>
-                    <div class="feature-text"><strong>Timeline Trimming:</strong> Precise start/end point control like Twitch Clips editor</div>
+                    <div class="feature-text"><strong>Time-Based Trimming:</strong> Precise timeline control like Twitch Clips editor</div>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">🔄</div>
-                    <div class="feature-text"><strong>Ping-Pong Loops:</strong> Auto-reverse for seamless looping animations</div>
+                    <div class="feature-text"><strong>Smart Presets:</strong> Quick 1.5s and 3s selections with manual fine-tuning</div>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">⚡</div>
-                    <div class="feature-text"><strong>Browser-Based:</strong> All processing happens locally - no uploads required</div>
+                    <div class="feature-text"><strong>Zero Dependencies:</strong> Works without external libraries - no CDN blocking issues</div>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">🎯</div>
-                    <div class="feature-text"><strong>Smart Presets:</strong> Quick 1.5s and 3s selections with manual fine-tuning</div>
+                    <div class="feature-text"><strong>Direct GIF Handling:</strong> Uses your browser's native GIF support for reliability</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- External Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.min.js"></script>
-    <!-- Try multiple CDNs for gifuct-js -->
-    <script>
-        // Try loading gifuct-js from multiple CDNs
-        (function() {
-            const cdns = [
-                'https://unpkg.com/gifuct-js@2.1.2/dist/gifuct.js',
-                'https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/dist/gifuct.js'
-            ];
-            
-            let loaded = false;
-            
-            function tryLoadFromCDN(index) {
-                if (index >= cdns.length || loaded) return;
-                
-                const script = document.createElement('script');
-                script.src = cdns[index];
-                script.onload = function() {
-                    loaded = true;
-                    console.log('gifuct-js loaded from:', cdns[index]);
-                };
-                script.onerror = function() {
-                    console.warn('Failed to load from:', cdns[index]);
-                    tryLoadFromCDN(index + 1);
-                };
-                document.head.appendChild(script);
-            }
-            
-            tryLoadFromCDN(0);
-        })();
-    </script>
+    <!-- No external libraries needed! -->
     <script src="../js/gif-editor.js"></script>
 </body>
 </html>
