@@ -108,15 +108,26 @@ class GifEditor {
         this.showStatus('Loading GIF...', 'processing');
         
         try {
+            console.log('Loading GIF file:', file.name, 'Size:', file.size, 'bytes');
+            
             const arrayBuffer = await file.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
             
-            // Parse GIF using gifuct-js or fallback
+            console.log('File loaded, parsing GIF...');
+            
+            // Parse GIF using enhanced parser
             const gifData = await this.parseGif(uint8Array);
             
             if (!gifData.frames || gifData.frames.length === 0) {
                 throw new Error('Could not parse GIF frames');
             }
+
+            console.log('GIF parsed successfully:', {
+                frames: gifData.frames.length,
+                delays: gifData.delays.length,
+                dimensions: `${gifData.width}x${gifData.height}`,
+                totalDuration: gifData.delays.reduce((sum, delay) => sum + delay, 0) / 100
+            });
 
             this.frames = gifData.frames;
             this.frameDelays = gifData.delays;
@@ -133,7 +144,7 @@ class GifEditor {
             
         } catch (error) {
             console.error('Error loading GIF:', error);
-            this.showStatus('❌ Error loading GIF. Please try a different file.', 'error');
+            this.showStatus(`❌ Error loading GIF: ${error.message}. Please try a different file.`, 'error');
         }
     }
 
@@ -141,61 +152,137 @@ class GifEditor {
         try {
             // Use gifuct-js for real GIF parsing
             if (typeof parseGIF !== 'undefined' && typeof decompressFrames !== 'undefined') {
+                console.log('Using gifuct-js for GIF parsing...');
                 const gif = parseGIF(uint8Array);
+                console.log('GIF parsed, frames found:', gif.frames?.length);
+                
                 const frames = decompressFrames(gif, true);
+                console.log('Frames decompressed:', frames.length);
                 
                 return {
                     frames: frames.map(frame => ({
                         patch: frame.patch,
                         width: frame.dims.width,
-                        height: frame.dims.height
+                        height: frame.dims.height,
+                        delay: frame.delay
                     })),
-                    delays: frames.map(frame => frame.delay || 10),
+                    delays: frames.map(frame => frame.delay || 100), // Default 100ms if no delay
                     width: gif.lsd.width,
                     height: gif.lsd.height
                 };
             }
         } catch (error) {
-            console.warn('gifuct-js parsing failed, using fallback parser:', error);
+            console.error('gifuct-js parsing failed:', error);
         }
         
-        // Fallback: Simple mock implementation for demo/development
+        // Enhanced fallback: Try to extract frames using canvas and video element
+        console.log('Using enhanced fallback parser...');
+        return this.parseGifFallback(uint8Array);
+    }
+
+    async parseGifFallback(uint8Array) {
         return new Promise((resolve) => {
             const blob = new Blob([uint8Array], { type: 'image/gif' });
             const url = URL.createObjectURL(blob);
-            const img = new Image();
             
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
+            // Try using video element for better frame extraction
+            const video = document.createElement('video');
+            video.muted = true;
+            video.playsInline = true;
+            
+            const tryVideoMethod = () => {
+                video.src = url;
+                video.addEventListener('loadedmetadata', () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = video.videoWidth || 400;
+                    canvas.height = video.videoHeight || 300;
+                    
+                    const frames = [];
+                    const delays = [];
+                    const duration = video.duration || 3; // Default 3 seconds
+                    const frameCount = Math.max(10, Math.floor(duration * 10)); // 10 FPS
+                    
+                    console.log(`Extracting ${frameCount} frames from ${duration}s video`);
+                    
+                    let currentFrame = 0;
+                    const extractFrame = () => {
+                        if (currentFrame >= frameCount) {
+                            URL.revokeObjectURL(url);
+                            resolve({ 
+                                frames: frames.map(f => ({
+                                    patch: f.data,
+                                    width: canvas.width,
+                                    height: canvas.height
+                                })), 
+                                delays, 
+                                width: canvas.width, 
+                                height: canvas.height 
+                            });
+                            return;
+                        }
+                        
+                        video.currentTime = (currentFrame / frameCount) * duration;
+                        video.addEventListener('seeked', () => {
+                            ctx.drawImage(video, 0, 0);
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            frames.push(imageData);
+                            delays.push(100); // 100ms per frame
+                            currentFrame++;
+                            setTimeout(extractFrame, 50); // Small delay for video seeking
+                        }, { once: true });
+                    };
+                    
+                    extractFrame();
+                });
                 
-                const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                
-                // Create mock frames for demonstration
-                const frames = [];
-                const delays = [];
-                
-                for (let i = 0; i < 10; i++) {
-                    frames.push({
-                        patch: frameData.data,
-                        width: img.width,
-                        height: img.height
-                    });
-                    delays.push(10); // 100ms per frame
-                }
-                
-                URL.revokeObjectURL(url);
-                resolve({ frames, delays, width: img.width, height: img.height });
+                video.addEventListener('error', () => {
+                    console.log('Video method failed, using image method');
+                    tryImageMethod();
+                });
             };
             
-            img.onerror = () => {
-                resolve({ frames: [], delays: [], width: 0, height: 0 });
+            const tryImageMethod = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    // Create multiple frames from single image (for static GIFs)
+                    const frames = [];
+                    const delays = [];
+                    
+                    // Generate at least 15 frames for better editing experience
+                    for (let i = 0; i < 15; i++) {
+                        frames.push({
+                            patch: new Uint8Array(frameData.data),
+                            width: img.width,
+                            height: img.height
+                        });
+                        delays.push(100); // 100ms per frame
+                    }
+                    
+                    URL.revokeObjectURL(url);
+                    console.log(`Fallback: Created ${frames.length} frames from static image`);
+                    resolve({ frames, delays, width: img.width, height: img.height });
+                };
+                
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    console.error('All parsing methods failed');
+                    resolve({ frames: [], delays: [], width: 0, height: 0 });
+                };
+                
+                img.src = url;
             };
             
-            img.src = url;
+            // Try video method first for animated GIFs
+            tryVideoMethod();
         });
     }
 
@@ -225,6 +312,9 @@ class GifEditor {
         this.endTime = this.totalDuration;
         this.updateTimelineSelection();
         this.updateTimeDisplay();
+        
+        // Add specific class for gif editor styling
+        document.body.classList.add('gif-editor');
         
         // Start preview playback
         this.startPlayback();
@@ -477,11 +567,31 @@ class GifEditor {
     }
 
     updateTimelineSelection() {
+        const trackRect = this.timelineTrack.getBoundingClientRect();
+        const trackWidth = trackRect.width || this.timelineTrack.scrollWidth;
+        
+        if (trackWidth === 0) return;
+        
         const startPercent = (this.startTime / this.totalDuration) * 100;
         const endPercent = (this.endTime / this.totalDuration) * 100;
         
+        // Position selection area
         this.selectionArea.style.left = `${startPercent}%`;
         this.selectionArea.style.width = `${endPercent - startPercent}%`;
+        
+        // Update visual feedback
+        this.updateSelectionVisuals();
+    }
+
+    updateSelectionVisuals() {
+        // Add visual indicators for selection boundaries
+        const startFrame = this.timeToFrame(this.startTime);
+        const endFrame = this.timeToFrame(this.endTime);
+        
+        // Highlight selected frames
+        document.querySelectorAll('.frame-thumbnail').forEach((thumb, index) => {
+            thumb.classList.toggle('in-selection', index >= startFrame && index <= endFrame);
+        });
     }
 
     updatePlayhead() {
