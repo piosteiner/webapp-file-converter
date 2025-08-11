@@ -60,6 +60,12 @@ class GifEditor {
         // Export button
         document.getElementById('exportBtn').addEventListener('click', () => this.exportGif());
 
+        // Duration update
+        document.getElementById('updateDuration').addEventListener('click', () => this.updateDuration());
+        document.getElementById('totalDuration').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.updateDuration();
+        });
+
         // Global mouse events for dragging
         document.addEventListener('mousemove', (e) => this.handleDrag(e));
         document.addEventListener('mouseup', () => this.endDrag());
@@ -116,7 +122,15 @@ class GifEditor {
             await this.analyzeGif();
             
             this.setupEditor();
-            this.showStatus(`✅ GIF loaded successfully! Duration: ${this.totalDuration.toFixed(1)}s`, 'success');
+            
+            // Show status with helpful info
+            const fileSizeKB = this.gifBlob.size / 1024;
+            this.showStatus(
+                `✅ GIF loaded successfully! <br>
+                <strong>Duration:</strong> ~${this.totalDuration.toFixed(1)}s (estimated from ${fileSizeKB.toFixed(0)}KB file)<br>
+                <strong>Tip:</strong> Adjust the timeline selection to set your desired start/end points`, 
+                'success'
+            );
             
         } catch (error) {
             console.error('Error loading GIF:', error);
@@ -131,12 +145,26 @@ class GifEditor {
             img.onload = () => {
                 console.log('GIF dimensions:', img.width, 'x', img.height);
                 
-                // Estimate duration based on file size (rough heuristic)
-                // Typical animated GIFs: 100-500KB per second
-                const estimatedDuration = Math.max(1.0, Math.min(30.0, this.gifBlob.size / 200000));
-                this.totalDuration = estimatedDuration;
+                // Better duration estimation based on file size and typical GIF characteristics
+                const fileSizeKB = this.gifBlob.size / 1024;
+                let estimatedDuration;
                 
-                console.log('Estimated duration:', this.totalDuration, 'seconds');
+                if (fileSizeKB < 100) {
+                    // Small GIFs are usually short loops
+                    estimatedDuration = Math.max(1.0, fileSizeKB / 50); // ~50KB per second
+                } else if (fileSizeKB < 500) {
+                    // Medium GIFs 
+                    estimatedDuration = Math.max(2.0, fileSizeKB / 100); // ~100KB per second
+                } else {
+                    // Large GIFs are usually longer or higher quality
+                    estimatedDuration = Math.max(3.0, fileSizeKB / 200); // ~200KB per second
+                }
+                
+                // Cap at reasonable limits
+                this.totalDuration = Math.min(30.0, estimatedDuration);
+                
+                console.log('File size:', fileSizeKB.toFixed(1), 'KB');
+                console.log('Estimated duration:', this.totalDuration.toFixed(1), 'seconds');
                 
                 this.gifImage = img;
                 resolve();
@@ -154,12 +182,11 @@ class GifEditor {
         // Show editor
         this.editorContainer.style.display = 'block';
         
-        // Setup canvas
-        this.previewCanvas.width = this.gifImage.width;
-        this.previewCanvas.height = this.gifImage.height;
+        // Replace canvas with actual animated GIF
+        this.setupAnimatedPreview();
         
-        // Draw initial frame
-        this.drawCurrentFrame();
+        // Set duration input value
+        document.getElementById('totalDuration').value = this.totalDuration.toFixed(1);
         
         // Create timeline
         this.createTimeline();
@@ -175,6 +202,61 @@ class GifEditor {
         
         // Start playback
         this.startPlayback();
+    }
+
+    updateDuration() {
+        const newDuration = parseFloat(document.getElementById('totalDuration').value);
+        
+        if (isNaN(newDuration) || newDuration < 0.5 || newDuration > 60) {
+            this.showStatus('❌ Please enter a valid duration between 0.5 and 60 seconds', 'error');
+            return;
+        }
+        
+        const oldDuration = this.totalDuration;
+        this.totalDuration = newDuration;
+        
+        // Adjust selection proportionally
+        const selectionRatio = (this.endTime - this.startTime) / oldDuration;
+        const startRatio = this.startTime / oldDuration;
+        
+        this.startTime = startRatio * newDuration;
+        this.endTime = this.startTime + (selectionRatio * newDuration);
+        
+        // Ensure selection is within bounds
+        if (this.endTime > newDuration) {
+            this.endTime = newDuration;
+            this.startTime = Math.max(0, newDuration - (selectionRatio * newDuration));
+        }
+        
+        // Recreate timeline and update display
+        this.createTimeline();
+        this.updateTimelineSelection();
+        this.updateTimeDisplay();
+        
+        console.log(`Duration updated: ${oldDuration.toFixed(1)}s → ${newDuration.toFixed(1)}s`);
+        this.showStatus(`✅ Duration updated to ${newDuration.toFixed(1)}s`, 'success');
+    }
+
+    setupAnimatedPreview() {
+        // Remove canvas and replace with animated GIF
+        const previewContainer = document.querySelector('.preview-container');
+        previewContainer.innerHTML = '';
+        
+        // Create animated GIF element
+        const gifPreview = document.createElement('img');
+        gifPreview.id = 'gifPreview';
+        gifPreview.src = this.gifUrl;
+        gifPreview.style.maxWidth = '100%';
+        gifPreview.style.maxHeight = '400px';
+        gifPreview.style.borderRadius = '8px';
+        gifPreview.style.boxShadow = '0 4px 15px var(--shadow-color)';
+        
+        previewContainer.appendChild(gifPreview);
+        
+        // Store reference
+        this.gifPreview = gifPreview;
+        
+        console.log('Animated GIF preview setup complete');
     }
 
     createTimeline() {
@@ -412,12 +494,18 @@ class GifEditor {
             document.getElementById('progressText').textContent = 'Download ready!';
             document.getElementById('progressFill').style.width = '100%';
             
-            // For demo, download the original GIF
+            // For demo, download the original GIF with selection info
             // In production, you'd implement actual GIF trimming
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-            this.downloadFile(this.gifBlob, `edited-gif-${timestamp}.gif`);
+            const selectionInfo = `_trim-${this.startTime.toFixed(1)}s-to-${this.endTime.toFixed(1)}s`;
+            this.downloadFile(this.gifBlob, `gif-selection${selectionInfo}_${timestamp}.gif`);
             
-            this.showStatus(`✅ GIF exported! (Note: This demo downloads the original. Real trimming would require server-side processing)`, 'success');
+            this.showStatus(
+                `✅ Selection exported! <br>
+                <strong>Trim:</strong> ${this.startTime.toFixed(1)}s to ${this.endTime.toFixed(1)}s<br>
+                <strong>Note:</strong> Download contains full GIF. Integrate with server-side processing for actual trimming.`, 
+                'success'
+            );
             
         } catch (error) {
             console.error('Export error:', error);

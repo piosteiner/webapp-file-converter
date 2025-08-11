@@ -53,6 +53,11 @@
                         <button class="preset-btn" data-duration="3">3s</button>
                         <button class="preset-btn" data-duration="full">Full</button>
                     </div>
+                    <div class="duration-control">
+                        <label class="control-label" for="totalDuration">Total Duration (s)</label>
+                        <input type="number" id="totalDuration" min="0.5" max="60" step="0.1" value="3.0" class="duration-input">
+                        <button id="updateDuration" class="duration-btn">Update</button>
+                    </div>
                     <div class="loop-options">
                         <label class="checkbox-label">
                             <input type="checkbox" id="pingPongMode">
@@ -119,9 +124,10 @@
 
         <!-- Implementation Note -->
         <div class="tech-note" style="margin-top: 20px; padding: 15px; background: var(--controls-bg); border-radius: 10px; font-size: 0.9em; color: var(--text-tertiary);">
-            <strong>Current Status:</strong> This library-free GIF editor provides timeline controls and preview functionality. 
-            For actual GIF trimming/cropping, you can integrate this with your existing server-side GIF processing 
-            or use Web Assembly libraries for client-side processing.
+            <strong>How it works:</strong> This editor shows your animated GIF and provides precise timeline controls. 
+            Duration is estimated from file size, but you can manually adjust it. The timeline selection shows exactly 
+            what portion to trim. To actually create trimmed GIFs, integrate this with your server-side processing 
+            or use Web Assembly libraries for client-side GIF manipulation.
         </div>
 
         <!-- Features -->
