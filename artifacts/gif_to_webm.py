@@ -113,11 +113,18 @@ def convert_gif_to_webm(input_path, output_path=None, mode='sticker', max_size_k
     # Build video filters
     filters = [scale_filter]
     
-    # Limit duration to 3 seconds
-    duration_limit = min(duration, 3.0)
+    # Limit duration to 3 seconds (except for preview mode)
+    if mode == 'preview':
+        duration_limit = duration  # Keep full duration for preview
+        print(f"🎥 PREVIEW MODE: Preserving full {duration:.2f}s duration")
+    else:
+        duration_limit = min(duration, 3.0)  # Limit to 3s for stickers
+        print(f"🎬 STICKER MODE: Limiting to {duration_limit:.2f}s")
     
     # Limit FPS to 30
-    filters.append("fps=fps=min(30\\,source_fps)")
+    source_fps = eval(video_stream.get('r_frame_rate', '30/1'))
+    if source_fps > 30:
+        filters.append("fps=30")
     
     # Combine filters
     video_filter = ",".join(filters)
