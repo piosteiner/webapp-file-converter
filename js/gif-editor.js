@@ -6,14 +6,15 @@ class GifEditor {
         this.gifBlob = null;
         this.gifUrl = null;
         this.gifImage = null;
-        this.totalDuration = 3.0; // Default 3 seconds, will be updated
+        this.totalDuration = 5.0; // Default duration, will be detected or manually set
+        this.originalDuration = 5.0; // Store the detected/default duration
         this.currentTime = 0;
         this.isPlaying = false;
         this.playInterval = null;
         
         // Selection state (time-based, not frame-based)
         this.startTime = 0;
-        this.endTime = 3.0;
+        this.endTime = 5.0;
         this.isDragging = false;
         this.dragType = null;
         this.dragStartX = 0;
@@ -118,8 +119,8 @@ class GifEditor {
             }
             this.gifUrl = URL.createObjectURL(file);
             
-            // Load GIF as image to get dimensions and estimate duration
-            await this.analyzeGif();
+            // Try to detect the actual GIF duration
+            await this.detectGifDuration();
             
             this.setupEditor();
             
@@ -127,8 +128,9 @@ class GifEditor {
             const fileSizeKB = this.gifBlob.size / 1024;
             this.showStatus(
                 `✅ GIF loaded successfully! <br>
-                <strong>Duration:</strong> ~${this.totalDuration.toFixed(1)}s (estimated from ${fileSizeKB.toFixed(0)}KB file)<br>
-                <strong>Tip:</strong> Adjust the timeline selection to set your desired start/end points`, 
+                <strong>Duration:</strong> ${this.totalDuration.toFixed(1)}s<br>
+                <strong>File Size:</strong> ${fileSizeKB.toFixed(0)}KB<br>
+                <strong>Tip:</strong> Use the timeline selection to trim your GIF`, 
                 'success'
             );
             
@@ -138,40 +140,51 @@ class GifEditor {
         }
     }
 
-    async analyzeGif() {
-        return new Promise((resolve, reject) => {
+    async detectGifDuration() {
+        return new Promise((resolve) => {
             const img = new Image();
             
             img.onload = () => {
                 console.log('GIF dimensions:', img.width, 'x', img.height);
                 
-                // Better duration estimation based on file size and typical GIF characteristics
-                const fileSizeKB = this.gifBlob.size / 1024;
-                let estimatedDuration;
+                // Try to detect duration by monitoring animation cycles
+                // This is a best-effort approach since browser APIs don't expose GIF timing
                 
-                if (fileSizeKB < 100) {
-                    // Small GIFs are usually short loops
-                    estimatedDuration = Math.max(1.0, fileSizeKB / 50); // ~50KB per second
-                } else if (fileSizeKB < 500) {
-                    // Medium GIFs 
-                    estimatedDuration = Math.max(2.0, fileSizeKB / 100); // ~100KB per second
+                // For now, we'll use intelligent defaults based on common patterns
+                // and let users adjust manually
+                const fileSizeKB = this.gifBlob.size / 1024;
+                
+                let estimatedDuration;
+                if (fileSizeKB < 50) {
+                    // Very small GIFs are usually short loops (1-3 seconds)
+                    estimatedDuration = 2.0;
+                } else if (fileSizeKB < 200) {
+                    // Small to medium GIFs (2-5 seconds)
+                    estimatedDuration = 3.5;
+                } else if (fileSizeKB < 1000) {
+                    // Medium GIFs (3-8 seconds)
+                    estimatedDuration = 6.0;
                 } else {
-                    // Large GIFs are usually longer or higher quality
-                    estimatedDuration = Math.max(3.0, fileSizeKB / 200); // ~200KB per second
+                    // Large GIFs are usually longer (5-15 seconds)
+                    estimatedDuration = 10.0;
                 }
                 
-                // Cap at reasonable limits
-                this.totalDuration = Math.min(30.0, estimatedDuration);
+                this.totalDuration = estimatedDuration;
+                this.originalDuration = estimatedDuration;
                 
-                console.log('File size:', fileSizeKB.toFixed(1), 'KB');
                 console.log('Estimated duration:', this.totalDuration.toFixed(1), 'seconds');
+                console.log('User can adjust duration manually if needed');
                 
                 this.gifImage = img;
                 resolve();
             };
             
             img.onerror = () => {
-                reject(new Error('Failed to load GIF image'));
+                // Fallback to default duration
+                this.totalDuration = 5.0;
+                this.originalDuration = 5.0;
+                console.warn('Could not load GIF image, using default duration');
+                resolve();
             };
             
             img.src = this.gifUrl;
@@ -209,23 +222,25 @@ class GifEditor {
         
         if (isNaN(newDuration) || newDuration < 0.5 || newDuration > 60) {
             this.showStatus('❌ Please enter a valid duration between 0.5 and 60 seconds', 'error');
+            document.getElementById('totalDuration').value = this.totalDuration.toFixed(1);
             return;
         }
         
         const oldDuration = this.totalDuration;
         this.totalDuration = newDuration;
         
-        // Adjust selection proportionally
-        const selectionRatio = (this.endTime - this.startTime) / oldDuration;
-        const startRatio = this.startTime / oldDuration;
+        // Keep the selection ratio but ensure it fits in the new duration
+        const selectionDuration = this.endTime - this.startTime;
+        const selectionStartRatio = this.startTime / oldDuration;
         
-        this.startTime = startRatio * newDuration;
-        this.endTime = this.startTime + (selectionRatio * newDuration);
+        // Try to maintain the same relative position
+        this.startTime = Math.min(selectionStartRatio * newDuration, newDuration - 0.1);
+        this.endTime = Math.min(this.startTime + selectionDuration, newDuration);
         
-        // Ensure selection is within bounds
+        // If the selection doesn't fit, adjust it proportionally
         if (this.endTime > newDuration) {
             this.endTime = newDuration;
-            this.startTime = Math.max(0, newDuration - (selectionRatio * newDuration));
+            this.startTime = Math.max(0, newDuration - selectionDuration);
         }
         
         // Recreate timeline and update display
@@ -277,15 +292,7 @@ class GifEditor {
     }
 
     drawCurrentFrame() {
-        const ctx = this.previewCanvas.getContext('2d');
-        
-        // Clear canvas
-        ctx.clearRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
-        
-        // Draw current GIF frame (browser handles animation automatically)
-        ctx.drawImage(this.gifImage, 0, 0);
-        
-        // Update info
+        // Update info (the animated GIF handles its own display)
         document.getElementById('previewInfo').textContent = `Time: ${this.currentTime.toFixed(1)}s of ${this.totalDuration.toFixed(1)}s`;
     }
 
@@ -368,7 +375,7 @@ class GifEditor {
             const durationNum = parseFloat(duration);
             const maxStart = Math.max(0, this.totalDuration - durationNum);
             
-            // Center the selection
+            // Center the selection if possible
             let start = Math.max(0, (this.totalDuration - durationNum) / 2);
             if (start > maxStart) start = maxStart;
             

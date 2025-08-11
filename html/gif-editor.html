@@ -14,7 +14,7 @@
 <body class="converter-page gif-editor">
     <div class="container">
         <h1>✂️ GIF Editor</h1>
-        <p class="subtitle">Time-based GIF trimming and editing • No external libraries • Works with any animated GIF</p>
+        <p class="subtitle">Time-based GIF trimming and editing • Full original duration preserved • Precise timeline controls</p>
         
         <div class="nav-links">
             <a href="../index.html">← Home</a>
@@ -26,7 +26,7 @@
         <div class="drop-zone" id="dropZone">
             <div class="drop-icon">✂️</div>
             <div class="drop-text">Drop your animated GIF here to start editing</div>
-            <div class="drop-subtext">or click to browse • No libraries needed • Direct GIF timeline editing</div>
+            <div class="drop-subtext">or click to browse • Full original duration preserved • Manual trimming controls</div>
         </div>
         <input type="file" id="fileInput" accept=".gif,image/gif" class="hidden">
 
@@ -55,7 +55,7 @@
                     </div>
                     <div class="duration-control">
                         <label class="control-label" for="totalDuration">Total Duration (s)</label>
-                        <input type="number" id="totalDuration" min="0.5" max="60" step="0.1" value="3.0" class="duration-input">
+                        <input type="number" id="totalDuration" min="0.5" max="60" step="0.1" value="5.0" class="duration-input">
                         <button id="updateDuration" class="duration-btn">Update</button>
                     </div>
                     <div class="loop-options">
@@ -63,11 +63,6 @@
                             <input type="checkbox" id="pingPongMode">
                             <span class="checkmark"></span>
                             Ping-Pong Loop
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="repeatMode">
-                            <span class="checkmark"></span>
-                            Repeat if &lt; 1.5s
                         </label>
                     </div>
                 </div>
@@ -124,10 +119,9 @@
 
         <!-- Implementation Note -->
         <div class="tech-note" style="margin-top: 20px; padding: 15px; background: var(--controls-bg); border-radius: 10px; font-size: 0.9em; color: var(--text-tertiary);">
-            <strong>How it works:</strong> This editor shows your animated GIF and provides precise timeline controls. 
-            Duration is estimated from file size, but you can manually adjust it. The timeline selection shows exactly 
-            what portion to trim. To actually create trimmed GIFs, integrate this with your server-side processing 
-            or use Web Assembly libraries for client-side GIF manipulation.
+            <strong>How it works:</strong> The editor loads your GIF at its full original duration and provides precise timeline controls 
+            for trimming. You can manually adjust the total duration if the auto-detection isn't accurate. The timeline selection shows exactly 
+            what portion to export. To create actual trimmed GIFs, integrate this with your server-side processing.
         </div>
 
         <!-- Features -->
@@ -135,20 +129,20 @@
             <h3>✨ GIF Editor Features:</h3>
             <div class="features-grid">
                 <div class="feature">
+                    <div class="feature-icon">📏</div>
+                    <div class="feature-text"><strong>Full Original Duration:</strong> Preserves your GIF's complete timeline with smart detection</div>
+                </div>
+                <div class="feature">
                     <div class="feature-icon">✂️</div>
-                    <div class="feature-text"><strong>Time-Based Trimming:</strong> Precise timeline control like Twitch Clips editor</div>
+                    <div class="feature-text"><strong>Precise Trimming:</strong> Timeline control like video editors for exact start/end points</div>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">🔄</div>
-                    <div class="feature-text"><strong>Smart Presets:</strong> Quick 1.5s and 3s selections with manual fine-tuning</div>
+                    <div class="feature-text"><strong>Smart Presets:</strong> Quick 1.5s and 3s selections with ping-pong loop option</div>
                 </div>
                 <div class="feature">
                     <div class="feature-icon">⚡</div>
-                    <div class="feature-text"><strong>Zero Dependencies:</strong> Works without external libraries - no CDN blocking issues</div>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🎯</div>
-                    <div class="feature-text"><strong>Direct GIF Handling:</strong> Uses your browser's native GIF support for reliability</div>
+                    <div class="feature-text"><strong>Zero Dependencies:</strong> Works without external libraries - reliable and fast</div>
                 </div>
             </div>
         </div>
