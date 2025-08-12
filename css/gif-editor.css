@@ -77,6 +77,10 @@
     display: none !important;
 }
 
+.gif-editor-container:focus {
+    outline: none; /* Remove focus outline since we don't need it visible */
+}
+
 /* ========================================
    PREVIEW SECTION
    ======================================== */
@@ -179,9 +183,30 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 25px; /* More space before timeline */
     flex-wrap: wrap;
     gap: 15px;
+    padding: 0 5px; /* Small side padding */
+}
+
+@media (max-width: 768px) {
+    .timeline-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .preset-buttons {
+        order: 1;
+    }
+    
+    .duration-display {
+        order: 2;
+    }
+    
+    .loop-options {
+        order: 3;
+    }
 }
 
 .preset-buttons {
@@ -294,8 +319,8 @@
     position: absolute;
     top: 0;
     left: 50%;
-    transform: translate(-50%, -130%);
-    padding: 6px 10px;
+    transform: translate(-50%, -160%); /* Moved further up */
+    padding: 8px 12px; /* Slightly larger */
     border-radius: 999px;
     font-size: 12px;
     font-weight: 600;
@@ -305,6 +330,7 @@
     white-space: nowrap;
     pointer-events: none;
     z-index: 30;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Timeline Container */
@@ -312,11 +338,12 @@
     position: relative;
     background: var(--timeline-bg);
     border-radius: 10px;
-    padding: 15px;
+    padding: 15px 15px 20px 15px; /* Extra bottom padding */
     margin-bottom: 15px;
-    min-height: 80px;
+    min-height: 100px; /* Increased height */
     max-width: 100%;
     overflow: visible;
+    margin-top: 40px; /* Space for the duration pill */
 }
 
 /* Track holds overlays */
@@ -325,9 +352,35 @@
     background: var(--timeline-track-bg);
     border-radius: 6px;
     padding: 5px;
-    min-height: 50px;
+    min-height: 60px; /* Taller for easier interaction */
     cursor: pointer;
     overflow: visible;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 10px 0; /* Vertical spacing */
+    transition: all 0.15s ease; /* Smooth interactions */
+}
+
+.timeline-track:hover {
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Add subtle gradient for better depth */
+.timeline-track::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, 
+        rgba(255, 255, 255, 0.05) 0%, 
+        transparent 50%, 
+        rgba(0, 0, 0, 0.05) 100%);
+    border-radius: 6px;
+    pointer-events: none;
 }
 
 /* Time markers */
@@ -383,8 +436,22 @@
     height: 100%;
     pointer-events: all;
     cursor: grab;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-    min-width: 20px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    min-width: 30px; /* Minimum width for easier grabbing */
+}
+
+.selection-area:hover {
+    background: rgba(59, 130, 246, 0.3); /* Slightly more visible on hover */
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.selection-area:active,
+.selection-area.dragging {
+    cursor: grabbing;
+    background: rgba(59, 130, 246, 0.4);
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
 }
 
 .selection-area::before {
@@ -397,35 +464,56 @@
     border: 1px dashed var(--timeline-selection-border);
     border-radius: 8px;
     opacity: 0.5;
+    pointer-events: none;
 }
 
-.selection-area:active {
-    cursor: grabbing;
+/* Add center grab indicator */
+.selection-area::after {
+    content: '⋮⋮';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    font-weight: bold;
+    pointer-events: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .selection-handle {
     position: absolute;
-    width: 12px;
+    width: 16px; /* Wider for easier grabbing */
     height: 100%;
     background: var(--timeline-handle);
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: ew-resize;
     pointer-events: all;
-    transition: all 0.3s ease;
-    z-index: 2;
+    transition: all 0.2s ease;
+    z-index: 3;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .selection-handle:hover {
     background: var(--timeline-handle-hover);
-    transform: scaleX(1.2);
+    transform: scaleX(1.3) scaleY(1.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
 }
 
 .selection-handle.left {
-    left: -6px;
+    left: -8px; /* Centered on edge */
 }
 
 .selection-handle.right {
-    right: -6px;
+    right: -8px; /* Centered on edge */
+}
+
+/* Add visual indicator when dragging */
+.selection-handle.dragging {
+    background: #3b82f6; /* Blue when dragging */
+    transform: scaleX(1.4) scaleY(1.2);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
 }
 
 /* Timeline Playhead */
@@ -456,14 +544,69 @@
 .timeline-info {
     display: flex;
     justify-content: center;
+    margin-top: 15px; /* More space from timeline */
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
 }
 
 .time-display {
     display: flex;
-    gap: 20px;
+    gap: 25px; /* More space between time values */
     font-size: 14px;
     color: var(--text-secondary);
     font-weight: 500;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.time-display > span {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .time-display {
+        gap: 15px;
+        font-size: 12px;
+    }
+    
+    .time-display > span {
+        padding: 3px 6px;
+    }
+}
+
+/* Keyboard shortcuts help */
+.keyboard-help {
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.4;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.keyboard-help strong {
+    color: var(--text-secondary);
+}
+
+.keyboard-help span {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin: 0 2px;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .keyboard-help {
+        font-size: 10px;
+    }
+    
+    .keyboard-help span {
+        display: inline-block;
+        margin: 1px;
+    }
 }
 
 /* ========================================
