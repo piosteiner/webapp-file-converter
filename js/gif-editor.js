@@ -56,6 +56,12 @@ class IntegratedGifEditor {
         // Drag and drop for editor
         this.setupEditorDragDrop();
 
+        this.editorDropZone?.addEventListener('click', () => {
+        if (!this.isProcessing) {
+        this.editorFileInput?.click();
+        }
+        });
+
         // Video controls
         document.getElementById('playPauseBtn')?.addEventListener('click', () => this.togglePlayback());
         document.getElementById('restartBtn')?.addEventListener('click', () => this.restart());
@@ -130,6 +136,10 @@ class IntegratedGifEditor {
             URL.revokeObjectURL(this.previewVideoUrl);
         }
         this.previewVideoUrl = null;
+        if (this.previewVideo) {
+            this.previewVideo.src = '';
+            this.previewVideo.load(); // Force reset
+        }
         this.previewVideo.src = '';
         this.videoDuration = 0;
         this.startTime = 0;
@@ -199,36 +209,43 @@ class IntegratedGifEditor {
     }
 
     onVideoLoaded() {
-        this.videoDuration = this.previewVideo.duration;
-        
-        if (!this.videoDuration || this.videoDuration === 0) {
-            console.error('Video duration is 0 or invalid');
-            this.showEditorStatus('❌ Failed to load video metadata', 'error');
-            return;
-        }
-        
-        // Update duration display
-        const durationEl = document.getElementById('videoDuration');
-        if (durationEl) {
-            durationEl.textContent = `${this.videoDuration.toFixed(1)}s`;
-        }
-        
-        // Set initial selection to full video
-        this.startTime = 0;
-        this.endTime = this.videoDuration;
-        this.currentTime = 0;
-        
-        // Create timeline and update display
-        this.createTimeline();
-        this.updateTimelineSelection();
-        this.updateTimeDisplay();
-        this.updatePlayhead();
-        this.updateDurationPill();
-        
-        // Enable controls
-        this.enableControls(true);
-        
-        console.log(`Video loaded: ${this.videoDuration.toFixed(1)}s duration`);
+    // Add safety check
+    if (!this.previewVideo || !this.previewVideo.duration) {
+        console.error('Video not properly loaded');
+        this.showEditorStatus('❌ Failed to load video metadata', 'error');
+        return;
+    }
+    
+    this.videoDuration = this.previewVideo.duration;
+    
+    if (!this.videoDuration || this.videoDuration === 0 || !isFinite(this.videoDuration)) {
+        console.error('Video duration is 0 or invalid:', this.videoDuration);
+        this.showEditorStatus('❌ Failed to load video metadata', 'error');
+        return;
+    }
+    
+    // Update duration display
+    const durationEl = document.getElementById('videoDuration');
+    if (durationEl) {
+        durationEl.textContent = `${this.videoDuration.toFixed(1)}s`;
+    }
+    
+    // Set initial selection to full video
+    this.startTime = 0;
+    this.endTime = this.videoDuration;
+    this.currentTime = 0;
+    
+    // Create timeline and update display
+    this.createTimeline();
+    this.updateTimelineSelection();
+    this.updateTimeDisplay();
+    this.updatePlayhead();
+    this.updateDurationPill();
+    
+    // Enable controls
+    this.enableControls(true);
+    
+    console.log(`Video loaded successfully: ${this.videoDuration.toFixed(1)}s duration`);
     }
 
     enableControls(enabled) {
