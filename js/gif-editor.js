@@ -144,9 +144,9 @@ class IntegratedGifEditor {
             const formData = new FormData();
             formData.append('file', file, file.name);
 
-            const uploadResponse = await fetch(`${this.SERVER_URL}/api/convert-gif-preview`, {
-            method: 'POST',
-            body: formData
+            const uploadResponse = await fetch(`${this.SERVER_URL}/convert/gif-to-webm`, {
+                method: 'POST',
+                body: formData
             });
 
             if (!uploadResponse.ok) {
@@ -542,9 +542,9 @@ class IntegratedGifEditor {
             form.append('start', String(this.startTime));
             form.append('end', String(this.endTime));
 
-            const res = await fetch(`${this.SERVER_URL}/api/trim-gif`, {
-            method: 'POST',
-            body: form
+            const res = await fetch(`${this.SERVER_URL}/edit/trim-gif`, {
+                method: 'POST',
+                body: form
             });
 
             if (progressText) progressText.textContent = 'Processing trim...';
