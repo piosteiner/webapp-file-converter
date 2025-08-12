@@ -93,6 +93,9 @@ class IntegratedGifEditor {
         document.addEventListener('mousemove', (e) => this.handleDrag(e));
         document.addEventListener('mouseup', () => this.endDrag());
 
+        // Keyboard shortcuts for fine-tuning selection
+        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+
         console.log('GIF Editor initialized.');
     }
 
@@ -247,12 +250,16 @@ class IntegratedGifEditor {
                 // Force display as backup
                 this.editorContainer.style.display = 'block';
                 
+                // Make container focusable for keyboard shortcuts
+                this.editorContainer.setAttribute('tabindex', '0');
+                
                 console.log('Container classes after:', this.editorContainer.classList.toString());
                 console.log('Container display after:', window.getComputedStyle(this.editorContainer).display);
                 
-                // Scroll to editor
+                // Scroll to editor and focus for keyboard control
                 setTimeout(() => {
                     this.editorContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    this.editorContainer.focus();
                 }, 100);
             } else {
                 console.error('Editor container not found!');
@@ -377,7 +384,19 @@ class IntegratedGifEditor {
         
         // Seek to clicked position (within selection bounds)
         const targetTime = clickPercent * this.videoDuration;
-        this.previewVideo.currentTime = Math.max(this.startTime, Math.min(this.endTime, targetTime));
+        const seekTime = Math.max(this.startTime, Math.min(this.endTime, targetTime));
+        
+        if (this.previewVideo) {
+            this.previewVideo.currentTime = seekTime;
+        }
+        
+        // Visual feedback for click
+        this.timelineTrack.style.transform = 'scale(0.98)';
+        setTimeout(() => {
+            this.timelineTrack.style.transform = '';
+        }, 100);
+        
+        console.log(`Timeline clicked at ${targetTime.toFixed(2)}s, seeked to ${seekTime.toFixed(2)}s`);
     }
 
     setPreset(duration) {
@@ -428,12 +447,22 @@ class IntegratedGifEditor {
         if (type === 'area') {
             this.dragStartTime = this.startTime;
             this.dragEndTime = this.endTime;
+            // Add visual feedback for area dragging
+            this.selectionArea.classList.add('dragging');
         } else {
             this.dragStartTime = type === 'start' ? this.startTime : this.endTime;
+            // Add visual feedback for handle dragging
+            if (type === 'start') {
+                this.startHandle.classList.add('dragging');
+            } else {
+                this.endHandle.classList.add('dragging');
+            }
         }
         
         document.body.style.userSelect = 'none';
         document.body.style.cursor = type === 'area' ? 'grabbing' : 'ew-resize';
+        
+        console.log(`Started dragging ${type} at time: ${this.dragStartTime.toFixed(2)}s`);
     }
 
     handleDrag(event) {
@@ -445,16 +474,33 @@ class IntegratedGifEditor {
         const mousePercent = Math.max(0, Math.min(1, mouseX / trackWidth));
         const mouseTime = mousePercent * this.videoDuration;
 
+        const minSelectionDuration = 0.1; // Minimum 0.1s selection
+
         if (this.dragType === 'start') {
-            // Minimum selection duration: 0.1s
-            const maxStart = this.endTime - 0.1;
-            this.startTime = Math.max(0, Math.min(maxStart, mouseTime));
+            // Dragging start handle
+            const maxStart = this.endTime - minSelectionDuration;
+            const newStart = Math.max(0, Math.min(maxStart, mouseTime));
+            this.startTime = newStart;
+            
+            // Update playhead to follow start handle while dragging
+            if (this.previewVideo) {
+                this.previewVideo.currentTime = this.startTime;
+            }
+            
         } else if (this.dragType === 'end') {
-            // Minimum selection duration: 0.1s
-            const minEnd = this.startTime + 0.1;
-            this.endTime = Math.min(this.videoDuration, Math.max(minEnd, mouseTime));
+            // Dragging end handle
+            const minEnd = this.startTime + minSelectionDuration;
+            const newEnd = Math.min(this.videoDuration, Math.max(minEnd, mouseTime));
+            this.endTime = newEnd;
+            
+            // Update playhead to follow end handle while dragging
+            if (this.previewVideo) {
+                this.previewVideo.currentTime = this.endTime;
+            }
+            
         } else if (this.dragType === 'area') {
-            const duration = this.dragEndTime - this.dragStartTime;
+            // Dragging entire selection
+            const selectionDuration = this.dragEndTime - this.dragStartTime;
             const deltaX = event.clientX - this.dragStartX;
             const deltaTime = (deltaX / trackWidth) * this.videoDuration;
             
@@ -464,32 +510,156 @@ class IntegratedGifEditor {
             // Keep within bounds
             if (newStart < 0) {
                 newStart = 0;
-                newEnd = duration;
+                newEnd = selectionDuration;
             }
             if (newEnd > this.videoDuration) {
                 newEnd = this.videoDuration;
-                newStart = this.videoDuration - duration;
+                newStart = this.videoDuration - selectionDuration;
             }
             
             this.startTime = newStart;
             this.endTime = newEnd;
+            
+            // Update playhead to follow the center of selection while dragging
+            if (this.previewVideo) {
+                const centerTime = (this.startTime + this.endTime) / 2;
+                this.previewVideo.currentTime = centerTime;
+            }
         }
 
+        // Update all visual elements with real-time feedback
         this.updateTimelineSelection();
         this.updateTimeDisplay();
         this.updatePlayhead();
         this.updateDurationPill();
+        
+        // Show real-time drag feedback in preview info
+        const previewInfo = document.getElementById('previewInfo');
+        if (previewInfo) {
+            const duration = this.endTime - this.startTime;
+            const dragIcon = this.dragType === 'start' ? '◀️' : 
+                           this.dragType === 'end' ? '▶️' : '🔄';
+            previewInfo.textContent = 
+                `${dragIcon} Dragging ${this.dragType} | Selection: ${duration.toFixed(1)}s (${((duration / this.videoDuration) * 100).toFixed(0)}%)`;
+        }
+        
+        // Clear preset button states since we're manually adjusting
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+    }
+
+    handleKeyboard(event) {
+        // Only handle keyboard when editor container is visible and not in an input field
+        if (!this.editorContainer || 
+            this.editorContainer.classList.contains('hidden') ||
+            this.videoDuration === 0 ||
+            ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) {
+            return;
+        }
+        
+        const step = event.shiftKey ? 0.1 : 0.01; // Fine control with Shift
+        let updated = false;
+        
+        switch(event.key) {
+            case 'ArrowLeft':
+                if (event.ctrlKey || event.metaKey) {
+                    // Move selection left
+                    const duration = this.endTime - this.startTime;
+                    const newStart = Math.max(0, this.startTime - step);
+                    this.startTime = newStart;
+                    this.endTime = Math.min(this.videoDuration, newStart + duration);
+                    updated = true;
+                } else if (event.altKey) {
+                    // Shrink from end
+                    this.endTime = Math.max(this.startTime + 0.1, this.endTime - step);
+                    updated = true;
+                } else {
+                    // Move start left
+                    this.startTime = Math.max(0, this.startTime - step);
+                    updated = true;
+                }
+                break;
+                
+            case 'ArrowRight':
+                if (event.ctrlKey || event.metaKey) {
+                    // Move selection right
+                    const duration = this.endTime - this.startTime;
+                    const newEnd = Math.min(this.videoDuration, this.endTime + step);
+                    this.endTime = newEnd;
+                    this.startTime = Math.max(0, newEnd - duration);
+                    updated = true;
+                } else if (event.altKey) {
+                    // Expand to end
+                    this.endTime = Math.min(this.videoDuration, this.endTime + step);
+                    updated = true;
+                } else {
+                    // Move end right
+                    this.endTime = Math.min(this.videoDuration, this.endTime + step);
+                    updated = true;
+                }
+                break;
+                
+            case ' ':
+                // Spacebar to play/pause
+                event.preventDefault();
+                this.togglePlayback();
+                return;
+        }
+        
+        if (updated) {
+            event.preventDefault();
+            this.updateTimelineSelection();
+            this.updateTimeDisplay();
+            this.updatePlayhead();
+            this.updateDurationPill();
+            
+            // Update video position
+            if (this.previewVideo) {
+                this.previewVideo.currentTime = this.startTime;
+            }
+            
+            // Clear preset states
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            console.log(`Keyboard adjustment: ${this.startTime.toFixed(2)}s - ${this.endTime.toFixed(2)}s`);
+        }
     }
 
     endDrag() {
         if (!this.isDragging) return;
+        
+        const dragType = this.dragType;
+        const finalStart = this.startTime;
+        const finalEnd = this.endTime;
+        
+        // Remove visual feedback classes
+        if (this.selectionArea) {
+            this.selectionArea.classList.remove('dragging');
+        }
+        if (this.startHandle) {
+            this.startHandle.classList.remove('dragging');
+        }
+        if (this.endHandle) {
+            this.endHandle.classList.remove('dragging');
+        }
         
         this.isDragging = false;
         this.dragType = null;
         document.body.style.userSelect = '';
         document.body.style.cursor = '';
         
-        console.log(`Selection updated: ${this.startTime.toFixed(1)}s - ${this.endTime.toFixed(1)}s`);
+        console.log(`Finished dragging ${dragType}. Final selection: ${finalStart.toFixed(2)}s - ${finalEnd.toFixed(2)}s (duration: ${(finalEnd - finalStart).toFixed(2)}s)`);
+        
+        // Restore normal preview info display
+        this.updatePlayhead();
+        
+        // Seek video to start of selection after dragging
+        if (this.previewVideo && dragType !== 'area') {
+            this.previewVideo.currentTime = this.startTime;
+        }
     }
 
     updateTimelineSelection() {
