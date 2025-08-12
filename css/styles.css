@@ -1595,3 +1595,11 @@ h1 {
         max-height: 250px;
     }
 }
+
+/* Add this temporarily to your CSS to debug video visibility */
+#previewVideo {
+    border: 2px solid red !important;
+    background: yellow !important;
+    min-width: 200px !important;
+    min-height: 200px !important;
+}

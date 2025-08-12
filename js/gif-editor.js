@@ -53,9 +53,8 @@ class IntegratedGifEditor {
             }
         });
 
-        // Drag and drop for editor
+        // Drag and drop for editor + click to open file dialog
         this.setupEditorDragDrop();
-
         this.editorDropZone?.addEventListener('click', () => {
         if (!this.isProcessing) {
         this.editorFileInput?.click();
@@ -159,25 +158,40 @@ class IntegratedGifEditor {
                 body: formData
             });
 
+            // DEBUG: Check the server response
+            console.log('Server response status:', uploadResponse.status);
+            console.log('Server response headers:', Object.fromEntries(uploadResponse.headers.entries()));
+
             if (!uploadResponse.ok) {
                 const errorText = await uploadResponse.text();
-                console.error('Upload failed:', errorText);
-                throw new Error(`Upload failed: ${uploadResponse.status}`);
+                console.error('Server response error:', errorText);
+                throw new Error(`Server error: ${uploadResponse.status} - ${errorText}`);
             }
 
             this.showEditorStatus('⏳ Processing preview...', 'info');
 
             // Server returns a WebM blob
             const webmBlob = await uploadResponse.blob();
-            
+
+            // DEBUG: Check the blob
+            console.log('Received blob:', webmBlob);
+            console.log('Blob size:', webmBlob.size);
+            console.log('Blob type:', webmBlob.type);
+
             // Verify we got a valid blob
             if (!webmBlob || webmBlob.size === 0) {
                 throw new Error('Received empty response from server');
             }
 
             this.previewVideoUrl = URL.createObjectURL(webmBlob);
+            console.log('Created blob URL:', this.previewVideoUrl);
+
             this.previewVideo.src = this.previewVideoUrl;
-            
+
+            // DEBUG: Check video element
+            console.log('Video element:', this.previewVideo);
+            console.log('Video src set to:', this.previewVideo.src);
+
             // Force load the video
             await this.previewVideo.load();
 
@@ -186,18 +200,18 @@ class IntegratedGifEditor {
             if (filenameEl) {
                 filenameEl.textContent = file.name;
             }
-            
+
             // Show file info
             const fileSizeKB = file.size / 1024;
             this.showEditorStatus(
                 `✅ Preview ready! File: ${file.name} (${fileSizeKB.toFixed(0)}KB)`, 
                 'success'
             );
-            
+
         } catch (err) {
             console.error('Error loading GIF:', err);
             this.showEditorStatus(`❌ Failed to load preview: ${err.message}`, 'error');
-            
+
             // Clean up on error
             if (this.previewVideoUrl) {
                 URL.revokeObjectURL(this.previewVideoUrl);
