@@ -1,7 +1,35 @@
 /*
  * GIF Editor Specific Styles
- * INCLUDES THE FIX for #previewVideo visibility
+ * INCLUDES THE FIX for #previewVideo visibility and editor drop zone behavior
  */
+
+/* ========================================
+   EDITOR DROP ZONE FIXES
+   ======================================== */
+
+/* Make editor drop zone behave like main converter */
+#editorDropZone {
+    border-color: var(--drop-zone-border) !important;
+    background: transparent !important;
+}
+
+#editorDropZone:hover {
+    border-color: var(--drop-zone-hover-border);
+    background-color: var(--drop-zone-hover-bg);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+}
+
+#editorDropZone.dragover {
+    border-color: var(--drop-zone-dragover-border);
+    background-color: var(--drop-zone-dragover-bg);
+    transform: scale(1.02);
+}
+
+#editorDropZone.processing {
+    border-color: var(--drop-zone-processing-border);
+    background-color: var(--drop-zone-processing-bg);
+}
 
 /* ========================================
    GIF EDITOR CONTAINER
@@ -62,7 +90,7 @@
 }
 
 /* ========================================
-   VIDEO ELEMENT STYLES - THE FIX!
+   VIDEO ELEMENT STYLES - THE MAIN FIX!
    ======================================== */
 
 #previewVideo {
@@ -71,9 +99,18 @@
     border-radius: 8px;
     box-shadow: 0 4px 15px var(--shadow-color);
     background: white;
-    display: block;
+    display: block !important;
     width: auto;
     height: auto;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative;
+    z-index: 1;
+}
+
+/* Ensure video is visible when loading */
+#previewVideo[src] {
+    display: block !important;
 }
 
 /* Legacy canvas and gif preview styles (keep for compatibility) */

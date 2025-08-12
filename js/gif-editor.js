@@ -145,6 +145,9 @@ class IntegratedGifEditor {
         this.endTime = 0;
         this.currentTime = 0;
 
+        // Add processing class to drop zone
+        this.editorDropZone?.classList.add('processing');
+
         // Upload GIF -> server converts to WebM for preview
         try {
             this.isProcessing = true;
@@ -219,6 +222,8 @@ class IntegratedGifEditor {
             }
         } finally {
             this.isProcessing = false;
+            // Remove processing class from drop zone
+            this.editorDropZone?.classList.remove('processing');
         }
     }
 
@@ -645,6 +650,7 @@ class IntegratedGifEditor {
     setupEditorDragDrop() {
         if (!this.editorDropZone) return;
         
+        // Prevent default drag behaviors
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             this.editorDropZone.addEventListener(eventName, (e) => {
                 e.preventDefault();
@@ -652,27 +658,55 @@ class IntegratedGifEditor {
             });
         });
 
-        this.editorDropZone.addEventListener('dragover', () => {
-            if (!this.isProcessing) this.editorDropZone.classList.add('dragover');
+        // Visual feedback on drag enter/over
+        this.editorDropZone.addEventListener('dragenter', () => {
+            if (!this.isProcessing) {
+                this.editorDropZone.classList.add('dragover');
+            }
         });
 
+        this.editorDropZone.addEventListener('dragover', () => {
+            if (!this.isProcessing) {
+                this.editorDropZone.classList.add('dragover');
+            }
+        });
+
+        // Remove visual feedback on drag leave
         this.editorDropZone.addEventListener('dragleave', (e) => {
             // Only remove dragover if we're actually leaving the drop zone
-            if (e.target === this.editorDropZone) {
+            // Check if the mouse is leaving the drop zone (not just moving to a child element)
+            const rect = this.editorDropZone.getBoundingClientRect();
+            const x = e.clientX;
+            const y = e.clientY;
+            
+            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
                 this.editorDropZone.classList.remove('dragover');
             }
         });
 
+        // Handle file drop
         this.editorDropZone.addEventListener('drop', (e) => {
             this.editorDropZone.classList.remove('dragover');
+            
             if (!this.isProcessing && e.dataTransfer?.files?.length) {
                 const file = e.dataTransfer.files[0];
-                if (file && /gif$/i.test(file.name)) {
+                if (file && /\.gif$/i.test(file.name)) {
                     this.loadGifForEditing(file);
                 } else {
                     this.showEditorStatus('❌ Please drop a GIF file.', 'error');
                 }
             }
+        });
+
+        // Add hover effects (matching main converter)
+        this.editorDropZone.addEventListener('mouseenter', () => {
+            if (!this.isProcessing) {
+                this.editorDropZone.classList.add('hover');
+            }
+        });
+
+        this.editorDropZone.addEventListener('mouseleave', () => {
+            this.editorDropZone.classList.remove('hover');
         });
     }
 
