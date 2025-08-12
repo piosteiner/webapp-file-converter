@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
 Flask Server for GIF to WebM Conversion + GIF Editor
-Wraps the existing gif_to_webm.py functionality as a web API
-Enhanced with GIF trimming/editing capabilities
+- Keeps existing /api/* endpoints (JSON responses)
+- Adds blob-returning endpoints used by the integrated editor:
+    * POST /convert/gif-to-webm  -> returns video/webm (preview)
+    * POST /edit/trim-gif        -> returns image/gif  (trimmed blob)
+- Fixed CORS configuration for converter.piogino.ch
 """
 
 from flask import (
@@ -10,21 +13,16 @@ from flask import (
     request,
     jsonify,
     send_file,
-    render_template_string,
 )
-from flask_cors import CORS
 import tempfile
 import os
-import json
 import subprocess
-import sys
 from pathlib import Path
 import uuid
-import shutil
 from werkzeug.utils import secure_filename
+import threading
 
-# Import your existing conversion functions
-# Adjust this import path to match your file structure
+# ---- Import conversion helpers (your existing file) ----
 try:
     from gif_to_webm import convert_gif_to_webm, check_ffmpeg, get_video_info
     HAS_CONVERTER = True
@@ -33,58 +31,38 @@ except ImportError:
     HAS_CONVERTER = False
 
 app = Flask(__name__)
-# Allow only your frontends to call the API
-ALLOWED_ORIGINS = [
-    "https://piogino.ch",
-    "https://www.piogino.ch",
-    "https://converter.piogino.ch",  # your GitHub Pages subdomain (the website)
-    # Add your GitHub Pages user domain if you ever use it directly, e.g.:
-    # "https://yourname.github.io",
-]
-CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
+
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB hard limit
 
-# Configuration
+# ---- Storage / validation ----
 UPLOAD_FOLDER = 'temp_uploads'
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+MAX_FILE_SIZE = 100 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'gif'}
-
-# Ensure upload directory exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-def allowed_file(filename):
-    """Check if file extension is allowed"""
+def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def cleanup_old_files():
-    """Clean up temporary files older than 1 hour"""
+    """Remove temp files older than 1 hour."""
     try:
         import time
-        current_time = time.time()
-        for filename in os.listdir(UPLOAD_FOLDER):
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            if os.path.isfile(file_path):
-                if current_time - os.path.getctime(file_path) > 3600:  # 1 hour
-                    os.remove(file_path)
+        now = time.time()
+        for fn in os.listdir(UPLOAD_FOLDER):
+            p = os.path.join(UPLOAD_FOLDER, fn)
+            if os.path.isfile(p) and now - os.path.getctime(p) > 3600:
+                os.remove(p)
     except Exception as e:
         print(f"Cleanup warning: {e}")
 
-def run_ffmpeg_command(cmd):
-    """Run FFmpeg command and return success status"""
+def run_ffmpeg_command(cmd) -> bool:
+    """Run FFmpeg command and return success."""
     try:
-        print(f"Running FFmpeg: {' '.join(cmd)}")
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=300  # 5 minute timeout
-        )
-        
-        if result.returncode != 0:
-            print(f"FFmpeg error: {result.stderr}")
+        print("Running FFmpeg:", " ".join(cmd))
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=300)
+        if proc.returncode != 0:
+            print("FFmpeg error:", proc.stderr)
             return False
-        
         return True
     except subprocess.TimeoutExpired:
         print("FFmpeg command timed out")
@@ -93,25 +71,24 @@ def run_ffmpeg_command(cmd):
         print(f"FFmpeg command failed: {e}")
         return False
 
+# ---- Simple index with status ----
 @app.route('/')
 def index():
-    """Serve a simple test page"""
-    # Only call check_ffmpeg() if the function is available (i.e., module imported)
     ffmpeg_status = "✅ Available" if (HAS_CONVERTER and check_ffmpeg()) else ("❌ Not found" if HAS_CONVERTER else "⚠️ Unknown (converter module missing)")
     converter_status = "✅ Available" if HAS_CONVERTER else "❌ Not found"
-
     return f"""
     <!DOCTYPE html>
-    <html>
-    <head><title>GIF to WebM Converter + Editor API</title></head>
+    <html><head><title>GIF to WebM Converter + Editor API</title></head>
     <body>
         <h1>GIF to WebM Converter + Editor API</h1>
         <p>Server is running successfully!</p>
         <h2>API Endpoints:</h2>
         <ul>
-            <li><strong>POST /api/convert</strong> - Convert GIF to WebM</li>
-            <li><strong>POST /api/convert-bulk</strong> - Bulk convert GIFs to WebM</li>
-            <li><strong>POST /api/trim-gif</strong> - Trim/edit GIF files</li>
+            <li><strong>POST /api/convert</strong> - Convert GIF to WebM (JSON)</li>
+            <li><strong>POST /api/convert-bulk</strong> - Bulk convert GIFs (JSON)</li>
+            <li><strong>POST /api/trim-gif</strong> - Trim GIF (JSON)</li>
+            <li><strong>POST /convert/gif-to-webm</strong> - Preview WebM blob</li>
+            <li><strong>POST /edit/trim-gif</strong> - Trimmed GIF blob</li>
             <li><strong>GET /api/download/&lt;file_id&gt;</strong> - Download converted files</li>
             <li><strong>GET /api/health</strong> - Health check</li>
         </ul>
@@ -120,104 +97,257 @@ def index():
             <li>FFmpeg: {ffmpeg_status}</li>
             <li>Converter: {converter_status}</li>
         </ul>
-        <h2>New Features:</h2>
+        <h2>CORS Configuration:</h2>
         <ul>
-            <li>✂️ <strong>GIF Editor</strong> - Trim GIFs with precise timing</li>
-            <li>🎥 <strong>Preview Mode</strong> - Convert GIFs to WebM for editing preview</li>
-            <li>🔄 <strong>Ping-Pong Loops</strong> - Create seamless back-and-forth animations</li>
+            <li>Allowed Origin: https://converter.piogino.ch</li>
         </ul>
-    </body>
-    </html>
+    </body></html>
     """
 
-@app.route('/api/health', methods=['GET'])
+# ---- Health ----
+@app.route('/api/health', methods=['GET', 'OPTIONS'])
 def health_check():
-    """Health check endpoint"""
     ffmpeg_ok = check_ffmpeg() if HAS_CONVERTER else False
     return jsonify({
         'status': 'healthy',
         'ffmpeg_available': ffmpeg_ok,
         'converter_available': HAS_CONVERTER,
-        'gif_editor_available': ffmpeg_ok  # GIF editor requires FFmpeg
+        'gif_editor_available': ffmpeg_ok
     })
 
-@app.route('/api/convert', methods=['POST'])
-def convert_gif():
-    """Convert GIF to WebM endpoint (enhanced with preview mode)"""
+# ====================================================================================
+# New endpoints used by the integrated editor (blob responses, match the frontend)
+# ====================================================================================
+
+@app.route('/convert/gif-to-webm', methods=['POST', 'OPTIONS'])
+def convert_gif_to_webm_preview():
+    """
+    Returns a WebM BLOB for preview (video/webm).
+    Frontend: POST file to this endpoint; expect 200 + WebM body.
+    """
+
     cleanup_old_files()
-    
+
     try:
-        # Check if conversion module is available
-        if not HAS_CONVERTER:
-            return jsonify({'error': 'Conversion module not available'}), 500
-        
-        # Check if FFmpeg is available
-        if not check_ffmpeg():
-            return jsonify({'error': 'FFmpeg not found on server'}), 500
-        
-        # Check if file is provided
+        if not HAS_CONVERTER or not check_ffmpeg():
+            return jsonify({'error': 'FFmpeg or converter unavailable'}), 500
+
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
-        
+
+        file = request.files['file']
+        if not file.filename or not allowed_file(file.filename):
+            return jsonify({'error': 'Only GIF files are allowed'}), 400
+
+        if request.content_length is None or request.content_length > MAX_FILE_SIZE:
+            return jsonify({'error': f'File too large. Max {MAX_FILE_SIZE // (1024*1024)}MB'}), 400
+
+        file_id = str(uuid.uuid4())
+        secure_name = secure_filename(file.filename)
+        in_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{secure_name}")
+        out_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_preview.webm")
+
+        file.save(in_path)
+
+        # Use 'preview' mode; allow generous size for quality
+        ok = convert_gif_to_webm(
+            input_path=in_path,
+            output_path=out_path,
+            mode='preview',
+            max_size_kb=2048  # higher cap for preview
+        )
+
+        # Clean input
+        try:
+            os.remove(in_path)
+        except:
+            pass
+
+        if not ok or not os.path.exists(out_path):
+            # Ensure any partial is removed
+            try:
+                if os.path.exists(out_path): os.remove(out_path)
+            except:
+                pass
+            return jsonify({'error': 'Conversion failed'}), 400
+
+        # Return the WebM blob; schedule deletion
+        def _cleanup():
+            try:
+                os.remove(out_path)
+            except:
+                pass
+
+        resp = send_file(out_path, mimetype="video/webm", as_attachment=False)
+        threading.Timer(30, _cleanup).start()
+        return resp
+
+    except Exception as e:
+        print("Preview conversion error:", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/edit/trim-gif', methods=['POST', 'OPTIONS'])
+def edit_trim_gif_blob():
+    """
+    Returns a trimmed GIF as a BLOB (image/gif).
+    Frontend sends: file, start, end  (seconds). Optionally ping_pong=true.
+    """
+
+    cleanup_old_files()
+
+    try:
+        if not check_ffmpeg():
+            return jsonify({'error': 'FFmpeg not found on server'}), 500
+
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        f = request.files['file']
+        if not f.filename or not allowed_file(f.filename):
+            return jsonify({'error': 'Only GIF files are allowed'}), 400
+
+        # Params (front-end used keys: 'start' and 'end' in your integrated JS)
+        try:
+            start_time = float(request.form.get('start', request.form.get('start_time', 0)))
+            end_time = float(request.form.get('end', request.form.get('end_time', 3)))
+            ping_pong = str(request.form.get('ping_pong', 'false')).lower() == 'true'
+        except ValueError:
+            return jsonify({'error': 'Invalid time parameters'}), 400
+
+        if start_time < 0 or end_time <= start_time or (end_time - start_time) > 60:
+            return jsonify({'error': 'Invalid time range. Must be 0 ≤ start < end ≤ start+60'}), 400
+
+        file_id = str(uuid.uuid4())
+        secure_name = secure_filename(f.filename)
+        in_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{secure_name}")
+        out_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_trimmed.gif")
+        f.save(in_path)
+
+        duration = end_time - start_time
+
+        if ping_pong:
+            # Trim first, then ping-pong (reverse + concat) with palette
+            temp = os.path.join(UPLOAD_FOLDER, f"{file_id}_temp.gif")
+            cmd_trim = [
+                'ffmpeg', '-y',
+                '-i', in_path,
+                '-ss', str(start_time),
+                '-t', str(duration),
+                '-vf', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+                temp
+            ]
+            ok = run_ffmpeg_command(cmd_trim)
+            if ok:
+                cmd_pingpong = [
+                    'ffmpeg', '-y',
+                    '-i', temp,
+                    '-filter_complex',
+                    '[0:v]split[a][b];[a]split[c][d];[d]reverse[r];[c][r]concat=n=2:v=1[out];[out]split[g][h];[g]palettegen[p];[h][p]paletteuse',
+                    '-map', '[out]',
+                    out_path
+                ]
+                ok = run_ffmpeg_command(cmd_pingpong)
+            try:
+                if os.path.exists(temp): os.remove(temp)
+            except:
+                pass
+        else:
+            # Simple trim with proper palette for good quality
+            cmd = [
+                'ffmpeg', '-y',
+                '-i', in_path,
+                '-ss', str(start_time),
+                '-t', str(duration),
+                '-vf', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+                out_path
+            ]
+            ok = run_ffmpeg_command(cmd)
+
+        try:
+            os.remove(in_path)
+        except:
+            pass
+
+        if not ok or not os.path.exists(out_path):
+            try:
+                if os.path.exists(out_path): os.remove(out_path)
+            except:
+                pass
+            return jsonify({'error': 'GIF trimming failed'}), 400
+
+        # Return GIF blob; schedule deletion
+        def _cleanup():
+            try:
+                os.remove(out_path)
+            except:
+                pass
+
+        resp = send_file(out_path, mimetype='image/gif', as_attachment=True,
+                         download_name=f"{Path(secure_name).stem}_trimmed_{start_time:.1f}-{end_time:.1f}.gif")
+        threading.Timer(60, _cleanup).start()
+        return resp
+
+    except Exception as e:
+        print("Trim (blob) error:", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
+# ====================================================================================
+# Existing JSON endpoints used by your main converter UI (/api/*)
+# ====================================================================================
+
+@app.route('/api/convert', methods=['POST', 'OPTIONS'])
+def convert_gif():
+    """Convert GIF to WebM endpoint (JSON summary)."""
+
+    cleanup_old_files()
+    try:
+        if not HAS_CONVERTER:
+            return jsonify({'error': 'Conversion module not available'}), 500
+        if not check_ffmpeg():
+            return jsonify({'error': 'FFmpeg not found on server'}), 500
+
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
         file = request.files['file']
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-        
-        # Validate file
         if not allowed_file(file.filename):
             return jsonify({'error': 'Only GIF files are allowed'}), 400
-        
-        # Check file size
         if request.content_length is None or request.content_length > MAX_FILE_SIZE:
             return jsonify({'error': f'File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB'}), 400
-        
-        # Get conversion parameters
+
         max_size_kb = int(request.form.get('max_size', 256))
         mode = request.form.get('mode', 'sticker')  # sticker, emoji, or preview
         starting_crf = int(request.form.get('crf', 35))
-        
-        # Validate parameters
+
         if max_size_kb < 64 or max_size_kb > 2048:
             return jsonify({'error': 'Invalid max_size. Must be between 64 and 2048 KB'}), 400
-        
         if mode not in ['sticker', 'emoji', 'preview']:
             return jsonify({'error': 'Invalid mode. Must be "sticker", "emoji", or "preview"'}), 400
-        
-        # Generate unique filenames
+
         file_id = str(uuid.uuid4())
         secure_name = secure_filename(file.filename)
-        input_filename = f"{file_id}_{secure_name}"
-        input_path = os.path.join(UPLOAD_FOLDER, input_filename)
-        
-        # Save uploaded file
+        input_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{secure_name}")
+        output_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_output.webm")
         file.save(input_path)
-        
-        # Generate output filename
-        output_filename = f"{file_id}_output.webm"
-        output_path = os.path.join(UPLOAD_FOLDER, output_filename)
-        
-        print(f"Converting {input_path} -> {output_path}")
-        print(f"Parameters: max_size={max_size_kb}KB, mode={mode}, crf={starting_crf}")
-        
-        # Get original file info
-        original_info = get_video_info(input_path)
+
+        print(f"Converting {input_path} -> {output_path} (mode={mode}, max_size={max_size_kb}KB, crf={starting_crf})")
+
+        original_info = get_video_info(input_path) if HAS_CONVERTER else None
         original_size = os.path.getsize(input_path)
-        
-        # Use the modified gif_to_webm function that handles preview mode properly
-        success = convert_gif_to_webm(
+
+        ok = convert_gif_to_webm(
             input_path=input_path,
             output_path=output_path,
             mode=mode,
-            max_size_kb=max_size_kb if mode != 'preview' else 2048  # Allow larger files for preview
+            max_size_kb=max_size_kb if mode != 'preview' else 2048
         )
-        
-        if success and os.path.exists(output_path):
-            # Get output file info
+
+        if ok and os.path.exists(output_path):
             output_size = os.path.getsize(output_path)
-            output_info = get_video_info(output_path)
-            
-            # Prepare response data
-            response_data = {
+            output_info = get_video_info(output_path) if HAS_CONVERTER else None
+
+            data = {
                 'success': True,
                 'original_filename': secure_name,
                 'output_filename': f"{Path(secure_name).stem}_{mode}.webm",
@@ -230,211 +360,117 @@ def convert_gif():
                 'max_size_kb': max_size_kb,
                 'download_id': file_id
             }
-            
-            # Add video dimensions if available
-            if original_info and 'streams' in original_info:
-                for stream in original_info['streams']:
-                    if stream.get('codec_type') == 'video':
-                        response_data['original_width'] = stream.get('width')
-                        response_data['original_height'] = stream.get('height')
-                        response_data['original_duration'] = float(original_info.get('format', {}).get('duration', 0))
-                        break
-            
-            if output_info and 'streams' in output_info:
-                for stream in output_info['streams']:
-                    if stream.get('codec_type') == 'video':
-                        response_data['output_width'] = stream.get('width')
-                        response_data['output_height'] = stream.get('height')
-                        response_data['output_duration'] = float(output_info.get('format', {}).get('duration', 0))
-                        break
-            
-            # Clean up input file
-            try:
-                os.remove(input_path)
-            except:
-                pass
-            
-            return jsonify(response_data)
-        
-        else:
-            # Conversion failed
-            try:
-                os.remove(input_path)
-                if os.path.exists(output_path):
-                    os.remove(output_path)
-            except:
-                pass
-            
-            return jsonify({
-                'success': False,
-                'error': f'Conversion failed. Could not create file under {max_size_kb}KB limit.'
-            }), 400
-    
-    except Exception as e:
-        print(f"Conversion error: {str(e)}")
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
-@app.route('/api/trim-gif', methods=['POST'])
-def trim_gif():
-    """Trim GIF file with precise timing - NEW ENDPOINT FOR GIF EDITOR"""
+            if original_info and 'streams' in original_info:
+                for s in original_info['streams']:
+                    if s.get('codec_type') == 'video':
+                        data['original_width'] = s.get('width')
+                        data['original_height'] = s.get('height')
+                        data['original_duration'] = float(original_info.get('format', {}).get('duration', 0))
+                        break
+            if output_info and 'streams' in output_info:
+                for s in output_info['streams']:
+                    if s.get('codec_type') == 'video':
+                        data['output_width'] = s.get('width')
+                        data['output_height'] = s.get('height')
+                        data['output_duration'] = float(output_info.get('format', {}).get('duration', 0))
+                        break
+
+            try: os.remove(input_path)
+            except: pass
+
+            return jsonify(data)
+
+        # fail path
+        try:
+            os.remove(input_path)
+            if os.path.exists(output_path): os.remove(output_path)
+        except:
+            pass
+        return jsonify({'success': False, 'error': f'Conversion failed. Could not meet {max_size_kb}KB limit.'}), 400
+
+    except Exception as e:
+        print("Conversion error:", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/trim-gif', methods=['POST', 'OPTIONS'])
+def trim_gif_json():
+    """Trim GIF and return JSON metadata (kept for your original UI)."""
+
     cleanup_old_files()
-    
     try:
-        # Check if FFmpeg is available
         if not check_ffmpeg():
             return jsonify({'error': 'FFmpeg not found on server'}), 500
-        
-        # Check if file is provided
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
-        
+
         file = request.files['file']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        # Validate file
-        if not allowed_file(file.filename):
+        if file.filename == '' or not allowed_file(file.filename):
             return jsonify({'error': 'Only GIF files are allowed'}), 400
-        
-        # Get trimming parameters
+
         try:
             start_time = float(request.form.get('start_time', 0))
             end_time = float(request.form.get('end_time', 3))
-            ping_pong = request.form.get('ping_pong', 'false').lower() == 'true'
+            ping_pong = str(request.form.get('ping_pong', 'false')).lower() == 'true'
         except ValueError:
             return jsonify({'error': 'Invalid time parameters'}), 400
-        
-        # Validate timing
+
         if start_time < 0 or end_time <= start_time or (end_time - start_time) > 60:
             return jsonify({'error': 'Invalid time range. Must be 0 ≤ start < end ≤ start+60'}), 400
-        
-        # Generate unique filenames
+
         file_id = str(uuid.uuid4())
         secure_name = secure_filename(file.filename)
-        input_filename = f"{file_id}_{secure_name}"
-        input_path = os.path.join(UPLOAD_FOLDER, input_filename)
-        
-        # Save uploaded file
-        file.save(input_path)
-        
-        # Generate output filename
-        output_filename = f"{file_id}_trimmed.gif"
-        output_path = os.path.join(UPLOAD_FOLDER, output_filename)
-        
-        print(f"Trimming GIF: {input_path} -> {output_path}")
-        print(f"Time range: {start_time}s - {end_time}s, Ping-pong: {ping_pong}")
-        
-        # Get original file info
-        original_size = os.path.getsize(input_path)
-        
-        # Build FFmpeg command for trimming
+        in_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{secure_name}")
+        out_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_trimmed.gif")
+        file.save(in_path)
+
         duration = end_time - start_time
-        
-        if ping_pong:
-            # Create ping-pong effect: original + reversed
-            temp_output = os.path.join(UPLOAD_FOLDER, f"{file_id}_temp.gif")
-            
-            # First, trim to the desired segment
-            cmd_trim = [
-                'ffmpeg', '-y',
-                '-i', input_path,
-                '-ss', str(start_time),
-                '-t', str(duration),
-                '-vf', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
-                temp_output
-            ]
-            
-            if run_ffmpeg_command(cmd_trim):
-                # Then create ping-pong effect
-                cmd_pingpong = [
-                    'ffmpeg', '-y',
-                    '-i', temp_output,
-                    '-filter_complex', '[0:v]split[a][b];[a]palettegen[p];[b]split[c][d];[d]reverse[r];[c][r]concat[final];[final][p]paletteuse',
-                    output_path
-                ]
-                
-                success = run_ffmpeg_command(cmd_pingpong)
-                
-                # Clean up temp file
-                try:
-                    os.remove(temp_output)
-                except:
-                    pass
-            else:
-                success = False
-        else:
-            # Simple trim without ping-pong
-            cmd = [
-                'ffmpeg', '-y',
-                '-i', input_path,
-                '-ss', str(start_time),
-                '-t', str(duration),
-                '-vf', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
-                output_path
-            ]
-            
-            success = run_ffmpeg_command(cmd)
-        
-        if success and os.path.exists(output_path):
-            # Get output file info
-            output_size = os.path.getsize(output_path)
-            
-            # Prepare response data
-            response_data = {
+        cmd = [
+            'ffmpeg', '-y',
+            '-i', in_path,
+            '-ss', str(start_time),
+            '-t', str(duration),
+            '-vf', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+            out_path
+        ]
+        ok = run_ffmpeg_command(cmd)
+
+        if ok and os.path.exists(out_path):
+            original_size = os.path.getsize(in_path)
+            output_size = os.path.getsize(out_path)
+            try: os.remove(in_path)
+            except: pass
+            return jsonify({
                 'success': True,
                 'original_filename': secure_name,
                 'output_filename': f"{Path(secure_name).stem}_trimmed_{start_time:.1f}s-{end_time:.1f}s.gif",
-                'original_size_bytes': original_size,
-                'output_size_bytes': output_size,
-                'original_size_kb': round(original_size / 1024, 1),
-                'output_size_kb': round(output_size / 1024, 1),
-                'compression_ratio': round((1 - output_size / original_size) * 100, 1),
+                'original_size_kb': round(original_size/1024, 1),
+                'output_size_kb': round(output_size/1024, 1),
                 'start_time': start_time,
                 'end_time': end_time,
                 'duration': duration,
                 'ping_pong': ping_pong,
                 'download_id': file_id
-            }
-            
-            # Clean up input file
-            try:
-                os.remove(input_path)
-            except:
-                pass
-            
-            return jsonify(response_data)
-        
-        else:
-            # Trimming failed
-            try:
-                os.remove(input_path)
-                if os.path.exists(output_path):
-                    os.remove(output_path)
-            except:
-                pass
-            
-            return jsonify({
-                'success': False,
-                'error': 'GIF trimming failed. Please check your time parameters.'
-            }), 400
-    
+            })
+
+        try:
+            if os.path.exists(in_path): os.remove(in_path)
+            if os.path.exists(out_path): os.remove(out_path)
+        except:
+            pass
+        return jsonify({'success': False, 'error': 'GIF trimming failed'}), 400
+
     except Exception as e:
-        print(f"Trim error: {str(e)}")
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+        print("Trim (JSON) error:", e)
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/download/<file_id>')
 def download_file(file_id):
-    """Download converted file (enhanced to handle both WebM and GIF)"""
+    """Download converted file (handles both WebM and GIF)."""
     try:
-        # Try to find WebM file first (original functionality)
-        webm_filename = f"{file_id}_output.webm"
-        webm_path = os.path.join(UPLOAD_FOLDER, webm_filename)
-        
-        # Try to find trimmed GIF file (new functionality)
-        gif_filename = f"{file_id}_trimmed.gif"
-        gif_path = os.path.join(UPLOAD_FOLDER, gif_filename)
-        
-        # Determine which file exists
+        webm_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_output.webm")
+        gif_path  = os.path.join(UPLOAD_FOLDER, f"{file_id}_trimmed.gif")
+
         if os.path.exists(webm_path):
             file_path = webm_path
             download_name = f"converted_sticker_{file_id[:8]}.webm"
@@ -445,31 +481,20 @@ def download_file(file_id):
             mimetype = 'image/gif'
         else:
             return jsonify({'error': 'File not found or expired'}), 404
-        
-        def remove_file_after_send():
-            try:
-                os.remove(file_path)
-            except:
-                pass
-        
-        # Send file and schedule cleanup
-        response = send_file(
-            file_path,
-            as_attachment=True,
-            download_name=download_name,
-            mimetype=mimetype
-        )
-        
-        # Clean up file after a delay (Flask will handle the sending first)
-        import threading
-        threading.Timer(10, remove_file_after_send).start()
-        
-        return response
-    
+
+        def _cleanup():
+            try: os.remove(file_path)
+            except: pass
+
+        resp = send_file(file_path, as_attachment=True, download_name=download_name, mimetype=mimetype)
+        threading.Timer(10, _cleanup).start()
+        return resp
+
     except Exception as e:
-        print(f"Download error: {str(e)}")
+        print("Download error:", e)
         return jsonify({'error': 'Download failed'}), 500
 
+# ---- Error handlers ----
 @app.errorhandler(413)
 def too_large(e):
     return jsonify({'error': f'File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB'}), 413
@@ -482,93 +507,67 @@ def not_found(e):
 def internal_error(e):
     return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/api/convert-bulk', methods=['POST'])
+# ---- Bulk convert ----
+@app.route('/api/convert-bulk', methods=['POST', 'OPTIONS'])
 def convert_bulk():
-    """Convert multiple GIF files to WebM"""
+
     cleanup_old_files()
-    
     try:
         if not HAS_CONVERTER:
             return jsonify({'error': 'Conversion module not available'}), 500
-        
         if not check_ffmpeg():
             return jsonify({'error': 'FFmpeg not found on server'}), 500
-        
-        # Get files from request
+
         files = request.files.getlist('files')
-        
-        if not files or len(files) == 0:
+        if not files:
             return jsonify({'error': 'No files provided'}), 400
-        
-        # Get conversion parameters
+
         max_size_kb = int(request.form.get('max_size', 256))
         mode = request.form.get('mode', 'sticker')
-        
-        # Validate parameters
+
         if max_size_kb < 64 or max_size_kb > 2048:
             return jsonify({'error': 'Invalid max_size. Must be between 64 and 2048 KB'}), 400
-        
         if mode not in ['sticker', 'emoji', 'preview']:
             return jsonify({'error': 'Invalid mode. Must be "sticker", "emoji", or "preview"'}), 400
-        
-        results = []
-        successful = 0
-        failed = 0
-        
+
+        results, successful, failed = [], 0, 0
+
         for file in files:
-            if file.filename == '':
+            if not file.filename:
                 continue
-            
             if not allowed_file(file.filename):
-                results.append({
-                    'filename': file.filename,
-                    'success': False,
-                    'error': 'Not a GIF file'
-                })
+                results.append({'filename': file.filename, 'success': False, 'error': 'Not a GIF file'})
                 failed += 1
                 continue
-            
-            # Generate unique filenames
+
             file_id = str(uuid.uuid4())
             secure_name = secure_filename(file.filename)
-            input_filename = f"{file_id}_{secure_name}"
-            input_path = os.path.join(UPLOAD_FOLDER, input_filename)
-            
-            file.save(input_path)
-            
-            output_filename = f"{file_id}_output.webm"
-            output_path = os.path.join(UPLOAD_FOLDER, output_filename)
-            
-            print(f"Converting {secure_name} (bulk)")
-            
-            original_size = os.path.getsize(input_path)
-            
-            # Perform conversion
-            success = convert_gif_to_webm(
-                input_path=input_path,
-                output_path=output_path,
+            in_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{secure_name}")
+            out_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_output.webm")
+            file.save(in_path)
+
+            orig_size = os.path.getsize(in_path)
+            ok = convert_gif_to_webm(
+                input_path=in_path,
+                output_path=out_path,
                 mode=mode,
                 max_size_kb=max_size_kb
             )
-            
-            if success and os.path.exists(output_path):
-                output_size = os.path.getsize(output_path)
-                
+
+            if ok and os.path.exists(out_path):
+                out_size = os.path.getsize(out_path)
                 results.append({
                     'filename': secure_name,
                     'success': True,
                     'output_filename': f"{Path(secure_name).stem}_{mode}.webm",
-                    'original_size_kb': round(original_size / 1024, 1),
-                    'output_size_kb': round(output_size / 1024, 1),
-                    'compression_ratio': round((1 - output_size / original_size) * 100, 1),
+                    'original_size_kb': round(orig_size / 1024, 1),
+                    'output_size_kb': round(out_size / 1024, 1),
+                    'compression_ratio': round((1 - out_size / orig_size) * 100, 1),
                     'download_id': file_id
                 })
                 successful += 1
-                
-                try:
-                    os.remove(input_path)
-                except:
-                    pass
+                try: os.remove(in_path)
+                except: pass
             else:
                 results.append({
                     'filename': secure_name,
@@ -576,25 +575,19 @@ def convert_bulk():
                     'error': f'Could not compress under {max_size_kb}KB'
                 })
                 failed += 1
-                
                 try:
-                    os.remove(input_path)
-                    if os.path.exists(output_path):
-                        os.remove(output_path)
+                    os.remove(in_path)
+                    if os.path.exists(out_path): os.remove(out_path)
                 except:
                     pass
-        
-        return jsonify({
-            'total': len(files),
-            'successful': successful,
-            'failed': failed,
-            'results': results
-        })
-    
-    except Exception as e:
-        print(f"Bulk conversion error: {str(e)}")
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+        return jsonify({'total': len(files), 'successful': successful, 'failed': failed, 'results': results})
+
+    except Exception as e:
+        print("Bulk conversion error:", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
+# ---- Main ----
 if __name__ == '__main__':
     print("🚀 Starting GIF to WebM Converter + Editor Server...")
     print(f"📁 Upload folder: {os.path.abspath(UPLOAD_FOLDER)}")
@@ -602,9 +595,14 @@ if __name__ == '__main__':
     print(f"🔧 FFmpeg available: {check_ffmpeg() if HAS_CONVERTER else 'Unknown'}")
     print(f"🔄 Converter available: {HAS_CONVERTER}")
     print()
-    print("🌐 Server will be available at: http://127.0.0.1:5000 (behind Nginx)")
-    print("🔧 Public API endpoint: https://api.piogino.ch/api/convert")
-    print("✂️ New GIF Editor endpoint: https://api.piogino.ch/api/trim-gif")
+    print("🌐 Public blob endpoints:")
+    print("    POST https://api.piogino.ch/convert/gif-to-webm")
+    print("    POST https://api.piogino.ch/edit/trim-gif")
+    print("🌐 JSON endpoints:")
+    print("    POST https://api.piogino.ch/api/convert")
+    print("    POST https://api.piogino.ch/api/trim-gif")
+    print("    POST https://api.piogino.ch/api/convert-bulk")
+    print("    GET  https://api.piogino.ch/api/download/<id>")
+    print("🔒 CORS: https://converter.piogino.ch")
     print()
-    
     app.run(debug=False, host='127.0.0.1', port=5000)
