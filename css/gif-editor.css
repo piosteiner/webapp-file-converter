@@ -1,0 +1,491 @@
+/*
+ * GIF Editor Specific Styles
+ * INCLUDES THE FIX for #previewVideo visibility
+ */
+
+/* ========================================
+   GIF EDITOR CONTAINER
+   ======================================== */
+
+.gif-editor-container {
+    margin-top: 30px;
+    text-align: left;
+}
+
+/* ========================================
+   PREVIEW SECTION
+   ======================================== */
+
+.preview-section {
+    margin-bottom: 30px;
+}
+
+.preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    justify-content: center;
+}
+
+.control-btn {
+    background: var(--control-btn-bg);
+    border: 1px solid var(--timeline-handle);
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+}
+
+.control-btn:hover {
+    background: var(--control-btn-hover);
+    transform: translateY(-1px);
+}
+
+.preview-info {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.preview-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--timeline-bg);
+    border-radius: 10px;
+    padding: 20px;
+    min-height: 200px;
+}
+
+/* ========================================
+   VIDEO ELEMENT STYLES - THE FIX!
+   ======================================== */
+
+#previewVideo {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    background: white;
+    display: block;
+    width: auto;
+    height: auto;
+}
+
+/* Legacy canvas and gif preview styles (keep for compatibility) */
+#previewCanvas {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    background: white;
+}
+
+#gifPreview {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    background: white;
+}
+
+/* ========================================
+   TIMELINE SECTION
+   ======================================== */
+
+.timeline-section {
+    margin-bottom: 30px;
+}
+
+.timeline-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.preset-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.preset-btn {
+    background: var(--quality-btn-bg);
+    border: 1px solid var(--timeline-handle);
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.preset-btn:hover,
+.preset-btn.active {
+    background: var(--quality-btn-active);
+    color: white;
+}
+
+.duration-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.duration-input {
+    width: 70px;
+    padding: 6px 8px;
+    border: 1px solid var(--timeline-handle);
+    border-radius: 4px;
+    background: var(--checkbox-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.duration-btn {
+    background: var(--timeline-handle);
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.duration-btn:hover {
+    background: var(--timeline-handle-hover);
+}
+
+.loop-options {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--checkbox-border);
+    border-radius: 4px;
+    background: var(--checkbox-bg);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background: var(--checkbox-check);
+    border-color: var(--checkbox-check);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* ========================================
+   TIMELINE COMPONENTS
+   ======================================== */
+
+/* Status pill above the timeline bar */
+.duration-pill {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -130%);
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--controls-bg);
+    color: var(--text-accent);
+    border: 1px solid var(--timeline-handle);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 30;
+}
+
+/* Timeline Container */
+.timeline-container {
+    position: relative;
+    background: var(--timeline-bg);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    min-height: 80px;
+    max-width: 100%;
+    overflow: visible;
+}
+
+/* Track holds overlays */
+.timeline-track {
+    position: relative;
+    background: var(--timeline-track-bg);
+    border-radius: 6px;
+    padding: 5px;
+    min-height: 50px;
+    cursor: pointer;
+    overflow: visible;
+}
+
+/* Time markers */
+.time-marker {
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    width: 1px;
+    background: var(--timeline-handle);
+    opacity: 0.2;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.time-marker.major-marker {
+    width: 2px;
+    opacity: 0.5;
+}
+
+.time-marker:first-child,
+.time-marker:last-child {
+    opacity: 0.7;
+    width: 2px;
+}
+
+.time-label {
+    position: absolute;
+    top: -25px;
+    left: -15px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    background: var(--timeline-bg);
+    padding: 2px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    font-weight: 500;
+    z-index: 2;
+}
+
+/* Timeline Selection */
+.timeline-selection {
+    position: absolute;
+    inset: 5px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.selection-area {
+    position: absolute;
+    background: var(--timeline-selection);
+    border: 2px solid var(--timeline-selection-border);
+    border-radius: 6px;
+    height: 100%;
+    pointer-events: all;
+    cursor: grab;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    min-width: 20px;
+}
+
+.selection-area::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border: 1px dashed var(--timeline-selection-border);
+    border-radius: 8px;
+    opacity: 0.5;
+}
+
+.selection-area:active {
+    cursor: grabbing;
+}
+
+.selection-handle {
+    position: absolute;
+    width: 12px;
+    height: 100%;
+    background: var(--timeline-handle);
+    border-radius: 6px;
+    cursor: ew-resize;
+    pointer-events: all;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.selection-handle:hover {
+    background: var(--timeline-handle-hover);
+    transform: scaleX(1.2);
+}
+
+.selection-handle.left {
+    left: -6px;
+}
+
+.selection-handle.right {
+    right: -6px;
+}
+
+/* Timeline Playhead */
+.timeline-playhead {
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    width: 3px;
+    background: var(--timeline-playhead);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 20;
+    transition: left 0.1s ease;
+}
+
+.timeline-playhead::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -4px;
+    width: 11px;
+    height: 11px;
+    background: var(--timeline-playhead);
+    border-radius: 50%;
+}
+
+/* Timeline Info */
+.timeline-info {
+    display: flex;
+    justify-content: center;
+}
+
+.time-display {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ========================================
+   EXPORT SECTION
+   ======================================== */
+
+.export-section {
+    background: var(--controls-bg);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.export-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.export-options {
+    flex: 1;
+}
+
+.quality-selector {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.quality-btn {
+    background: var(--quality-btn-bg);
+    border: 1px solid var(--timeline-handle);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.quality-btn:hover,
+.quality-btn.active {
+    background: var(--quality-btn-active);
+    color: white;
+    border-color: var(--quality-btn-active);
+}
+
+.export-btn {
+    background: var(--export-btn-bg);
+    border: none;
+    border-radius: 10px;
+    padding: 15px 25px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    font-size: 16px;
+}
+
+.export-btn:hover {
+    background: var(--export-btn-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+.export-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.export-icon {
+    font-size: 18px;
+}
+
+.export-progress {
+    margin-top: 20px;
+}
+
+.progress-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 10px;
+    font-weight: 500;
+}
+
+/* Hide unused frame thumbnail styles */
+.frame-thumbnail,
+.frame-thumbnail.active,
+.frame-thumbnail.in-selection,
+.frame-thumbnail:hover {
+    display: none;
+}

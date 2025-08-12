@@ -1,0 +1,114 @@
+/*
+ * Base Layout & Typography
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    transition: background 0.3s ease;
+}
+
+.container {
+    background: var(--container-bg);
+    backdrop-filter: var(--backdrop-blur);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px var(--shadow-color);
+    text-align: center;
+    max-width: 600px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+/* Make GIF editor use more width for desktop */
+.gif-editor .container {
+    max-width: 1200px !important;
+    width: 95vw;
+}
+
+h1 {
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    font-size: 2.5em;
+    font-weight: 300;
+    transition: color 0.3s ease;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    font-size: 1.1em;
+    transition: color 0.3s ease;
+}
+
+.nav-links {
+    margin-bottom: 30px;
+}
+
+.nav-links a {
+    color: var(--text-accent);
+    text-decoration: none;
+    margin: 0 15px;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: var(--text-accent-hover);
+}
+
+.hidden {
+    display: none;
+}
+
+/* Page-specific styles */
+.landing-page .container {
+    max-width: 800px;
+    padding: 50px 40px;
+}
+
+.landing-page h1 {
+    font-size: 3em;
+    margin-bottom: 15px;
+}
+
+.landing-page .subtitle {
+    font-size: 1.2em;
+    line-height: 1.6;
+    margin-bottom: 50px;
+}
+
+.converter-page .container {
+    max-width: 500px;
+}
+
+.converter-page.gif-converter .container {
+    max-width: 600px;
+}
+
+/* Animations */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

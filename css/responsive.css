@@ -1,0 +1,144 @@
+/*
+ * Responsive Design - Mobile & Tablet Support
+ */
+
+@media (max-width: 1024px) {
+    .converters {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .landing-page .container {
+        padding: 40px 30px;
+    }
+
+    .landing-page h1 {
+        font-size: 2.5em;
+    }
+
+    .converters {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .converter-card {
+        padding: 25px 15px;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .mode-selector {
+        flex-direction: column;
+    }
+
+    .theme-toggle-container {
+        top: 15px;
+        right: 15px;
+    }
+
+    /* GIF Editor specific responsive for tablet */
+    .gif-editor .container {
+        max-width: 600px !important;
+        width: 95vw;
+    }
+    
+    .timeline-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .preset-buttons,
+    .duration-control,
+    .loop-options {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .export-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .export-btn {
+        justify-content: center;
+    }
+    
+    .time-display {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 30px 20px;
+    }
+    
+    h1 {
+        font-size: 2em;
+    }
+    
+    .drop-zone {
+        padding: 40px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .landing-page .container {
+        padding: 30px 20px;
+    }
+
+    .landing-page h1 {
+        font-size: 2em;
+    }
+
+    .converter-icon {
+        font-size: 3em;
+    }
+
+    .theme-toggle-container {
+        top: 10px;
+        right: 10px;
+    }
+
+    /* GIF Editor specific responsive for mobile */
+    .gif-editor .container {
+        max-width: 100% !important;
+        width: 100vw;
+        padding: 20px 15px;
+    }
+    
+    .preset-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .duration-control {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
+    }
+    
+    .duration-input {
+        width: 80px;
+    }
+    
+    .loop-options {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #gifPreview {
+        max-height: 250px;
+    }
+    
+    #previewVideo {
+        max-height: 250px;
+    }
+}
