@@ -1,56 +1,71 @@
-// Library-Free GIF Editor - Natural GIF Playback with Timeline Controls
-// Works with browser's native GIF animation while providing precise selection tools
+// Integrated GIF Editor for gif-converter.html
+// Provides video-based editing with WebM preview and server-side GIF trimming
+// Consolidated version with all fixes applied
 
-class GifEditor {
+class IntegratedGifEditor {
     constructor() {
-        this.gifBlob = null;
-        this.gifUrl = null;
-        this.totalDuration = 5.0;
-        this.originalDuration = 5.0;
-        this.currentTime = 0;
-        this.isPlaying = true; // GIF plays naturally
-        this.playInterval = null;
-        this.startTimeInternal = 0; // For our internal timeline simulation
-        
-        // Selection state
+        this.originalGifBlob = null;
+        this.previewVideoUrl = null;
+        this.videoDuration = 0;
         this.startTime = 0;
-        this.endTime = 5.0;
+        this.endTime = 0;
+        this.isProcessing = false;
+        this.currentTime = 0;
+        
+        // Selection dragging state
         this.isDragging = false;
         this.dragType = null;
         this.dragStartX = 0;
         this.dragStartTime = 0;
-        
+
+        // Server URL (same as main converter)
+        this.SERVER_URL = (window.SERVER_URL || 'https://api.piogino.ch');
+
         // UI elements
-        this.dropZone = document.getElementById('dropZone');
-        this.fileInput = document.getElementById('fileInput');
+        this.editorDropZone = document.getElementById('editorDropZone');
+        this.editorFileInput = document.getElementById('editorFileInput');
         this.editorContainer = document.getElementById('editorContainer');
+        this.previewVideo = document.getElementById('previewVideo');
         this.timelineTrack = document.getElementById('timelineTrack');
-        this.timelineSelection = document.getElementById('timelineSelection');
         this.selectionArea = document.getElementById('selectionArea');
         this.startHandle = document.getElementById('startHandle');
         this.endHandle = document.getElementById('endHandle');
         this.playhead = document.getElementById('playhead');
         
-        this.initializeEventListeners();
+        this.initializeEditor();
     }
 
-    initializeEventListeners() {
-        // File upload
-        this.dropZone.addEventListener('click', () => this.fileInput.click());
-        this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
-        this.setupDragDrop();
+    initializeEditor() {
+        // Button wiring (editor section)
+        document.getElementById('openEditorBtn')?.addEventListener('click', () => {
+            this.editorContainer?.classList.remove('hidden');
+            this.editorContainer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
 
-        // Preview controls
-        document.getElementById('playPauseBtn').addEventListener('click', () => this.togglePlayback());
-        document.getElementById('restartBtn').addEventListener('click', () => this.restart());
+        // Replace file
+        document.getElementById('replaceGifBtn')?.addEventListener('click', () => {
+            if (!this.isProcessing) this.editorFileInput?.click();
+        });
+        
+        this.editorFileInput?.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.loadGifForEditing(e.target.files[0]);
+            }
+        });
 
-        // Timeline controls
-        this.startHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'start'));
-        this.endHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'end'));
-        this.selectionArea.addEventListener('mousedown', (e) => this.startDrag(e, 'area'));
+        // Drag and drop for editor
+        this.setupEditorDragDrop();
 
-        // Timeline click to seek
-        this.timelineTrack.addEventListener('click', (e) => this.handleTimelineClick(e));
+        // Video controls
+        document.getElementById('playPauseBtn')?.addEventListener('click', () => this.togglePlayback());
+        document.getElementById('restartBtn')?.addEventListener('click', () => this.restart());
+        document.getElementById('loopBtn')?.addEventListener('click', () => this.toggleLoop());
+
+        // Timeline handles & area
+        this.startHandle?.addEventListener('mousedown', (e) => this.startDrag(e, 'start'));
+        this.endHandle?.addEventListener('mousedown', (e) => this.startDrag(e, 'end'));
+        this.selectionArea?.addEventListener('mousedown', (e) => this.startDrag(e, 'area'));
+        this.timelineTrack?.addEventListener('click', (e) => this.handleTimelineClick(e));
 
         // Preset buttons
         document.querySelectorAll('.preset-btn').forEach(btn => {
@@ -58,308 +73,222 @@ class GifEditor {
         });
 
         // Export button
-        document.getElementById('exportBtn').addEventListener('click', () => this.exportGif());
+        document.getElementById('exportTrimmedBtn')?.addEventListener('click', () => this.exportTrimmedGif());
 
-        // Duration update
-        document.getElementById('updateDuration').addEventListener('click', () => this.updateDuration());
-        document.getElementById('totalDuration').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.updateDuration();
-        });
+        // Video event listeners - Using arrow functions to preserve 'this' context
+        if (this.previewVideo) {
+            this.previewVideo.addEventListener('loadedmetadata', () => this.onVideoLoaded());
+            this.previewVideo.addEventListener('timeupdate', () => this.updatePlayhead());
+            this.previewVideo.addEventListener('play', () => this.onVideoPlay());
+            this.previewVideo.addEventListener('pause', () => this.onVideoPause());
+            this.previewVideo.addEventListener('ended', () => this.onVideoEnded());
+        }
 
         // Global mouse events for dragging
         document.addEventListener('mousemove', (e) => this.handleDrag(e));
         document.addEventListener('mouseup', () => this.endDrag());
+
+        console.log('GIF Editor initialized.');
     }
 
-    setupDragDrop() {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            this.dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-
-        this.dropZone.addEventListener('dragover', () => {
-            this.dropZone.classList.add('dragover');
-        });
-
-        this.dropZone.addEventListener('dragleave', () => {
-            this.dropZone.classList.remove('dragover');
-        });
-
-        this.dropZone.addEventListener('drop', (e) => {
-            this.dropZone.classList.remove('dragover');
-            const files = Array.from(e.dataTransfer.files);
-            if (files.length > 0 && files[0].type.includes('gif')) {
-                this.loadGif(files[0]);
-            }
-        });
-    }
-
-    async handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (file && file.type.includes('gif')) {
-            await this.loadGif(file);
-        } else {
-            this.showStatus('Please select a GIF file.', 'error');
+    showEditorStatus(message, type = 'info') {
+        const el = document.getElementById('editorStatus');
+        if (!el) return;
+        el.textContent = message;
+        el.className = `status ${type}`;
+        
+        // Auto-hide success/error messages after 5 seconds
+        if (type === 'success' || type === 'error') {
+            setTimeout(() => {
+                if (el.textContent === message) {
+                    el.textContent = '';
+                    el.className = 'status';
+                }
+            }, 5000);
         }
     }
 
-    async loadGif(file) {
-        this.showStatus('Loading GIF...', 'processing');
-        
+    async loadGifForEditing(file) {
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.includes('gif') && !file.name.toLowerCase().endsWith('.gif')) {
+            this.showEditorStatus('❌ Please select a GIF file.', 'error');
+            return;
+        }
+
+        // File size check
+        const maxSize = 100 * 1024 * 1024; // 100MB
+        if (file.size > maxSize) {
+            this.showEditorStatus(`❌ File too large. Maximum size: ${maxSize / (1024*1024)}MB`, 'error');
+            return;
+        }
+
+        // Reset state
+        this.originalGifBlob = file;
+        if (this.previewVideoUrl) {
+            URL.revokeObjectURL(this.previewVideoUrl);
+        }
+        this.previewVideoUrl = null;
+        this.previewVideo.src = '';
+        this.videoDuration = 0;
+        this.startTime = 0;
+        this.endTime = 0;
+        this.currentTime = 0;
+
+        // Upload GIF -> server converts to WebM for preview
         try {
-            console.log('Loading GIF file:', file.name, 'Size:', file.size, 'bytes');
-            
-            // Create blob URL for the GIF
-            this.gifBlob = file;
-            if (this.gifUrl) {
-                URL.revokeObjectURL(this.gifUrl);
+            this.isProcessing = true;
+            this.showEditorStatus('⏳ Uploading GIF for preview...', 'info');
+
+            const formData = new FormData();
+            formData.append('file', file, file.name);
+
+            const uploadResponse = await fetch(`${this.SERVER_URL}/convert/gif-to-webm`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!uploadResponse.ok) {
+                const errorText = await uploadResponse.text();
+                console.error('Upload failed:', errorText);
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
             }
-            this.gifUrl = URL.createObjectURL(file);
+
+            this.showEditorStatus('⏳ Processing preview...', 'info');
+
+            // Server returns a WebM blob
+            const webmBlob = await uploadResponse.blob();
             
-            // Detect GIF duration
-            await this.detectGifDuration();
+            // Verify we got a valid blob
+            if (!webmBlob || webmBlob.size === 0) {
+                throw new Error('Received empty response from server');
+            }
+
+            this.previewVideoUrl = URL.createObjectURL(webmBlob);
+            this.previewVideo.src = this.previewVideoUrl;
             
-            this.setupEditor();
+            // Force load the video
+            await this.previewVideo.load();
+
+            // Update filename display
+            const filenameEl = document.getElementById('loadedFilename');
+            if (filenameEl) {
+                filenameEl.textContent = file.name;
+            }
             
-            // Show status with helpful info
-            const fileSizeKB = this.gifBlob.size / 1024;
-            this.showStatus(
-                `✅ GIF loaded successfully! <br>
-                <strong>Duration:</strong> ${this.totalDuration.toFixed(1)}s<br>
-                <strong>File Size:</strong> ${fileSizeKB.toFixed(0)}KB<br>
-                <strong>Tip:</strong> The GIF plays naturally - use timeline selection to mark trim points`, 
+            // Show file info
+            const fileSizeKB = file.size / 1024;
+            this.showEditorStatus(
+                `✅ Preview ready! File: ${file.name} (${fileSizeKB.toFixed(0)}KB)`, 
                 'success'
             );
             
-        } catch (error) {
-            console.error('Error loading GIF:', error);
-            this.showStatus(`❌ Error loading GIF: ${error.message}`, 'error');
-        }
-    }
-
-    async detectGifDuration() {
-        return new Promise((resolve) => {
-            const img = new Image();
+        } catch (err) {
+            console.error('Error loading GIF:', err);
+            this.showEditorStatus(`❌ Failed to load preview: ${err.message}`, 'error');
             
-            img.onload = () => {
-                console.log('GIF dimensions:', img.width, 'x', img.height);
-                
-                // Better duration estimation
-                const fileSizeKB = this.gifBlob.size / 1024;
-                
-                let estimatedDuration;
-                if (fileSizeKB < 50) {
-                    estimatedDuration = 2.0;
-                } else if (fileSizeKB < 200) {
-                    estimatedDuration = 3.5;
-                } else if (fileSizeKB < 1000) {
-                    estimatedDuration = 6.0;
-                } else {
-                    estimatedDuration = 10.0;
-                }
-                
-                this.totalDuration = estimatedDuration;
-                this.originalDuration = estimatedDuration;
-                
-                console.log('Estimated duration:', this.totalDuration.toFixed(1), 'seconds');
-                
-                resolve();
-            };
-            
-            img.onerror = () => {
-                this.totalDuration = 5.0;
-                this.originalDuration = 5.0;
-                console.warn('Could not load GIF image, using default duration');
-                resolve();
-            };
-            
-            img.src = this.gifUrl;
-        });
-    }
-
-    setupEditor() {
-        // Show editor
-        this.editorContainer.style.display = 'block';
-        
-        // Setup animated GIF preview (no control needed)
-        this.setupAnimatedPreview();
-        
-        // Set duration input value
-        document.getElementById('totalDuration').value = this.totalDuration.toFixed(1);
-        
-        // Create timeline
-        this.createTimeline();
-        
-        // Set initial selection to full duration
-        this.startTime = 0;
-        this.endTime = this.totalDuration;
-        this.currentTime = 0;
-        this.updateTimelineSelection();
-        this.updateTimeDisplay();
-        
-        // Add body class for styling
-        document.body.classList.add('gif-editor');
-        
-        // Start our internal timeline simulation
-        this.startTimelineSimulation();
-        
-        // Initial button states
-        this.isPlaying = true;
-        document.getElementById('playPauseBtn').textContent = '⏸️';
-    }
-
-    setupAnimatedPreview() {
-        // Remove canvas if it exists and replace with animated GIF
-        const previewContainer = document.querySelector('.preview-container');
-        previewContainer.innerHTML = '';
-        
-        // Create animated GIF element that plays naturally
-        const gifPreview = document.createElement('img');
-        gifPreview.id = 'gifPreview';
-        gifPreview.src = this.gifUrl;
-        gifPreview.style.maxWidth = '100%';
-        gifPreview.style.maxHeight = '400px';
-        gifPreview.style.borderRadius = '8px';
-        gifPreview.style.boxShadow = '0 4px 15px var(--shadow-color)';
-        gifPreview.style.background = 'white';
-        
-        previewContainer.appendChild(gifPreview);
-        
-        // Store reference
-        this.gifPreview = gifPreview;
-        
-        console.log('Animated GIF preview setup - plays naturally');
-    }
-
-    startTimelineSimulation() {
-        // This simulates time progression for our timeline UI
-        // while the GIF plays naturally in the background
-        this.startTimeInternal = Date.now();
-        
-        if (this.playInterval) {
-            clearInterval(this.playInterval);
-        }
-        
-        this.playInterval = setInterval(() => {
-            if (this.isPlaying) {
-                this.currentTime += 0.1;
-                
-                // Loop the simulation within our total duration
-                if (this.currentTime >= this.totalDuration) {
-                    this.currentTime = 0;
-                    this.startTimeInternal = Date.now();
-                }
-                
-                this.updateTimelineDisplay();
+            // Clean up on error
+            if (this.previewVideoUrl) {
+                URL.revokeObjectURL(this.previewVideoUrl);
+                this.previewVideoUrl = null;
             }
-        }, 100);
+        } finally {
+            this.isProcessing = false;
+        }
     }
 
-    updateTimelineDisplay() {
-        // Update playhead position
-        this.updatePlayhead();
+    onVideoLoaded() {
+        this.videoDuration = this.previewVideo.duration;
         
-        // Update info display
-        const progressInSelection = this.currentTime >= this.startTime && this.currentTime <= this.endTime;
-        const selectionProgress = progressInSelection ? 
-            ((this.currentTime - this.startTime) / (this.endTime - this.startTime)) * 100 : 0;
-        
-        const statusIcon = progressInSelection ? '🎯' : '⏱️';
-        const statusText = progressInSelection ? 
-            `IN SELECTION (${selectionProgress.toFixed(0)}%)` : 
-            'Outside selection';
-        
-        document.getElementById('previewInfo').textContent = 
-            `${statusIcon} Time: ${this.currentTime.toFixed(1)}s | ${statusText}`;
-    }
-
-    updateDuration() {
-        const newDuration = parseFloat(document.getElementById('totalDuration').value);
-        
-        if (isNaN(newDuration) || newDuration < 0.5 || newDuration > 60) {
-            this.showStatus('❌ Please enter a valid duration between 0.5 and 60 seconds', 'error');
-            document.getElementById('totalDuration').value = this.totalDuration.toFixed(1);
+        if (!this.videoDuration || this.videoDuration === 0) {
+            console.error('Video duration is 0 or invalid');
+            this.showEditorStatus('❌ Failed to load video metadata', 'error');
             return;
         }
         
-        const oldDuration = this.totalDuration;
-        this.totalDuration = newDuration;
-        
-        // Keep the selection ratio
-        const selectionDuration = this.endTime - this.startTime;
-        const selectionStartRatio = this.startTime / oldDuration;
-        
-        this.startTime = Math.min(selectionStartRatio * newDuration, newDuration - 0.1);
-        this.endTime = Math.min(this.startTime + selectionDuration, newDuration);
-        
-        if (this.endTime > newDuration) {
-            this.endTime = newDuration;
-            this.startTime = Math.max(0, newDuration - selectionDuration);
+        // Update duration display
+        const durationEl = document.getElementById('videoDuration');
+        if (durationEl) {
+            durationEl.textContent = `${this.videoDuration.toFixed(1)}s`;
         }
         
+        // Set initial selection to full video
+        this.startTime = 0;
+        this.endTime = this.videoDuration;
+        this.currentTime = 0;
+        
+        // Create timeline and update display
         this.createTimeline();
         this.updateTimelineSelection();
         this.updateTimeDisplay();
+        this.updatePlayhead();
+        this.updateDurationPill();
         
-        console.log(`Duration updated: ${oldDuration.toFixed(1)}s → ${newDuration.toFixed(1)}s`);
-        this.showStatus(`✅ Duration updated to ${newDuration.toFixed(1)}s`, 'success');
+        // Enable controls
+        this.enableControls(true);
+        
+        console.log(`Video loaded: ${this.videoDuration.toFixed(1)}s duration`);
+    }
+
+    enableControls(enabled) {
+        const controls = [
+            'playPauseBtn', 
+            'restartBtn', 
+            'loopBtn', 
+            'exportTrimmedBtn'
+        ];
+        
+        controls.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = !enabled;
+        });
+        
+        // Enable preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.disabled = !enabled;
+        });
     }
 
     createTimeline() {
+        if (!this.timelineTrack) return;
+        
         this.timelineTrack.innerHTML = '';
         
-        const markerCount = Math.min(20, Math.max(5, Math.floor(this.totalDuration)));
+        // Calculate optimal number of markers
+        const markerCount = Math.min(20, Math.max(5, Math.floor(this.videoDuration)));
         
         for (let i = 0; i <= markerCount; i++) {
-            const time = (i / markerCount) * this.totalDuration;
+            const time = (i / markerCount) * this.videoDuration;
             const marker = document.createElement('div');
             marker.className = 'time-marker';
-            if (i === 0 || i === markerCount) marker.classList.add('major-marker');
+            
+            // Mark first and last as major markers
+            if (i === 0 || i === markerCount) {
+                marker.classList.add('major-marker');
+            }
+            
             marker.style.left = `${(i / markerCount) * 100}%`;
             marker.innerHTML = `<span class="time-label">${time.toFixed(1)}s</span>`;
-            
             this.timelineTrack.appendChild(marker);
         }
     }
 
-    togglePlayback() {
-        this.isPlaying = !this.isPlaying;
-        document.getElementById('playPauseBtn').textContent = this.isPlaying ? '⏸️' : '▶️';
-        
-        if (this.isPlaying) {
-            console.log('Timeline simulation resumed');
-        } else {
-            console.log(`Timeline simulation paused at: ${this.currentTime.toFixed(1)}s`);
-        }
-    }
-
-    restart() {
-        this.currentTime = 0;
-        this.startTimeInternal = Date.now();
-        this.updateTimelineDisplay();
-        
-        console.log('Timeline simulation restarted');
-    }
-
     handleTimelineClick(event) {
-        if (this.isDragging) return;
+        if (this.videoDuration === 0 || this.isDragging) return;
         
         const rect = this.timelineTrack.getBoundingClientRect();
         const clickX = event.clientX - rect.left;
-        const clickPercent = clickX / rect.width;
+        const clickPercent = Math.max(0, Math.min(1, clickX / rect.width));
         
-        // Seek to clicked position
-        this.currentTime = clickPercent * this.totalDuration;
-        this.startTimeInternal = Date.now() - (this.currentTime * 1000);
-        
-        this.updateTimelineDisplay();
-        
-        console.log(`Seeked to: ${this.currentTime.toFixed(1)}s`);
+        // Seek to clicked position (within selection bounds)
+        const targetTime = clickPercent * this.videoDuration;
+        this.previewVideo.currentTime = Math.max(this.startTime, Math.min(this.endTime, targetTime));
     }
 
     setPreset(duration) {
+        if (this.videoDuration === 0) return;
+
         // Update button states
         document.querySelectorAll('.preset-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.duration === duration);
@@ -367,33 +296,44 @@ class GifEditor {
 
         if (duration === 'full') {
             this.startTime = 0;
-            this.endTime = this.totalDuration;
+            this.endTime = this.videoDuration;
         } else {
             const durationNum = parseFloat(duration);
-            const maxStart = Math.max(0, this.totalDuration - durationNum);
             
-            // Center the selection if possible
-            let start = Math.max(0, (this.totalDuration - durationNum) / 2);
-            if (start > maxStart) start = maxStart;
-            
-            this.startTime = start;
-            this.endTime = Math.min(start + durationNum, this.totalDuration);
+            // Don't allow preset longer than video
+            if (durationNum > this.videoDuration) {
+                this.startTime = 0;
+                this.endTime = this.videoDuration;
+            } else {
+                // Center the selection if possible
+                const idealStart = (this.videoDuration - durationNum) / 2;
+                this.startTime = Math.max(0, idealStart);
+                this.endTime = Math.min(this.startTime + durationNum, this.videoDuration);
+            }
         }
 
         this.updateTimelineSelection();
         this.updateTimeDisplay();
+        this.updatePlayhead();
+        this.updateDurationPill();
         
-        console.log(`Preset applied: ${duration} | Selection: ${this.startTime.toFixed(1)}s - ${this.endTime.toFixed(1)}s`);
+        // Seek to start of selection
+        this.previewVideo.currentTime = this.startTime;
+        
+        console.log(`Preset: ${duration} | Selection: ${this.startTime.toFixed(1)}s - ${this.endTime.toFixed(1)}s`);
     }
 
     startDrag(event, type) {
         event.preventDefault();
+        event.stopPropagation();
+        
         this.isDragging = true;
         this.dragType = type;
         this.dragStartX = event.clientX;
         
         if (type === 'area') {
             this.dragStartTime = this.startTime;
+            this.dragEndTime = this.endTime;
         } else {
             this.dragStartTime = type === 'start' ? this.startTime : this.endTime;
         }
@@ -403,38 +343,48 @@ class GifEditor {
     }
 
     handleDrag(event) {
-        if (!this.isDragging) return;
+        if (!this.isDragging || this.videoDuration === 0) return;
 
         const rect = this.timelineTrack.getBoundingClientRect();
         const trackWidth = rect.width;
         const mouseX = event.clientX - rect.left;
         const mousePercent = Math.max(0, Math.min(1, mouseX / trackWidth));
-        const mouseTime = mousePercent * this.totalDuration;
+        const mouseTime = mousePercent * this.videoDuration;
 
         if (this.dragType === 'start') {
+            // Minimum selection duration: 0.1s
             const maxStart = this.endTime - 0.1;
             this.startTime = Math.max(0, Math.min(maxStart, mouseTime));
         } else if (this.dragType === 'end') {
+            // Minimum selection duration: 0.1s
             const minEnd = this.startTime + 0.1;
-            this.endTime = Math.min(this.totalDuration, Math.max(minEnd, mouseTime));
+            this.endTime = Math.min(this.videoDuration, Math.max(minEnd, mouseTime));
         } else if (this.dragType === 'area') {
-            const duration = this.endTime - this.startTime;
+            const duration = this.dragEndTime - this.dragStartTime;
             const deltaX = event.clientX - this.dragStartX;
-            const deltaTime = (deltaX / trackWidth) * this.totalDuration;
+            const deltaTime = (deltaX / trackWidth) * this.videoDuration;
             
             let newStart = this.dragStartTime + deltaTime;
+            let newEnd = this.dragEndTime + deltaTime;
             
-            if (newStart < 0) newStart = 0;
-            if (newStart + duration > this.totalDuration) {
-                newStart = this.totalDuration - duration;
+            // Keep within bounds
+            if (newStart < 0) {
+                newStart = 0;
+                newEnd = duration;
+            }
+            if (newEnd > this.videoDuration) {
+                newEnd = this.videoDuration;
+                newStart = this.videoDuration - duration;
             }
             
             this.startTime = newStart;
-            this.endTime = newStart + duration;
+            this.endTime = newEnd;
         }
 
         this.updateTimelineSelection();
         this.updateTimeDisplay();
+        this.updatePlayhead();
+        this.updateDurationPill();
     }
 
     endDrag() {
@@ -449,95 +399,291 @@ class GifEditor {
     }
 
     updateTimelineSelection() {
-        const startPercent = (this.startTime / this.totalDuration) * 100;
-        const endPercent = (this.endTime / this.totalDuration) * 100;
+        if (this.videoDuration === 0 || !this.selectionArea) return;
+        
+        const startPercent = (this.startTime / this.videoDuration) * 100;
+        const endPercent = (this.endTime / this.videoDuration) * 100;
         
         this.selectionArea.style.left = `${startPercent}%`;
         this.selectionArea.style.width = `${endPercent - startPercent}%`;
     }
 
     updatePlayhead() {
-        const percent = (this.currentTime / this.totalDuration) * 100;
+        if (this.videoDuration === 0 || !this.playhead) return;
+        
+        const currentTime = this.previewVideo?.currentTime || 0;
+        const percent = (currentTime / this.videoDuration) * 100;
         this.playhead.style.left = `${percent}%`;
+        
+        // Update current time for display
+        this.currentTime = currentTime;
+        
+        // Update preview info
+        const isInSelection = currentTime >= this.startTime && currentTime <= this.endTime;
+        const progressInSelection = isInSelection ? 
+            ((currentTime - this.startTime) / (this.endTime - this.startTime)) * 100 : 0;
+        
+        const statusIcon = isInSelection ? '🎯' : '⏱️';
+        const statusText = isInSelection ? 
+            `IN SELECTION (${progressInSelection.toFixed(0)}%)` : 
+            'Outside selection';
+        
+        const previewInfo = document.getElementById('previewInfo');
+        if (previewInfo) {
+            previewInfo.textContent = 
+                `${statusIcon} ${currentTime.toFixed(1)}s | ${statusText}`;
+        }
     }
 
     updateTimeDisplay() {
-        document.getElementById('startTime').textContent = `${this.startTime.toFixed(1)}s`;
-        document.getElementById('endTime').textContent = `${this.endTime.toFixed(1)}s`;
-        document.getElementById('duration').textContent = `${(this.endTime - this.startTime).toFixed(1)}s`;
+        const startEl = document.getElementById('startTime');
+        const endEl = document.getElementById('endTime');
+        const durationEl = document.getElementById('trimDuration');
+        
+        if (startEl) startEl.textContent = `${this.startTime.toFixed(1)}s`;
+        if (endEl) endEl.textContent = `${this.endTime.toFixed(1)}s`;
+        if (durationEl) durationEl.textContent = `${(this.endTime - this.startTime).toFixed(1)}s`;
     }
 
-    async exportGif() {
-        const exportBtn = document.getElementById('exportBtn');
+    updateDurationPill() {
+        const pill = document.getElementById('durationPill');
+        if (!pill) return;
+        
+        const totalSec = this.videoDuration || 0;
+        const selectionDuration = Math.max(0, (this.endTime || 0) - (this.startTime || 0));
+        const percentage = totalSec > 0 ? Math.round((selectionDuration / totalSec) * 100) : 0;
+        
+        pill.textContent = `🎬 ${selectionDuration.toFixed(1)}s selected (${percentage}% of original)`;
+    }
+
+    togglePlayback() {
+        if (!this.previewVideo) return;
+        
+        const btn = document.getElementById('playPauseBtn');
+        if (this.previewVideo.paused) {
+            // If at end of selection, restart from beginning of selection
+            if (this.currentTime >= this.endTime) {
+                this.previewVideo.currentTime = this.startTime;
+            }
+            this.previewVideo.play();
+            if (btn) btn.textContent = 'Pause';
+        } else {
+            this.previewVideo.pause();
+            if (btn) btn.textContent = 'Play';
+        }
+    }
+
+    restart() {
+        if (!this.previewVideo) return;
+        this.previewVideo.currentTime = this.startTime;
+        this.updatePlayhead();
+    }
+
+    toggleLoop() {
+        const btn = document.getElementById('loopBtn');
+        if (!btn || !this.previewVideo) return;
+        
+        const looping = btn.classList.toggle('active');
+        this.previewVideo.loop = looping;
+        btn.textContent = looping ? 'Loop: ON' : 'Loop: OFF';
+    }
+
+    onVideoPlay() {
+        const btn = document.getElementById('playPauseBtn');
+        if (btn) btn.textContent = 'Pause';
+    }
+
+    onVideoPause() {
+        const btn = document.getElementById('playPauseBtn');
+        if (btn) btn.textContent = 'Play';
+    }
+
+    onVideoEnded() {
+        if (!this.previewVideo.loop) {
+            const btn = document.getElementById('playPauseBtn');
+            if (btn) btn.textContent = 'Play';
+            // Reset to start of selection
+            this.previewVideo.currentTime = this.startTime;
+        }
+    }
+
+    async exportTrimmedGif() {
+        if (!this.originalGifBlob) {
+            this.showEditorStatus('❌ No GIF loaded for export.', 'error');
+            return;
+        }
+
+        if (this.isProcessing) {
+            this.showEditorStatus('⏳ Please wait for current processing to complete.', 'error');
+            return;
+        }
+
+        const exportBtn = document.getElementById('exportTrimmedBtn');
         const progressContainer = document.getElementById('exportProgress');
+        const progressText = document.getElementById('progressText');
+        const progressFill = document.getElementById('progressFill');
         
-        exportBtn.disabled = true;
-        progressContainer.style.display = 'block';
+        if (exportBtn) exportBtn.disabled = true;
+        if (progressContainer) progressContainer.style.display = 'block';
+        if (progressText) progressText.textContent = 'Preparing to trim...';
+        if (progressFill) progressFill.style.width = '10%';
         
+        this.isProcessing = true;
+
         try {
-            document.getElementById('progressText').textContent = 'Creating trimmed GIF...';
-            document.getElementById('progressFill').style.width = '50%';
+            // Ask server to trim the original GIF with current start/end
+            this.showEditorStatus('✂️ Trimming GIF on server...', 'info');
             
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (progressText) progressText.textContent = 'Uploading for trimming...';
+            if (progressFill) progressFill.style.width = '30%';
+
+            const form = new FormData();
+            form.append('file', this.originalGifBlob, this.originalGifBlob.name);
+            form.append('start', String(this.startTime));
+            form.append('end', String(this.endTime));
+
+            const res = await fetch(`${this.SERVER_URL}/edit/trim-gif`, {
+                method: 'POST',
+                body: form
+            });
+
+            if (progressText) progressText.textContent = 'Processing trim...';
+            if (progressFill) progressFill.style.width = '70%';
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error('Export failed:', errorText);
+                throw new Error(`Server error: ${res.status}`);
+            }
+
+            const outBlob = await res.blob();
             
-            document.getElementById('progressText').textContent = 'Download ready!';
-            document.getElementById('progressFill').style.width = '100%';
+            if (!outBlob || outBlob.size === 0) {
+                throw new Error('Received empty file from server');
+            }
             
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-            const selectionInfo = `_trim-${this.startTime.toFixed(1)}s-to-${this.endTime.toFixed(1)}s`;
-            this.downloadFile(this.gifBlob, `gif-selection${selectionInfo}_${timestamp}.gif`);
+            if (progressText) progressText.textContent = 'Download ready!';
+            if (progressFill) progressFill.style.width = '100%';
             
-            this.showStatus(
-                `✅ Selection exported! <br>
-                <strong>Trim points:</strong> ${this.startTime.toFixed(1)}s to ${this.endTime.toFixed(1)}s<br>
-                <strong>Duration:</strong> ${(this.endTime - this.startTime).toFixed(1)}s<br>
-                <strong>Note:</strong> Download contains full GIF with trim information in filename. Integrate with server-side processing for actual trimming.`, 
+            const outUrl = URL.createObjectURL(outBlob);
+
+            // Generate filename with trim info
+            const filename = this.makeOutputName(
+                this.originalGifBlob.name, 
+                `_trimmed_${this.startTime.toFixed(1)}s-${this.endTime.toFixed(1)}s`
+            );
+
+            // Trigger download
+            const a = document.createElement('a');
+            a.href = outUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            URL.revokeObjectURL(outUrl);
+
+            // Show success with details
+            const outputSizeKB = outBlob.size / 1024;
+            this.showEditorStatus(
+                `✅ Trimmed GIF downloaded! Size: ${outputSizeKB.toFixed(0)}KB`, 
                 'success'
             );
             
-        } catch (error) {
-            console.error('Export error:', error);
-            this.showStatus('❌ Export failed. Please try again.', 'error');
+        } catch (err) {
+            console.error('Export error:', err);
+            this.showEditorStatus(`❌ Export failed: ${err.message}`, 'error');
         } finally {
-            exportBtn.disabled = false;
-            progressContainer.style.display = 'none';
+            this.isProcessing = false;
+            if (exportBtn) exportBtn.disabled = false;
+            if (progressContainer) {
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    if (progressFill) progressFill.style.width = '0%';
+                }, 1000);
+            }
         }
     }
 
-    downloadFile(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+    makeOutputName(name, suffix) {
+        const dot = name.lastIndexOf('.');
+        if (dot <= 0) return name + suffix + '.gif';
+        return name.slice(0, dot) + suffix + name.slice(dot);
     }
 
-    showStatus(message, type) {
-        const statusContainer = document.getElementById('status');
-        statusContainer.innerHTML = `<div class="status-message show ${type}">${message}</div>`;
+    setupEditorDragDrop() {
+        if (!this.editorDropZone) return;
         
-        if (type !== 'processing') {
-            setTimeout(() => {
-                if (statusContainer.querySelector('.status-message')) {
-                    statusContainer.innerHTML = '';
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            this.editorDropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        this.editorDropZone.addEventListener('dragover', () => {
+            if (!this.isProcessing) this.editorDropZone.classList.add('dragover');
+        });
+
+        this.editorDropZone.addEventListener('dragleave', (e) => {
+            // Only remove dragover if we're actually leaving the drop zone
+            if (e.target === this.editorDropZone) {
+                this.editorDropZone.classList.remove('dragover');
+            }
+        });
+
+        this.editorDropZone.addEventListener('drop', (e) => {
+            this.editorDropZone.classList.remove('dragover');
+            if (!this.isProcessing && e.dataTransfer?.files?.length) {
+                const file = e.dataTransfer.files[0];
+                if (file && /gif$/i.test(file.name)) {
+                    this.loadGifForEditing(file);
+                } else {
+                    this.showEditorStatus('❌ Please drop a GIF file.', 'error');
                 }
-            }, 5000);
+            }
+        });
+    }
+
+    // Cleanup method for when editor is closed or page unloads
+    cleanup() {
+        if (this.previewVideoUrl) {
+            URL.revokeObjectURL(this.previewVideoUrl);
+            this.previewVideoUrl = null;
         }
+        
+        // Reset video element
+        if (this.previewVideo) {
+            this.previewVideo.pause();
+            this.previewVideo.src = '';
+        }
+        
+        console.log('Editor cleanup completed');
     }
 }
 
-// Initialize the GIF Editor when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new GifEditor();
+// Initialize the editor when DOM is loaded
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        window.gifEditor = new IntegratedGifEditor();
+        console.log('GIF Editor instance created and available as window.gifEditor');
+    }, 100);
 });
 
-// Prevent default drag behaviors
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (window.gifEditor) {
+        window.gifEditor.cleanup();
+    }
+});
+
+// Prevent default drag behaviors (but don't interfere with main converter)
+['dragenter', 'dragover'].forEach(eventName => {
     document.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        // Only prevent default if it's over the editor drop zone
+        if (e.target.closest('#editorDropZone')) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
     });
 });
