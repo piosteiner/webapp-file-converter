@@ -56,9 +56,9 @@ class IntegratedGifEditor {
         // Drag and drop for editor + click to open file dialog
         this.setupEditorDragDrop();
         this.editorDropZone?.addEventListener('click', () => {
-        if (!this.isProcessing) {
-        this.editorFileInput?.click();
-        }
+            if (!this.isProcessing) {
+                this.editorFileInput?.click();
+            }
         });
 
         // Video controls
@@ -129,6 +129,17 @@ class IntegratedGifEditor {
             return;
         }
 
+        // IMMEDIATELY add processing state for visual feedback
+        console.log('Starting GIF upload process...');
+        this.isProcessing = true;
+        
+        if (this.editorDropZone) {
+            this.editorDropZone.classList.add('processing');
+            this.editorDropZone.classList.remove('dragover', 'hover');
+            console.log('Processing class added to drop zone');
+            console.log('Drop zone classes:', this.editorDropZone.classList.toString());
+        }
+
         // Reset state
         this.originalGifBlob = file;
         if (this.previewVideoUrl) {
@@ -139,20 +150,14 @@ class IntegratedGifEditor {
             this.previewVideo.src = '';
             this.previewVideo.load(); // Force reset
         }
-        this.previewVideo.src = '';
         this.videoDuration = 0;
         this.startTime = 0;
         this.endTime = 0;
         this.currentTime = 0;
 
-        // Add processing class to drop zone
-        this.editorDropZone?.classList.add('processing');
+        this.showEditorStatus('⏳ Uploading GIF for preview...', 'info');
 
-        // Upload GIF -> server converts to WebM for preview
         try {
-            this.isProcessing = true;
-            this.showEditorStatus('⏳ Uploading GIF for preview...', 'info');
-
             const formData = new FormData();
             formData.append('file', file, file.name);
 
@@ -194,14 +199,63 @@ class IntegratedGifEditor {
             // DEBUG: Check video element
             console.log('Video element:', this.previewVideo);
             console.log('Video src set to:', this.previewVideo.src);
+            console.log('Video readyState:', this.previewVideo.readyState);
 
-            // Force load the video
-            await this.previewVideo.load();
+            // Force load the video and wait for it
+            await new Promise((resolve, reject) => {
+                const handleLoaded = () => {
+                    this.previewVideo.removeEventListener('loadedmetadata', handleLoaded);
+                    this.previewVideo.removeEventListener('error', handleError);
+                    resolve();
+                };
+                
+                const handleError = (e) => {
+                    this.previewVideo.removeEventListener('loadedmetadata', handleLoaded);
+                    this.previewVideo.removeEventListener('error', handleError);
+                    reject(new Error(`Video load error: ${e.message}`));
+                };
+                
+                this.previewVideo.addEventListener('loadedmetadata', handleLoaded);
+                this.previewVideo.addEventListener('error', handleError);
+                
+                this.previewVideo.load();
+                
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    this.previewVideo.removeEventListener('loadedmetadata', handleLoaded);
+                    this.previewVideo.removeEventListener('error', handleError);
+                    reject(new Error('Video load timeout'));
+                }, 10000);
+            });
+
+            console.log('Video loaded successfully, duration:', this.previewVideo.duration);
 
             // Update filename display
             const filenameEl = document.getElementById('loadedFilename');
             if (filenameEl) {
                 filenameEl.textContent = file.name;
+            }
+
+            // Show the editor container now that we have a file loaded
+            if (this.editorContainer) {
+                console.log('About to show editor container...');
+                console.log('Container classes before:', this.editorContainer.classList.toString());
+                console.log('Container display before:', window.getComputedStyle(this.editorContainer).display);
+                
+                this.editorContainer.classList.remove('hidden');
+                
+                // Force display as backup
+                this.editorContainer.style.display = 'block';
+                
+                console.log('Container classes after:', this.editorContainer.classList.toString());
+                console.log('Container display after:', window.getComputedStyle(this.editorContainer).display);
+                
+                // Scroll to editor
+                setTimeout(() => {
+                    this.editorContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            } else {
+                console.error('Editor container not found!');
             }
 
             // Show file info
@@ -223,48 +277,52 @@ class IntegratedGifEditor {
         } finally {
             this.isProcessing = false;
             // Remove processing class from drop zone
-            this.editorDropZone?.classList.remove('processing');
+            if (this.editorDropZone) {
+                this.editorDropZone.classList.remove('processing');
+                console.log('Removed processing class from editor drop zone');
+                console.log('Final drop zone classes:', this.editorDropZone.classList.toString());
+            }
         }
     }
 
     onVideoLoaded() {
-    // Add safety check
-    if (!this.previewVideo || !this.previewVideo.duration) {
-        console.error('Video not properly loaded');
-        this.showEditorStatus('❌ Failed to load video metadata', 'error');
-        return;
-    }
-    
-    this.videoDuration = this.previewVideo.duration;
-    
-    if (!this.videoDuration || this.videoDuration === 0 || !isFinite(this.videoDuration)) {
-        console.error('Video duration is 0 or invalid:', this.videoDuration);
-        this.showEditorStatus('❌ Failed to load video metadata', 'error');
-        return;
-    }
-    
-    // Update duration display
-    const durationEl = document.getElementById('videoDuration');
-    if (durationEl) {
-        durationEl.textContent = `${this.videoDuration.toFixed(1)}s`;
-    }
-    
-    // Set initial selection to full video
-    this.startTime = 0;
-    this.endTime = this.videoDuration;
-    this.currentTime = 0;
-    
-    // Create timeline and update display
-    this.createTimeline();
-    this.updateTimelineSelection();
-    this.updateTimeDisplay();
-    this.updatePlayhead();
-    this.updateDurationPill();
-    
-    // Enable controls
-    this.enableControls(true);
-    
-    console.log(`Video loaded successfully: ${this.videoDuration.toFixed(1)}s duration`);
+        // Add safety check
+        if (!this.previewVideo || !this.previewVideo.duration) {
+            console.error('Video not properly loaded');
+            this.showEditorStatus('❌ Failed to load video metadata', 'error');
+            return;
+        }
+        
+        this.videoDuration = this.previewVideo.duration;
+        
+        if (!this.videoDuration || this.videoDuration === 0 || !isFinite(this.videoDuration)) {
+            console.error('Video duration is 0 or invalid:', this.videoDuration);
+            this.showEditorStatus('❌ Failed to load video metadata', 'error');
+            return;
+        }
+        
+        // Update duration display
+        const durationEl = document.getElementById('videoDuration');
+        if (durationEl) {
+            durationEl.textContent = `${this.videoDuration.toFixed(1)}s`;
+        }
+        
+        // Set initial selection to full video
+        this.startTime = 0;
+        this.endTime = this.videoDuration;
+        this.currentTime = 0;
+        
+        // Create timeline and update display
+        this.createTimeline();
+        this.updateTimelineSelection();
+        this.updateTimeDisplay();
+        this.updatePlayhead();
+        this.updateDurationPill();
+        
+        // Enable controls
+        this.enableControls(true);
+        
+        console.log(`Video loaded successfully: ${this.videoDuration.toFixed(1)}s duration`);
     }
 
     enableControls(enabled) {

@@ -9,28 +9,29 @@
 
 /* Make editor drop zone behave like main converter */
 #editorDropZone {
-    border-color: var(--drop-zone-border) !important;
+    border-color: #e5e7eb !important; /* Default gray border */
     background: transparent !important;
+    transition: all 0.3s ease;
 }
 
 #editorDropZone:hover {
-    border-color: var(--drop-zone-hover-border);
-    background-color: var(--drop-zone-hover-bg);
+    border-color: #667eea; /* Blue hover */
+    background-color: rgba(102, 126, 234, 0.05);
     transform: translateY(-2px);
     box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
 }
 
 #editorDropZone.dragover {
-    border-color: var(--drop-zone-dragover-border);
-    background-color: var(--drop-zone-dragover-bg);
+    border-color: #10b981 !important; /* Green dragover */
+    background-color: rgba(16, 185, 129, 0.1) !important;
     transform: scale(1.02);
 }
 
 #editorDropZone.processing {
-    border-color: #fbbf24 !important; /* Orange border like main converter */
-    background-color: rgba(251, 191, 36, 0.1) !important; /* Light orange background */
+    border-color: #f59e0b !important; /* Orange processing - explicit color */
+    background-color: rgba(245, 158, 11, 0.1) !important;
     transform: none;
-    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
 }
 
 /* Ensure editor status messages match main converter styling */
@@ -69,10 +70,11 @@
 .gif-editor-container {
     margin-top: 30px;
     text-align: left;
+    display: block;
 }
 
 .gif-editor-container.hidden {
-    display: none;
+    display: none !important;
 }
 
 /* ========================================
