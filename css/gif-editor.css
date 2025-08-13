@@ -1,40 +1,39 @@
 /*
- * GIF Editor Specific Styles
- * INCLUDES THE FIX for #previewVideo visibility and editor drop zone behavior
+ * GIF Editor Specific Styles - ENHANCED VERSION
+ * Fixes layout overlaps and improves dragging UX
  */
 
 /* ========================================
    EDITOR DROP ZONE FIXES
    ======================================== */
 
-/* Make editor drop zone behave like main converter */
 #editorDropZone {
-    border-color: #e5e7eb !important; /* Default gray border */
+    border-color: #e5e7eb !important;
     background: transparent !important;
     transition: all 0.3s ease;
 }
 
 #editorDropZone:hover {
-    border-color: #667eea; /* Blue hover */
+    border-color: #667eea;
     background-color: rgba(102, 126, 234, 0.05);
     transform: translateY(-2px);
     box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
 }
 
 #editorDropZone.dragover {
-    border-color: #10b981 !important; /* Green dragover */
+    border-color: #10b981 !important;
     background-color: rgba(16, 185, 129, 0.1) !important;
     transform: scale(1.02);
 }
 
 #editorDropZone.processing {
-    border-color: #f59e0b !important; /* Orange processing - explicit color */
+    border-color: #f59e0b !important;
     background-color: rgba(245, 158, 11, 0.1) !important;
     transform: none;
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
 }
 
-/* Ensure editor status messages match main converter styling */
+/* Editor status messages */
 #editorStatus {
     margin-top: 20px;
     font-size: 16px;
@@ -46,21 +45,21 @@
 }
 
 #editorStatus.info {
-    background: var(--status-info-bg, rgba(59, 130, 246, 0.1));
-    color: var(--status-info-color, #3b82f6);
-    border: 1px solid var(--status-info-border, rgba(59, 130, 246, 0.3));
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 #editorStatus.success {
-    background: var(--status-success-bg, rgba(34, 197, 94, 0.1));
-    color: var(--status-success-color, #22c55e);
-    border: 1px solid var(--status-success-border, rgba(34, 197, 94, 0.3));
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 #editorStatus.error {
-    background: var(--status-error-bg, rgba(239, 68, 68, 0.1));
-    color: var(--status-error-color, #ef4444);
-    border: 1px solid var(--status-error-border, rgba(239, 68, 68, 0.3));
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 /* ========================================
@@ -78,7 +77,7 @@
 }
 
 .gif-editor-container:focus {
-    outline: none; /* Remove focus outline since we don't need it visible */
+    outline: none;
 }
 
 /* ========================================
@@ -113,10 +112,18 @@
     transform: translateY(-1px);
 }
 
+.control-btn.active {
+    background: var(--timeline-handle);
+    color: white;
+}
+
 .preview-info {
     color: var(--text-secondary);
     font-weight: 500;
     font-size: 14px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
 }
 
 .preview-container {
@@ -131,7 +138,7 @@
 }
 
 /* ========================================
-   VIDEO ELEMENT STYLES - THE MAIN FIX!
+   VIDEO ELEMENT STYLES
    ======================================== */
 
 #previewVideo {
@@ -149,30 +156,12 @@
     z-index: 1;
 }
 
-/* Ensure video is visible when loading */
 #previewVideo[src] {
     display: block !important;
 }
 
-/* Legacy canvas and gif preview styles (keep for compatibility) */
-#previewCanvas {
-    max-width: 100%;
-    max-height: 400px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px var(--shadow-color);
-    background: white;
-}
-
-#gifPreview {
-    max-width: 100%;
-    max-height: 400px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px var(--shadow-color);
-    background: white;
-}
-
 /* ========================================
-   TIMELINE SECTION
+   TIMELINE SECTION - FIXED LAYOUT
    ======================================== */
 
 .timeline-section {
@@ -183,10 +172,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px; /* More space before timeline */
+    margin-bottom: 20px;
     flex-wrap: wrap;
     gap: 15px;
-    padding: 0 5px; /* Small side padding */
+    padding: 0 5px;
 }
 
 @media (max-width: 768px) {
@@ -194,18 +183,6 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
-    }
-    
-    .preset-buttons {
-        order: 1;
-    }
-    
-    .duration-display {
-        order: 2;
-    }
-    
-    .loop-options {
-        order: 3;
     }
 }
 
@@ -231,36 +208,9 @@
     color: white;
 }
 
-.duration-control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.duration-input {
-    width: 70px;
-    padding: 6px 8px;
-    border: 1px solid var(--timeline-handle);
-    border-radius: 4px;
-    background: var(--checkbox-bg);
-    color: var(--text-primary);
-    font-size: 14px;
-}
-
-.duration-btn {
-    background: var(--timeline-handle);
-    border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-    color: white;
-    cursor: pointer;
-    font-size: 12px;
+.duration-display {
+    color: var(--text-secondary);
     font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.duration-btn:hover {
-    background: var(--timeline-handle-hover);
 }
 
 .loop-options {
@@ -311,86 +261,69 @@
 }
 
 /* ========================================
-   TIMELINE COMPONENTS
+   TIMELINE COMPONENTS - FIXED POSITIONING
    ======================================== */
 
-/* Status pill above the timeline bar */
-.duration-pill {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translate(-50%, -160%); /* Moved further up */
-    padding: 8px 12px; /* Slightly larger */
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    background: var(--controls-bg);
-    color: var(--text-accent);
-    border: 1px solid var(--timeline-handle);
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 30;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Timeline Container */
+/* Timeline Container - Fixed overlap issues */
 .timeline-container {
     position: relative;
     background: var(--timeline-bg);
     border-radius: 10px;
-    padding: 15px 15px 20px 15px; /* Extra bottom padding */
+    padding: 50px 15px 20px 15px; /* Increased top padding for pill */
     margin-bottom: 15px;
-    min-height: 100px; /* Increased height */
+    min-height: 120px;
     max-width: 100%;
     overflow: visible;
-    margin-top: 40px; /* Space for the duration pill */
 }
 
-/* Track holds overlays */
+/* Duration pill - Fixed positioning */
+.duration-pill {
+    position: absolute;
+    top: 15px; /* Fixed position from top of container */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--controls-bg);
+    color: var(--text-accent);
+    border: 2px solid var(--timeline-handle);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 30;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Timeline Track - Better interaction */
 .timeline-track {
     position: relative;
     background: var(--timeline-track-bg);
-    border-radius: 6px;
-    padding: 5px;
-    min-height: 60px; /* Taller for easier interaction */
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 70px;
     cursor: pointer;
     overflow: visible;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 10px 0; /* Vertical spacing */
-    transition: all 0.15s ease; /* Smooth interactions */
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    margin: 10px 0;
+    transition: all 0.15s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .timeline-track:hover {
-    background: rgba(0, 0, 0, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Add subtle gradient for better depth */
-.timeline-track::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(to bottom, 
-        rgba(255, 255, 255, 0.05) 0%, 
-        transparent 50%, 
-        rgba(0, 0, 0, 0.05) 100%);
-    border-radius: 6px;
-    pointer-events: none;
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Time markers */
 .time-marker {
     position: absolute;
-    top: 5px;
-    bottom: 5px;
+    top: 8px;
+    bottom: 8px;
     width: 1px;
     background: var(--timeline-handle);
-    opacity: 0.2;
+    opacity: 0.3;
     pointer-events: none;
     z-index: 1;
 }
@@ -400,159 +333,162 @@
     opacity: 0.5;
 }
 
-.time-marker:first-child,
-.time-marker:last-child {
-    opacity: 0.7;
-    width: 2px;
-}
-
 .time-label {
     position: absolute;
-    top: -25px;
+    top: -22px;
     left: -15px;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-tertiary);
     background: var(--timeline-bg);
-    padding: 2px 4px;
+    padding: 2px 5px;
     border-radius: 3px;
     white-space: nowrap;
     font-weight: 500;
     z-index: 2;
 }
 
-/* Timeline Selection */
+/* Timeline Selection - Enhanced dragging */
 .timeline-selection {
     position: absolute;
-    inset: 5px;
+    inset: 8px;
     pointer-events: none;
     z-index: 10;
 }
 
 .selection-area {
     position: absolute;
-    background: var(--timeline-selection);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(37, 99, 235, 0.25));
     border: 2px solid var(--timeline-selection-border);
     border-radius: 6px;
     height: 100%;
     pointer-events: all;
-    cursor: grab;
-    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    min-width: 30px; /* Minimum width for easier grabbing */
+    cursor: move;
+    transition: all 0.2s ease;
+    min-width: 40px;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
 }
 
 .selection-area:hover {
-    background: rgba(59, 130, 246, 0.3); /* Slightly more visible on hover */
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(37, 99, 235, 0.35));
     border-color: #3b82f6;
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 3px 12px rgba(59, 130, 246, 0.3);
 }
 
 .selection-area:active,
 .selection-area.dragging {
     cursor: grabbing;
-    background: rgba(59, 130, 246, 0.4);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.45), rgba(37, 99, 235, 0.45));
     border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+    transform: scale(1.02);
 }
 
-.selection-area::before {
-    content: '';
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
-    border: 1px dashed var(--timeline-selection-border);
-    border-radius: 8px;
-    opacity: 0.5;
-    pointer-events: none;
-}
-
-/* Add center grab indicator */
+/* Center drag indicator - More visible */
 .selection-area::after {
-    content: '⋮⋮';
+    content: '⋮⋮⋮';
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
     font-weight: bold;
     pointer-events: none;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    letter-spacing: 2px;
 }
 
+/* Selection handles - Easier to grab */
 .selection-handle {
     position: absolute;
-    width: 16px; /* Wider for easier grabbing */
-    height: 100%;
-    background: var(--timeline-handle);
-    border-radius: 8px;
+    width: 20px;
+    height: calc(100% + 16px);
+    background: linear-gradient(135deg, var(--timeline-handle), var(--timeline-handle-hover));
+    border-radius: 10px;
     cursor: ew-resize;
     pointer-events: all;
     transition: all 0.2s ease;
-    z-index: 3;
-    border: 2px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 15;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    top: -8px;
 }
 
 .selection-handle:hover {
-    background: var(--timeline-handle-hover);
-    transform: scaleX(1.3) scaleY(1.1);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+    background: linear-gradient(135deg, var(--timeline-handle-hover), #3b82f6);
+    transform: scaleX(1.3);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
 }
 
 .selection-handle.left {
-    left: -8px; /* Centered on edge */
+    left: -10px;
+    border-radius: 10px 4px 4px 10px;
 }
 
 .selection-handle.right {
-    right: -8px; /* Centered on edge */
+    right: -10px;
+    border-radius: 4px 10px 10px 4px;
 }
 
-/* Add visual indicator when dragging */
 .selection-handle.dragging {
-    background: #3b82f6; /* Blue when dragging */
-    transform: scaleX(1.4) scaleY(1.2);
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    transform: scaleX(1.4);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.5);
 }
 
-/* Timeline Playhead */
+/* Add grip indicators to handles */
+.selection-handle::after {
+    content: '|||';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(90deg);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: -1px;
+}
+
+/* Timeline Playhead - More visible */
 .timeline-playhead {
     position: absolute;
-    top: 5px;
-    bottom: 5px;
+    top: 0;
+    bottom: 0;
     width: 3px;
     background: var(--timeline-playhead);
     border-radius: 2px;
     pointer-events: none;
     z-index: 20;
-    transition: left 0.1s ease;
+    transition: left 0.05s linear;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
 }
 
 .timeline-playhead::before {
     content: '';
     position: absolute;
-    top: -8px;
-    left: -4px;
-    width: 11px;
-    height: 11px;
+    top: -10px;
+    left: -6px;
+    width: 15px;
+    height: 15px;
     background: var(--timeline-playhead);
     border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Timeline Info */
 .timeline-info {
     display: flex;
     justify-content: center;
-    margin-top: 15px; /* More space from timeline */
-    padding: 10px;
+    margin-top: 15px;
+    padding: 12px;
     background: rgba(0, 0, 0, 0.05);
     border-radius: 8px;
 }
 
 .time-display {
     display: flex;
-    gap: 25px; /* More space between time values */
+    gap: 20px;
     font-size: 14px;
     color: var(--text-secondary);
     font-weight: 500;
@@ -562,51 +498,38 @@
 
 .time-display > span {
     background: rgba(255, 255, 255, 0.1);
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 5px 10px;
+    border-radius: 5px;
     white-space: nowrap;
-}
-
-@media (max-width: 600px) {
-    .time-display {
-        gap: 15px;
-        font-size: 12px;
-    }
-    
-    .time-display > span {
-        padding: 3px 6px;
-    }
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Keyboard shortcuts help */
 .keyboard-help {
     text-align: center;
-    font-size: 11px;
-    line-height: 1.4;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    margin-top: 15px;
 }
 
 .keyboard-help strong {
     color: var(--text-secondary);
+    display: inline-block;
+    margin-right: 8px;
 }
 
 .keyboard-help span {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 2px 6px;
-    border-radius: 3px;
-    margin: 0 2px;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin: 0 3px;
     white-space: nowrap;
-}
-
-@media (max-width: 600px) {
-    .keyboard-help {
-        font-size: 10px;
-    }
-    
-    .keyboard-help span {
-        display: inline-block;
-        margin: 1px;
-    }
+    font-family: monospace;
+    font-size: 11px;
 }
 
 /* ========================================
@@ -657,7 +580,7 @@
 }
 
 .export-btn {
-    background: var(--export-btn-bg);
+    background: linear-gradient(135deg, var(--export-btn-bg), var(--export-btn-hover));
     border: none;
     border-radius: 10px;
     padding: 15px 25px;
@@ -669,18 +592,20 @@
     gap: 10px;
     transition: all 0.3s ease;
     font-size: 16px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
 .export-btn:hover {
-    background: var(--export-btn-hover);
+    background: linear-gradient(135deg, var(--export-btn-hover), var(--export-btn-bg));
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px var(--shadow-color);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
 }
 
 .export-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
+    background: linear-gradient(135deg, #6b7280, #9ca3af);
 }
 
 .export-icon {
@@ -691,6 +616,23 @@
     margin-top: 20px;
 }
 
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--progress-bg);
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--progress-fill), var(--timeline-handle));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
 .progress-text {
     text-align: center;
     color: var(--text-secondary);
@@ -699,10 +641,32 @@
     font-weight: 500;
 }
 
-/* Hide unused frame thumbnail styles */
-.frame-thumbnail,
-.frame-thumbnail.active,
-.frame-thumbnail.in-selection,
-.frame-thumbnail:hover {
-    display: none;
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .timeline-container {
+        padding: 45px 10px 15px 10px;
+    }
+    
+    .duration-pill {
+        font-size: 12px;
+        padding: 6px 12px;
+        top: 10px;
+    }
+    
+    .timeline-track {
+        min-height: 60px;
+    }
+    
+    .selection-handle {
+        width: 18px;
+    }
+    
+    .time-display {
+        gap: 10px;
+        font-size: 13px;
+    }
+    
+    .keyboard-help {
+        font-size: 10px;
+    }
 }
