@@ -200,23 +200,18 @@
 
         <div class="timeline-container" id="timelineContainer">
           <!-- pill above the bar -->
-          <div id="durationPill" class="duration-pill">🎯 Ready</div>
+          <div id="durationPill" class="duration-pill">🎬 Ready</div>
 
           <!-- track holds overlays so % math lines up -->
           <div class="timeline-track" id="timelineTrack">
+            <!-- Selection area with handles inside -->
             <div class="timeline-selection" id="timelineSelection">
               <div class="selection-area" id="selectionArea">
-                <div
-                  class="selection-handle left"
-                  id="startHandle"
-                  aria-label="Start handle"></div>
-                <div
-                  class="selection-handle right"
-                  id="endHandle"
-                  aria-label="End handle"></div>
+                <div class="selection-handle left" id="startHandle"></div>
+                <div class="selection-handle right" id="endHandle"></div>
               </div>
             </div>
-
+            <!-- Playhead -->
             <div class="timeline-playhead" id="playhead"></div>
           </div>
         </div>

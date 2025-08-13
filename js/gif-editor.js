@@ -1175,3 +1175,39 @@ window.addEventListener('beforeunload', () => {
         }
     });
 });
+
+// ENSURE HANDLES EXIST - Add this after the IntegratedGifEditor class
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Check if timeline structure exists and create if missing
+        const selectionArea = document.getElementById('selectionArea');
+        if (selectionArea) {
+            // Check for handles
+            let startHandle = document.getElementById('startHandle');
+            let endHandle = document.getElementById('endHandle');
+            
+            if (!startHandle) {
+                startHandle = document.createElement('div');
+                startHandle.className = 'selection-handle left';
+                startHandle.id = 'startHandle';
+                selectionArea.appendChild(startHandle);
+                console.log('Created missing start handle');
+            }
+            
+            if (!endHandle) {
+                endHandle = document.createElement('div');
+                endHandle.className = 'selection-handle right';
+                endHandle.id = 'endHandle';
+                selectionArea.appendChild(endHandle);
+                console.log('Created missing end handle');
+            }
+        }
+        
+        // Initialize editor
+        window.gifEditor = new IntegratedGifEditor();
+        console.log('Editor initialized with handles:', {
+            start: document.getElementById('startHandle'),
+            end: document.getElementById('endHandle')
+        });
+    }, 100);
+});
