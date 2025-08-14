@@ -1,6 +1,6 @@
 /*
- * GIF Editor Specific Styles - ENHANCED VERSION
- * Fixes layout overlaps and improves dragging UX
+ * GIF Editor Specific Styles - COMPLETE VERSION
+ * Includes highly visible timeline selection and draggable handles
  */
 
 /* ========================================
@@ -11,6 +11,8 @@
     border-color: #e5e7eb !important;
     background: transparent !important;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 #editorDropZone:hover {
@@ -31,6 +33,36 @@
     background-color: rgba(245, 158, 11, 0.1) !important;
     transform: none;
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
+/* Processing overlay message */
+#editorDropZone.processing::after {
+    content: '⏳ Converting on server...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(245, 158, 11, 0.95);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.05); }
+}
+
+#editorDropZone.processing .drop-icon,
+#editorDropZone.processing .drop-text,
+#editorDropZone.processing .drop-subtext {
+    opacity: 0.3;
+    filter: blur(1px);
 }
 
 /* Editor status messages */
@@ -261,25 +293,25 @@
 }
 
 /* ========================================
-   TIMELINE COMPONENTS - FIXED POSITIONING
+   TIMELINE CONTAINER & TRACK
    ======================================== */
 
-/* Timeline Container - Fixed overlap issues */
+/* Timeline Container */
 .timeline-container {
     position: relative;
     background: var(--timeline-bg);
     border-radius: 10px;
-    padding: 50px 15px 20px 15px; /* Increased top padding for pill */
+    padding: 50px 15px 20px 15px;
     margin-bottom: 15px;
     min-height: 120px;
     max-width: 100%;
     overflow: visible;
 }
 
-/* Duration pill - Fixed positioning */
+/* Duration pill */
 .duration-pill {
     position: absolute;
-    top: 15px; /* Fixed position from top of container */
+    top: 15px;
     left: 50%;
     transform: translateX(-50%);
     padding: 8px 16px;
@@ -295,23 +327,29 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
-/* Timeline Track - Better interaction */
+/* Timeline Track */
 .timeline-track {
-    position: relative;
-    background: var(--timeline-track-bg);
+    position: relative !important;
+    background: linear-gradient(to right, 
+        rgba(0, 0, 0, 0.1) 0%, 
+        rgba(0, 0, 0, 0.05) 50%, 
+        rgba(0, 0, 0, 0.1) 100%);
     border-radius: 8px;
     padding: 8px;
-    min-height: 70px;
+    min-height: 80px !important;
     cursor: pointer;
-    overflow: visible;
+    overflow: visible !important;
     border: 2px solid rgba(255, 255, 255, 0.1);
     margin: 10px 0;
-    transition: all 0.15s ease;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.15s ease;
 }
 
 .timeline-track:hover {
-    background: rgba(0, 0, 0, 0.08);
+    background: linear-gradient(to right, 
+        rgba(0, 0, 0, 0.12) 0%, 
+        rgba(0, 0, 0, 0.07) 50%, 
+        rgba(0, 0, 0, 0.12) 100%);
     border-color: rgba(255, 255, 255, 0.15);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -321,22 +359,21 @@
     position: absolute;
     top: 8px;
     bottom: 8px;
-    width: 1px;
-    background: var(--timeline-handle);
-    opacity: 0.3;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.2);
     pointer-events: none;
     z-index: 1;
 }
 
 .time-marker.major-marker {
-    width: 2px;
-    opacity: 0.5;
+    width: 3px;
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .time-label {
     position: absolute;
-    top: -22px;
-    left: -15px;
+    bottom: -22px;
+    left: -20px;
     font-size: 11px;
     color: var(--text-tertiary);
     background: var(--timeline-bg);
@@ -347,136 +384,197 @@
     z-index: 2;
 }
 
-/* Timeline Selection - Enhanced dragging */
+/* ========================================
+   TIMELINE SELECTION - HIGHLY VISIBLE
+   ======================================== */
+
+/* Timeline selection container */
 .timeline-selection {
-    position: absolute;
-    inset: 8px;
+    position: absolute !important;
+    top: 8px;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
     pointer-events: none;
     z-index: 10;
 }
 
+/* Selection area - The highlighted region between IN and OUT */
 .selection-area {
-    position: absolute;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(37, 99, 235, 0.25));
-    border: 2px solid var(--timeline-selection-border);
-    border-radius: 6px;
-    height: 100%;
-    pointer-events: all;
-    cursor: move;
+    position: absolute !important;
+    background: linear-gradient(135deg, 
+        rgba(99, 102, 241, 0.4),
+        rgba(139, 92, 246, 0.4)) !important;
+    border: 3px solid #6366f1 !important;
+    border-radius: 8px;
+    height: 100% !important;
+    pointer-events: all !important;
+    cursor: move !important;
+    min-width: 50px !important;
+    box-shadow: 
+        0 4px 12px rgba(99, 102, 241, 0.3),
+        inset 0 0 20px rgba(255, 255, 255, 0.1) !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
     transition: all 0.2s ease;
-    min-width: 40px;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
 }
 
 .selection-area:hover {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(37, 99, 235, 0.35));
-    border-color: #3b82f6;
-    box-shadow: 0 3px 12px rgba(59, 130, 246, 0.3);
+    background: linear-gradient(135deg, 
+        rgba(99, 102, 241, 0.5),
+        rgba(139, 92, 246, 0.5)) !important;
+    border-color: #818cf8 !important;
+    box-shadow: 
+        0 6px 20px rgba(99, 102, 241, 0.4),
+        inset 0 0 30px rgba(255, 255, 255, 0.15) !important;
 }
 
-.selection-area:active,
 .selection-area.dragging {
-    cursor: grabbing;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.45), rgba(37, 99, 235, 0.45));
-    border-color: #2563eb;
-    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
-    transform: scale(1.02);
+    cursor: grabbing !important;
+    background: linear-gradient(135deg, 
+        rgba(99, 102, 241, 0.6),
+        rgba(139, 92, 246, 0.6)) !important;
+    border-color: #a78bfa !important;
+    transform: scale(1.01);
 }
 
-/* Center drag indicator - More visible */
+/* Center drag indicator */
 .selection-area::after {
     content: '⋮⋮⋮';
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 16px;
+    color: white;
+    font-size: 18px;
     font-weight: bold;
     pointer-events: none;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-    letter-spacing: 2px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    letter-spacing: 3px;
 }
 
-/* Selection handles - Easier to grab */
+/* ========================================
+   IN/OUT HANDLES - LARGE AND VISIBLE
+   ======================================== */
+
 .selection-handle {
-    position: absolute;
-    width: 20px;
-    height: calc(100% + 16px);
-    background: linear-gradient(135deg, var(--timeline-handle), var(--timeline-handle-hover));
-    border-radius: 10px;
-    cursor: ew-resize;
-    pointer-events: all;
+    position: absolute !important;
+    width: 32px !important;
+    height: calc(100% + 24px) !important;
+    border-radius: 8px !important;
+    cursor: ew-resize !important;
+    pointer-events: all !important;
+    z-index: 25 !important;
+    border: 3px solid white !important;
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(0, 0, 0, 0.2) !important;
+    top: -12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     transition: all 0.2s ease;
-    z-index: 15;
-    border: 2px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    top: -8px;
 }
 
-.selection-handle:hover {
-    background: linear-gradient(135deg, var(--timeline-handle-hover), #3b82f6);
-    transform: scaleX(1.3);
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
-}
-
+/* Left handle (IN point) - Green */
 .selection-handle.left {
-    left: -10px;
-    border-radius: 10px 4px 4px 10px;
+    left: -16px !important;
+    background: linear-gradient(180deg, #10b981, #059669) !important;
 }
 
+/* Right handle (OUT point) - Red */
 .selection-handle.right {
-    right: -10px;
-    border-radius: 4px 10px 10px 4px;
+    right: -16px !important;
+    background: linear-gradient(180deg, #ef4444, #dc2626) !important;
 }
 
+/* Handle labels */
+.handle-label {
+    color: white !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    transform: rotate(-90deg);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Hover effects for handles */
+.selection-handle:hover {
+    transform: scaleX(1.2) scaleY(1.05);
+    filter: brightness(1.2);
+}
+
+.selection-handle.left:hover {
+    box-shadow: 
+        0 6px 20px rgba(16, 185, 129, 0.5),
+        0 0 0 2px rgba(16, 185, 129, 0.3) !important;
+}
+
+.selection-handle.right:hover {
+    box-shadow: 
+        0 6px 20px rgba(239, 68, 68, 0.5),
+        0 0 0 2px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Dragging states */
 .selection-handle.dragging {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    transform: scaleX(1.4);
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.5);
+    transform: scaleX(1.3) scaleY(1.1) !important;
+    filter: brightness(1.3) !important;
+    cursor: grabbing !important;
 }
 
-/* Add grip indicators to handles */
-.selection-handle::after {
-    content: '|||';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(90deg);
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 10px;
-    font-weight: bold;
-    letter-spacing: -1px;
+/* Animation to highlight handles when timeline loads */
+@keyframes pulseHandle {
+    0%, 100% { 
+        transform: scale(1);
+        filter: brightness(1);
+    }
+    50% { 
+        transform: scale(1.2);
+        filter: brightness(1.3);
+    }
 }
 
-/* Timeline Playhead - More visible */
+.timeline-container.ready .selection-handle {
+    animation: pulseHandle 0.8s ease-in-out 3;
+}
+
+/* ========================================
+   TIMELINE PLAYHEAD
+   ======================================== */
+
 .timeline-playhead {
-    position: absolute;
+    position: absolute !important;
     top: 0;
     bottom: 0;
-    width: 3px;
-    background: var(--timeline-playhead);
+    width: 3px !important;
+    background: #fbbf24 !important;
     border-radius: 2px;
     pointer-events: none;
     z-index: 20;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
     transition: left 0.05s linear;
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
 }
 
 .timeline-playhead::before {
     content: '';
     position: absolute;
-    top: -10px;
-    left: -6px;
-    width: 15px;
-    height: 15px;
-    background: var(--timeline-playhead);
+    top: -12px;
+    left: -7px;
+    width: 17px;
+    height: 17px;
+    background: #fbbf24;
     border-radius: 50%;
     border: 2px solid white;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Timeline Info */
+/* ========================================
+   TIMELINE INFO
+   ======================================== */
+
 .timeline-info {
     display: flex;
     justify-content: center;
@@ -508,8 +606,8 @@
 .keyboard-help {
     text-align: center;
     font-size: 12px;
-    line-height: 1.5;
-    padding: 10px;
+    line-height: 1.6;
+    padding: 12px;
     background: rgba(0, 0, 0, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
@@ -522,7 +620,8 @@
     margin-right: 8px;
 }
 
-.keyboard-help span {
+.keyboard-help span,
+.keyboard-help kbd {
     background: rgba(255, 255, 255, 0.15);
     padding: 3px 8px;
     border-radius: 4px;
@@ -530,6 +629,7 @@
     white-space: nowrap;
     font-family: monospace;
     font-size: 11px;
+    display: inline-block;
 }
 
 /* ========================================
@@ -641,7 +741,10 @@
     font-weight: 500;
 }
 
-/* Responsive adjustments */
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
 @media (max-width: 600px) {
     .timeline-container {
         padding: 45px 10px 15px 10px;
@@ -654,11 +757,11 @@
     }
     
     .timeline-track {
-        min-height: 60px;
+        min-height: 70px !important;
     }
     
     .selection-handle {
-        width: 18px;
+        width: 28px !important;
     }
     
     .time-display {
@@ -669,4 +772,52 @@
     .keyboard-help {
         font-size: 10px;
     }
+}
+
+/* ========================================
+   DARK MODE ADJUSTMENTS
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+    .timeline-track {
+        background: linear-gradient(to right, 
+            rgba(255, 255, 255, 0.05) 0%, 
+            rgba(255, 255, 255, 0.02) 50%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .selection-area {
+        background: linear-gradient(135deg, 
+            rgba(129, 140, 248, 0.35),
+            rgba(167, 139, 250, 0.35)) !important;
+        border-color: #818cf8 !important;
+    }
+    
+    .time-marker {
+        background: rgba(255, 255, 255, 0.15);
+    }
+}
+
+/* ========================================
+   FORCE VISIBILITY (DEBUG)
+   ======================================== */
+
+#selectionArea {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+#startHandle,
+#endHandle {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+#playhead {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }

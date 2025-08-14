@@ -1,6 +1,6 @@
 // Enhanced GIF Editor with Twitch/StreamLadder-style trimming
 // Adds numeric inputs, I/O hotkeys, scrubber dragging, and loop-in-selection
-// Builds on top of existing functionality without breaking anything
+// FIXED: Creates timeline selection elements when video loads
 
 class IntegratedGifEditor {
     constructor() {
@@ -31,16 +31,19 @@ class IntegratedGifEditor {
         // Server URL (same as main converter)
         this.SERVER_URL = (window.SERVER_URL || 'https://api.piogino.ch');
 
-        // UI elements
+        // UI elements - will be populated after creation
         this.editorDropZone = document.getElementById('editorDropZone');
         this.editorFileInput = document.getElementById('editorFileInput');
         this.editorContainer = document.getElementById('editorContainer');
         this.previewVideo = document.getElementById('previewVideo');
         this.timelineTrack = document.getElementById('timelineTrack');
-        this.selectionArea = document.getElementById('selectionArea');
-        this.startHandle = document.getElementById('startHandle');
-        this.endHandle = document.getElementById('endHandle');
-        this.playhead = document.getElementById('playhead');
+        
+        // These will be created dynamically
+        this.timelineSelection = null;
+        this.selectionArea = null;
+        this.startHandle = null;
+        this.endHandle = null;
+        this.playhead = null;
         
         // NEW: Numeric time inputs (will create if not exist)
         this.startTimeInput = null;
@@ -85,14 +88,8 @@ class IntegratedGifEditor {
         // ENHANCED: Loop button now toggles between full loop and selection loop
         document.getElementById('loopBtn')?.addEventListener('click', () => this.toggleLoopMode());
 
-        // Timeline handles & area
-        this.startHandle?.addEventListener('mousedown', (e) => this.startDrag(e, 'start'));
-        this.endHandle?.addEventListener('mousedown', (e) => this.startDrag(e, 'end'));
-        this.selectionArea?.addEventListener('mousedown', (e) => this.startDrag(e, 'area'));
-        
         // ENHANCED: Click timeline to seek, drag playhead directly
         this.timelineTrack?.addEventListener('mousedown', (e) => this.handleTimelineMouseDown(e));
-        this.playhead?.addEventListener('mousedown', (e) => this.startPlayheadDrag(e));
 
         // Preset buttons
         document.querySelectorAll('.preset-btn').forEach(btn => {
@@ -119,6 +116,79 @@ class IntegratedGifEditor {
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
 
         console.log('Enhanced GIF Editor initialized with Twitch-style features.');
+    }
+    
+    // CRITICAL: Create the timeline selection elements
+    createTimelineSelection() {
+        console.log('Creating timeline selection elements...');
+        
+        // Get the timeline track
+        const timelineTrack = document.getElementById('timelineTrack');
+        if (!timelineTrack) {
+            console.error('Timeline track not found!');
+            return;
+        }
+        
+        // Remove any existing selection elements first
+        const existingSelection = document.getElementById('timelineSelection');
+        if (existingSelection) {
+            existingSelection.remove();
+        }
+        
+        // Create the selection container
+        const timelineSelection = document.createElement('div');
+        timelineSelection.className = 'timeline-selection';
+        timelineSelection.id = 'timelineSelection';
+        timelineTrack.appendChild(timelineSelection);
+        
+        // Create the selection area (the blue highlighted region)
+        const selectionArea = document.createElement('div');
+        selectionArea.className = 'selection-area';
+        selectionArea.id = 'selectionArea';
+        timelineSelection.appendChild(selectionArea);
+        
+        // Create the IN handle (start)
+        const startHandle = document.createElement('div');
+        startHandle.className = 'selection-handle left';
+        startHandle.id = 'startHandle';
+        startHandle.innerHTML = '<span class="handle-label">IN</span>';
+        selectionArea.appendChild(startHandle);
+        
+        // Create the OUT handle (end)
+        const endHandle = document.createElement('div');
+        endHandle.className = 'selection-handle right';
+        endHandle.id = 'endHandle';
+        endHandle.innerHTML = '<span class="handle-label">OUT</span>';
+        selectionArea.appendChild(endHandle);
+        
+        // Create the playhead if it doesn't exist
+        let playhead = document.getElementById('playhead');
+        if (!playhead) {
+            playhead = document.createElement('div');
+            playhead.className = 'timeline-playhead';
+            playhead.id = 'playhead';
+            timelineTrack.appendChild(playhead);
+        }
+        
+        // Store references in the class
+        this.timelineSelection = timelineSelection;
+        this.selectionArea = selectionArea;
+        this.startHandle = startHandle;
+        this.endHandle = endHandle;
+        this.playhead = playhead;
+        
+        // Attach event listeners to the newly created elements
+        this.startHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'start'));
+        this.endHandle.addEventListener('mousedown', (e) => this.startDrag(e, 'end'));
+        this.selectionArea.addEventListener('mousedown', (e) => {
+            // Only drag the area if not clicking on handles
+            if (!e.target.classList.contains('selection-handle') && 
+                !e.target.classList.contains('handle-label')) {
+                this.startDrag(e, 'area');
+            }
+        });
+        
+        console.log('Timeline selection elements created successfully');
     }
     
     // NEW: Create numeric time inputs for precise control
@@ -170,30 +240,33 @@ class IntegratedGifEditor {
         }
         
         // Add CSS for time inputs
-        const style = document.createElement('style');
-        style.textContent = `
-            .time-input {
-                width: 80px;
-                padding: 2px 4px;
-                border: 1px solid var(--timeline-handle);
-                border-radius: 4px;
-                background: var(--controls-bg);
-                color: var(--text-primary);
-                font-size: 13px;
-                font-family: monospace;
-                text-align: center;
-            }
-            .time-input:focus {
-                outline: none;
-                border-color: var(--timeline-selection-border);
-                background: var(--container-bg);
-            }
-            .time-input.error {
-                border-color: #ef4444;
-                background: rgba(239, 68, 68, 0.1);
-            }
-        `;
-        document.head.appendChild(style);
+        if (!document.getElementById('time-input-styles')) {
+            const style = document.createElement('style');
+            style.id = 'time-input-styles';
+            style.textContent = `
+                .time-input {
+                    width: 80px;
+                    padding: 2px 4px;
+                    border: 1px solid var(--timeline-handle);
+                    border-radius: 4px;
+                    background: var(--controls-bg);
+                    color: var(--text-primary);
+                    font-size: 13px;
+                    font-family: monospace;
+                    text-align: center;
+                }
+                .time-input:focus {
+                    outline: none;
+                    border-color: var(--timeline-selection-border);
+                    background: var(--container-bg);
+                }
+                .time-input.error {
+                    border-color: #ef4444;
+                    background: rgba(239, 68, 68, 0.1);
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
     
     // NEW: Parse time input (supports "5.5" or "1:23.456" format)
@@ -528,8 +601,6 @@ class IntegratedGifEditor {
         }
     }
 
-    // Keep all existing methods below unchanged...
-    
     showEditorStatus(message, type = 'info') {
         const el = document.getElementById('editorStatus');
         if (!el) return;
@@ -672,6 +743,7 @@ class IntegratedGifEditor {
         }
     }
 
+    // MODIFIED: Call createTimelineSelection after video loads
     onVideoLoaded() {
         if (!this.previewVideo || !this.previewVideo.duration) {
             console.error('Video not properly loaded');
@@ -696,13 +768,26 @@ class IntegratedGifEditor {
         this.endTime = this.videoDuration;
         this.currentTime = 0;
         
+        // Create timeline markers
         this.createTimeline();
+        
+        // CREATE THE SELECTION ELEMENTS - THIS IS THE KEY!
+        this.createTimelineSelection();
+        
+        // Update visual positions
         this.updateTimelineSelection();
         this.updateTimeDisplay();
         this.updatePlayhead();
         this.updateDurationPill();
         
+        // Enable controls
         this.enableControls(true);
+        
+        // Add ready class for animations
+        const container = document.getElementById('timelineContainer');
+        if (container) {
+            container.classList.add('ready');
+        }
         
         console.log(`Video loaded successfully: ${this.videoDuration.toFixed(1)}s duration`);
     }
@@ -728,6 +813,10 @@ class IntegratedGifEditor {
     createTimeline() {
         if (!this.timelineTrack) return;
         
+        // Clear but preserve selection elements if they exist
+        const selection = document.getElementById('timelineSelection');
+        const playhead = document.getElementById('playhead');
+        
         this.timelineTrack.innerHTML = '';
         
         const markerCount = Math.min(20, Math.max(5, Math.floor(this.videoDuration)));
@@ -745,11 +834,10 @@ class IntegratedGifEditor {
             marker.innerHTML = `<span class="time-label">${time.toFixed(1)}s</span>`;
             this.timelineTrack.appendChild(marker);
         }
-    }
-
-    handleTimelineClick(event) {
-        // This is now handled by handleTimelineMouseDown
-        return;
+        
+        // Re-add selection and playhead if they existed
+        if (selection) this.timelineTrack.appendChild(selection);
+        if (playhead) this.timelineTrack.appendChild(playhead);
     }
 
     setPreset(duration) {
@@ -796,20 +884,20 @@ class IntegratedGifEditor {
         if (type === 'area') {
             this.dragStartTime = this.startTime;
             this.dragEndTime = this.endTime;
-            this.selectionArea.classList.add('dragging');
+            this.selectionArea?.classList.add('dragging');
         } else {
             this.dragStartTime = type === 'start' ? this.startTime : this.endTime;
             if (type === 'start') {
-                this.startHandle.classList.add('dragging');
+                this.startHandle?.classList.add('dragging');
             } else {
-                this.endHandle.classList.add('dragging');
+                this.endHandle?.classList.add('dragging');
             }
         }
         
         document.body.style.userSelect = 'none';
         document.body.style.cursor = type === 'area' ? 'grabbing' : 'ew-resize';
         
-        console.log(`Started dragging ${type} at time: ${this.dragStartTime.toFixed(2)}s`);
+        console.log(`Started dragging ${type} at time: ${this.dragStartTime?.toFixed(2)}s`);
     }
 
     handleDrag(event) {
@@ -891,15 +979,9 @@ class IntegratedGifEditor {
         const finalStart = this.startTime;
         const finalEnd = this.endTime;
         
-        if (this.selectionArea) {
-            this.selectionArea.classList.remove('dragging');
-        }
-        if (this.startHandle) {
-            this.startHandle.classList.remove('dragging');
-        }
-        if (this.endHandle) {
-            this.endHandle.classList.remove('dragging');
-        }
+        this.selectionArea?.classList.remove('dragging');
+        this.startHandle?.classList.remove('dragging');
+        this.endHandle?.classList.remove('dragging');
         
         this.isDragging = false;
         this.dragType = null;
@@ -915,14 +997,24 @@ class IntegratedGifEditor {
         }
     }
 
+    // MODIFIED: Ensure visibility
     updateTimelineSelection() {
-        if (this.videoDuration === 0 || !this.selectionArea) return;
+        if (this.videoDuration === 0 || !this.selectionArea) {
+            console.warn('Cannot update selection - video not loaded or selection area missing');
+            return;
+        }
         
         const startPercent = (this.startTime / this.videoDuration) * 100;
         const endPercent = (this.endTime / this.videoDuration) * 100;
         
         this.selectionArea.style.left = `${startPercent}%`;
         this.selectionArea.style.width = `${endPercent - startPercent}%`;
+        
+        // Force visibility
+        this.selectionArea.style.display = 'block';
+        this.selectionArea.style.opacity = '1';
+        
+        console.log(`Selection updated: ${startPercent.toFixed(1)}% to ${endPercent.toFixed(1)}%`);
     }
 
     updateDurationPill() {
@@ -1155,7 +1247,7 @@ class IntegratedGifEditor {
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         window.gifEditor = new IntegratedGifEditor();
-        console.log('Enhanced GIF Editor instance created with Twitch-style features');
+        console.log('Enhanced GIF Editor instance created with timeline selection');
     }, 100);
 });
 
@@ -1174,40 +1266,4 @@ window.addEventListener('beforeunload', () => {
             e.stopPropagation();
         }
     });
-});
-
-// ENSURE HANDLES EXIST - Add this after the IntegratedGifEditor class
-window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        // Check if timeline structure exists and create if missing
-        const selectionArea = document.getElementById('selectionArea');
-        if (selectionArea) {
-            // Check for handles
-            let startHandle = document.getElementById('startHandle');
-            let endHandle = document.getElementById('endHandle');
-            
-            if (!startHandle) {
-                startHandle = document.createElement('div');
-                startHandle.className = 'selection-handle left';
-                startHandle.id = 'startHandle';
-                selectionArea.appendChild(startHandle);
-                console.log('Created missing start handle');
-            }
-            
-            if (!endHandle) {
-                endHandle = document.createElement('div');
-                endHandle.className = 'selection-handle right';
-                endHandle.id = 'endHandle';
-                selectionArea.appendChild(endHandle);
-                console.log('Created missing end handle');
-            }
-        }
-        
-        // Initialize editor
-        window.gifEditor = new IntegratedGifEditor();
-        console.log('Editor initialized with handles:', {
-            start: document.getElementById('startHandle'),
-            end: document.getElementById('endHandle')
-        });
-    }, 100);
 });
