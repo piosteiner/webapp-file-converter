@@ -19,6 +19,7 @@ class UIManager {
     initialize() {
         this.createNumericInputs();
         this.createTimelineElements();
+        this.addHandleStyles(); // Add purple handle styling
         console.log('UIManager initialized');
     }
     
@@ -50,6 +51,61 @@ class UIManager {
         
         // Add CSS for time inputs if not exists
         this.addTimeInputStyles();
+    }
+    
+    // Add CSS for improved handle styling
+    addHandleStyles() {
+        if (!document.getElementById('handle-styles')) {
+            const style = document.createElement('style');
+            style.id = 'handle-styles';
+            style.textContent = `
+                .selection-handle {
+                    width: 8px !important;
+                    height: 100% !important;
+                    background: #8b5cf6 !important; /* Dark vibrant purple */
+                    border: 2px solid #7c3aed !important;
+                    border-radius: 4px !important;
+                    cursor: ew-resize !important;
+                    position: absolute !important;
+                    top: 0 !important;
+                    z-index: 15 !important;
+                    transition: all 0.2s ease !important;
+                }
+                
+                .selection-handle:hover {
+                    background: #7c3aed !important;
+                    border-color: #6d28d9 !important;
+                    transform: scaleX(1.2) !important;
+                }
+                
+                .selection-handle.dragging {
+                    background: #6d28d9 !important;
+                    border-color: #5b21b6 !important;
+                    transform: scaleX(1.3) !important;
+                    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5) !important;
+                }
+                
+                .selection-handle.left {
+                    left: -4px !important;
+                }
+                
+                .selection-handle.right {
+                    right: -4px !important;
+                }
+                
+                /* Remove any handle labels */
+                .handle-label {
+                    display: none !important;
+                }
+                
+                /* Make selection area background slightly visible */
+                .selection-area {
+                    background: rgba(139, 92, 246, 0.1) !important;
+                    border: 1px solid rgba(139, 92, 246, 0.3) !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
     
     addTimeInputStyles() {
@@ -137,19 +193,20 @@ class UIManager {
         this.selectionArea.id = 'selectionArea';
         this.timelineSelection.appendChild(this.selectionArea);
         
-        // Create the IN handle (start)
+        // Create the IN handle (start) - no labels, slimmer design
         this.startHandle = document.createElement('div');
         this.startHandle.className = 'selection-handle left';
         this.startHandle.id = 'startHandle';
-        this.startHandle.innerHTML = '<span class="handle-label">IN</span>';
         this.selectionArea.appendChild(this.startHandle);
         
-        // Create the OUT handle (end)
+        // Create the OUT handle (end) - no labels, slimmer design
         this.endHandle = document.createElement('div');
         this.endHandle.className = 'selection-handle right';
         this.endHandle.id = 'endHandle';
-        this.endHandle.innerHTML = '<span class="handle-label">OUT</span>';
         this.selectionArea.appendChild(this.endHandle);
+        
+        // IMMEDIATELY attach event listeners to make dragging work
+        this.attachDragEventListeners();
         
         console.log('Timeline selection elements created successfully');
         
@@ -161,6 +218,33 @@ class UIManager {
             endHandle: this.endHandle,
             playhead: this.playhead
         };
+    }
+    
+    // Attach drag event listeners immediately after creating elements
+    attachDragEventListeners() {
+        if (!this.startHandle || !this.endHandle || !this.selectionArea) {
+            console.error('Cannot attach drag listeners - elements not created');
+            return;
+        }
+        
+        // Get reference to timeline controller
+        const timelineController = this.editor.timelineController;
+        if (!timelineController) {
+            console.error('TimelineController not available');
+            return;
+        }
+        
+        // Attach the drag listeners
+        this.startHandle.addEventListener('mousedown', (e) => timelineController.startDrag(e, 'start'));
+        this.endHandle.addEventListener('mousedown', (e) => timelineController.startDrag(e, 'end'));
+        this.selectionArea.addEventListener('mousedown', (e) => {
+            // Only drag the area if not clicking on handles
+            if (!e.target.classList.contains('selection-handle')) {
+                timelineController.startDrag(e, 'area');
+            }
+        });
+        
+        console.log('Drag event listeners attached successfully');
     }
     
     removeExistingTimelineElements() {
@@ -284,7 +368,7 @@ class UIManager {
         
         const timeStr = this.formatTimeForInput(currentTime);
         const statusIcon = isInSelection ? '🎯' : '⏱️';
-        const loopMode = this.editor.videoController?.loopInSelection ? '↻ Selection' : '↻ Full';
+        const loopMode = this.editor.videoController?.loopInSelection ? '↻ Selection' : '↻ OFF';
         
         if (isInSelection) {
             previewInfo.textContent = `${statusIcon} ${timeStr} | In selection (${progressInSelection.toFixed(0)}%) | ${loopMode}`;
@@ -392,6 +476,16 @@ class UIManager {
     cleanup() {
         // Remove any created elements
         this.removeExistingTimelineElements();
+        
+        // Clean up references
+        this.timelineSelection = null;
+        this.selectionArea = null;
+        this.startHandle = null;
+        this.endHandle = null;
+        this.playhead = null;
+        this.startTimeInput = null;
+        this.endTimeInput = null;
+        
         console.log('UIManager cleanup completed');
     }
 }
