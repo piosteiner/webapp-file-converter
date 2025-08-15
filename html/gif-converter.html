@@ -199,72 +199,24 @@
         </div>
 
         <div class="timeline-container" id="timelineContainer">
-          <!-- pill above the bar -->
+          <!-- Duration pill above the bar -->
           <div id="durationPill" class="duration-pill">🎬 Ready</div>
 
-          <!-- track holds overlays so % math lines up -->
+          <!-- Track container - JavaScript will populate this -->
           <div class="timeline-track" id="timelineTrack">
-            <!-- Selection area with handles inside -->
-            <div class="timeline-selection" id="timelineSelection">
-              <div class="selection-area" id="selectionArea">
-                <div class="selection-handle left" id="startHandle"></div>
-                <div class="selection-handle right" id="endHandle"></div>
-              </div>
-            </div>
-            <!-- Playhead -->
-            <div class="timeline-playhead" id="playhead"></div>
+            <!-- Timeline markers, selection area, handles, and playhead will be created by JavaScript -->
           </div>
         </div>
 
         <div class="timeline-info">
           <div class="time-display">
+            <!-- JavaScript will replace these spans with inputs -->
             <span>Start: <span id="startTime">0.0s</span></span>
             <span>End: <span id="endTime">0.0s</span></span>
             <span>Duration: <span id="trimDuration">0.0s</span></span>
           </div>
         </div>
-
-      <!-- Keyboard shortcuts help -->
-      <div class="keyboard-help" style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.05); border-radius: 6px; font-size: 12px; color: var(--text-tertiary); line-height: 1.6;">
-      <strong>⌨️ Pro Keyboard Shortcuts:</strong><br>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-        <span>• <kbd>I</kbd> Set IN point at playhead</span>
-        <span>• <kbd>O</kbd> Set OUT point at playhead</span>
-        <span>• <kbd>←→</kbd> Scrub frame-by-frame</span>
-        <span>• <kbd>Space</kbd> Play/Pause</span>
-        <span>• <kbd>Ctrl+←→</kbd> Move selection</span>
-        <span>• <kbd>Alt+←→</kbd> Resize selection</span>
-        <span>• <kbd>1</kbd>/<kbd>3</kbd>/<kbd>F</kbd> Quick presets</span>
-        <span>• <kbd>Shift</kbd> = Fine control (0.001s)</span>
-        </div>
       </div>
-
-      <!-- Export -->
-      <div class="export-section">
-        <div class="export-controls">
-          <div class="export-options">
-            <label class="control-label">Export Quality</label>
-            <div class="quality-selector">
-              <button class="quality-btn active" data-quality="high">High</button>
-              <button class="quality-btn" data-quality="medium">Medium</button>
-              <button class="quality-btn" data-quality="low">Low</button>
-            </div>
-          </div>
-
-          <button id="exportTrimmedBtn" class="export-btn">
-            <span class="export-icon">💾</span>
-            Export Trimmed GIF
-          </button>
-        </div>
-
-        <div class="export-progress" id="exportProgress" style="display: none">
-          <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-          </div>
-          <div class="progress-text" id="progressText">Preparing…</div>
-        </div>
-      </div>
-    </div>
 
     <!-- Editor status + filename mount points -->
     <div class="status" id="editorStatus"></div>
@@ -304,11 +256,11 @@
 
   <!-- Scripts -->
   <script src="../js/gif-converter.js"></script>
-  <script src="../js/UIManager.js"></script>
-  <script src="../js/TimelineController.js"></script>
-  <script src="../js/VideoController.js"></script>
-  <script src="../js/InputHandler.js"></script>
-  <script src="../js/FileHandler.js"></script>
+  <script src="../js/ui_manager.js"></script>
+  <script src="../js/timeline_controller.js"></script>
+  <script src="../js/video_controller.js"></script>
+  <script src="../js/input_handler.js"></script>
+  <script src="../js/file_handler.js"></script>
   <script src="../js/gif_editor_main.js"></script>
 
   <!-- (Optional) Guard: only boot editor JS if markup exists -->
