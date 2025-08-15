@@ -21,6 +21,13 @@ class IntegratedGifEditor {
         // UI element references
         this.initializeElementReferences();
         
+        // Timeline element references (like the original file)
+        this.timelineSelection = null;
+        this.selectionArea = null;
+        this.startHandle = null;
+        this.endHandle = null;
+        this.playhead = null;
+        
         // Initialize subsystems
         this.initializeSubsystems();
         
@@ -117,9 +124,41 @@ class IntegratedGifEditor {
         this.timelineController.onVideoLoaded();
         this.videoController.onVideoLoaded();
         this.inputHandler.onVideoLoaded();
-        this.uiManager.onVideoLoaded();
+        
+        // Get timeline element references from UI manager and store them directly
+        const elements = this.uiManager.onVideoLoaded();
+        if (elements) {
+            this.timelineSelection = elements.timelineSelection;
+            this.selectionArea = elements.selectionArea;
+            this.startHandle = elements.startHandle;
+            this.endHandle = elements.endHandle;
+            this.playhead = elements.playhead;
+        }
+        
+        // Update timeline selection visually (like the original)
+        this.updateTimelineSelection();
         
         console.log(`Video loaded successfully: ${this.videoDuration.toFixed(1)}s duration`);
+    }
+    
+    // Direct timeline selection update method (from original file)
+    updateTimelineSelection() {
+        if (this.videoDuration === 0 || !this.selectionArea) {
+            console.warn('Cannot update selection - video not loaded or selection area missing');
+            return;
+        }
+        
+        const startPercent = (this.startTime / this.videoDuration) * 100;
+        const endPercent = (this.endTime / this.videoDuration) * 100;
+        
+        this.selectionArea.style.left = `${startPercent}%`;
+        this.selectionArea.style.width = `${endPercent - startPercent}%`;
+        
+        // Force visibility
+        this.selectionArea.style.display = 'block';
+        this.selectionArea.style.opacity = '1';
+        
+        console.log(`Timeline selection updated: ${startPercent.toFixed(1)}% to ${endPercent.toFixed(1)}%`);
     }
     
     // Update selection times (called by various subsystems)
@@ -131,8 +170,10 @@ class IntegratedGifEditor {
         this.startTime = Math.max(0, Math.min(maxStart, startTime));
         this.endTime = Math.min(this.videoDuration, Math.max(minEnd, endTime));
         
-        // Notify all subsystems of the change - INCLUDING visual update
-        this.timelineController.updateSelection();
+        // Update timeline visually using direct method (like original)
+        this.updateTimelineSelection();
+        
+        // Notify subsystems of the change
         this.videoController.updateSelection();
         this.inputHandler.updateSelection();
         this.uiManager.updateSelection();

@@ -181,8 +181,8 @@ class TimelineController {
             }
         }
 
-        // CRITICAL: Update all displays including visual timeline position
-        this.updateSelectionVisual();
+        // CRITICAL: Update using main editor's direct method (like original file)
+        this.editor.updateTimelineSelection();
         this.editor.uiManager.updateTimeDisplay();
         this.editor.uiManager.updatePlayhead();
         this.editor.uiManager.updateDurationPill();
@@ -305,27 +305,21 @@ class TimelineController {
     
     // Called when video loads
     onVideoLoaded() {
-        // Get element references from UI manager
-        const elements = this.editor.uiManager.onVideoLoaded();
+        // Get element references from main editor (like original file)
+        this.timelineSelection = this.editor.timelineSelection;
+        this.selectionArea = this.editor.selectionArea;
+        this.startHandle = this.editor.startHandle;
+        this.endHandle = this.editor.endHandle;
+        this.playhead = this.editor.playhead;
         
-        if (elements) {
-            this.timelineSelection = elements.timelineSelection;
-            this.selectionArea = elements.selectionArea;
-            this.startHandle = elements.startHandle;
-            this.endHandle = elements.endHandle;
-            this.playhead = elements.playhead;
-            
-            console.log('TimelineController: Got element references from UIManager');
-        }
-        
-        // Update visual state
-        this.updateSelectionVisual();
+        console.log('TimelineController: Got element references from main editor');
     }
     
     // Called when selection updates from other sources
     updateSelection() {
-        this.updateSelectionVisual();
-        console.log('TimelineController: Selection updated visually');
+        // Use main editor's direct method (like original file)
+        this.editor.updateTimelineSelection();
+        console.log('TimelineController: Selection updated using main editor method');
     }
     
     // Cleanup
