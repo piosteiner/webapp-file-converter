@@ -4,8 +4,8 @@ class VideoController {
     constructor(editor) {
         this.editor = editor;
         
-        // Loop mode - start with OFF to match HTML
-        this.loopInSelection = false;
+        // Loop mode - start with ON for testing
+        this.loopInSelection = true; // Changed to true for debugging
         
         // Ping-pong preview state
         this.isPlayingBackward = false;
@@ -51,29 +51,12 @@ class VideoController {
         
         // Handle looping within selection
         if (this.loopInSelection && this.editor.previewVideo && !this.editor.previewVideo.paused) {
-            // Enhanced ping-pong preview (simplified version)
-            if (this.editor.pingPongMode && this.isPlayingBackward) {
-                // Playing backward in ping-pong mode (simulated)
-                if (this.editor.previewVideo.currentTime <= this.editor.startTime) {
-                    this.isPlayingBackward = false;
-                    this.editor.previewVideo.currentTime = this.editor.startTime + 0.01;
-                }
-            } else {
-                // Normal forward play
-                if (this.editor.previewVideo.currentTime >= this.editor.endTime) {
-                    if (this.editor.pingPongMode) {
-                        // Start "playing backward" (restart from end for preview)
-                        this.isPlayingBackward = true;
-                        this.editor.previewVideo.currentTime = this.editor.endTime - 0.01;
-                        // Note: True ping-pong preview would require complex video manipulation
-                        // The actual ping-pong effect will be applied when exporting
-                    } else {
-                        // Normal loop
-                        this.editor.previewVideo.currentTime = this.editor.startTime;
-                    }
-                } else if (this.editor.previewVideo.currentTime < this.editor.startTime) {
-                    this.editor.previewVideo.currentTime = this.editor.startTime;
-                }
+            const currentTime = this.editor.previewVideo.currentTime;
+            
+            // Simple looping logic (ping-pong effect happens on export, not preview)
+            if (currentTime >= this.editor.endTime || currentTime < this.editor.startTime) {
+                this.editor.previewVideo.currentTime = this.editor.startTime;
+                console.log('Looped back to start:', this.editor.startTime);
             }
         }
     }
@@ -115,12 +98,14 @@ class VideoController {
         if (this.loopInSelection) {
             btn.textContent = 'Loop: Selection';
             btn.classList.add('active');
-            this.editor.uiManager.showStatus('🔁 Looping within selection', 'info');
+            this.editor.uiManager.showStatus('🔁 Looping within selection enabled', 'info');
         } else {
             btn.textContent = 'Loop: OFF';
             btn.classList.remove('active');
             this.editor.uiManager.showStatus('🔁 Loop disabled', 'info');
         }
+        
+        console.log('Loop mode toggled. Loop in selection:', this.loopInSelection);
     }
     
     // Seek to specific time
@@ -304,6 +289,8 @@ class VideoController {
         if (this.editor.previewVideo) {
             this.editor.previewVideo.currentTime = this.editor.startTime;
         }
+        
+        console.log('Video controller loaded. Loop in selection:', this.loopInSelection);
     }
     
     // Called when selection updates
@@ -323,4 +310,4 @@ class VideoController {
         
         console.log('VideoController cleanup completed');
     }
-}
+}a

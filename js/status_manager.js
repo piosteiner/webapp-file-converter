@@ -36,8 +36,8 @@ class StatusManager {
         const selectionDuration = Math.max(0, (this.editor.endTime || 0) - (this.editor.startTime || 0));
         const percentage = totalSec > 0 ? Math.round((selectionDuration / totalSec) * 100) : 0;
         
-        // Enhanced ping-pong display
-        const pingPongMode = this.editor.pingPongMode;
+        // FIXED: Check actual editor ping-pong state, not checkbox directly
+        const pingPongMode = this.editor.pingPongMode === true;
         const pingPongText = pingPongMode ? ' 🔄 ×2' : '';
         const effectiveDuration = pingPongMode ? selectionDuration * 2 : selectionDuration;
         
@@ -53,6 +53,8 @@ class StatusManager {
             pill.style.borderColor = 'var(--timeline-handle)';
             pill.title = '';
         }
+        
+        console.log('Duration pill updated. Ping-pong mode:', pingPongMode);
     }
     
     // Update preview info display
@@ -121,12 +123,16 @@ class StatusManager {
     setupPingPongListener() {
         const pingPongCheckbox = document.getElementById('pingPongMode');
         if (pingPongCheckbox) {
+            // Set initial state
+            this.editor.pingPongMode = pingPongCheckbox.checked;
+            
             pingPongCheckbox.addEventListener('change', (e) => {
+                console.log('Ping-pong checkbox changed to:', e.target.checked);
                 // Call main editor's setPingPongMode method
                 this.editor.setPingPongMode(e.target.checked);
             });
             
-            console.log('Ping-pong checkbox listener attached');
+            console.log('Ping-pong checkbox listener attached. Initial state:', pingPongCheckbox.checked);
         } else {
             console.warn('Ping-pong checkbox not found');
         }

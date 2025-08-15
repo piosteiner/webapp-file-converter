@@ -229,8 +229,8 @@ class IntegratedGifEditor {
     setPingPongMode(enabled) {
         this.pingPongMode = enabled;
         
-        // Update UI via managers
-        this.uiManager.updatePingPongUI();
+        // Update UI directly via status manager
+        this.uiManager.statusManager.updateDurationPill();
         
         // Show status
         if (enabled) {
