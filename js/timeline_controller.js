@@ -299,8 +299,7 @@ class TimelineController {
             this.endHandle = elements.endHandle;
             this.playhead = elements.playhead;
             
-            // Setup event listeners for the new elements
-            this.setupElementEventListeners();
+            console.log('TimelineController: Got element references from UIManager');
         }
         
         // Update visual state
