@@ -53,10 +53,15 @@ class VideoController {
         if (this.loopInSelection && this.editor.previewVideo && !this.editor.previewVideo.paused) {
             const currentTime = this.editor.previewVideo.currentTime;
             
+            // Debug logging
+            if (currentTime >= this.editor.endTime - 0.1) {
+                console.log(`🔄 Loop triggered: currentTime=${currentTime.toFixed(2)}s, endTime=${this.editor.endTime.toFixed(2)}s`);
+            }
+            
             // Simple looping logic (ping-pong effect happens on export, not preview)
             if (currentTime >= this.editor.endTime || currentTime < this.editor.startTime) {
                 this.editor.previewVideo.currentTime = this.editor.startTime;
-                console.log('Looped back to start:', this.editor.startTime);
+                console.log('✅ Looped back to start:', this.editor.startTime.toFixed(2));
             }
         }
     }
@@ -91,7 +96,10 @@ class VideoController {
     // Toggle between full loop and selection loop
     toggleLoopMode() {
         const btn = document.getElementById('loopBtn');
-        if (!btn) return;
+        if (!btn) {
+            console.error('Loop button not found!');
+            return;
+        }
         
         this.loopInSelection = !this.loopInSelection;
         
@@ -105,7 +113,7 @@ class VideoController {
             this.editor.uiManager.showStatus('🔁 Loop disabled', 'info');
         }
         
-        console.log('Loop mode toggled. Loop in selection:', this.loopInSelection);
+        console.log(`🔄 Loop mode toggled. Loop in selection: ${this.loopInSelection}`);
     }
     
     // Seek to specific time
@@ -269,11 +277,13 @@ class VideoController {
     
     // Called when video loads
     onVideoLoaded() {
-        // Reset loop mode button state
+        // Reset loop mode button state - make sure it's ON for testing
         const loopBtn = document.getElementById('loopBtn');
         if (loopBtn) {
             loopBtn.textContent = this.loopInSelection ? 'Loop: Selection' : 'Loop: OFF';
             loopBtn.classList.toggle('active', this.loopInSelection);
+            
+            console.log(`🔄 Loop button initialized. Loop in selection: ${this.loopInSelection}`);
         }
         
         // Reset play button
@@ -290,7 +300,7 @@ class VideoController {
             this.editor.previewVideo.currentTime = this.editor.startTime;
         }
         
-        console.log('Video controller loaded. Loop in selection:', this.loopInSelection);
+        console.log(`🎥 Video loaded. Duration: ${this.editor.videoDuration.toFixed(2)}s, Selection: ${this.editor.startTime.toFixed(2)}s - ${this.editor.endTime.toFixed(2)}s`);
     }
     
     // Called when selection updates
@@ -310,4 +320,4 @@ class VideoController {
         
         console.log('VideoController cleanup completed');
     }
-}a
+}

@@ -299,52 +299,16 @@ class FileHandler {
         form.append('start', String(this.editor.startTime));
         form.append('end', String(this.editor.endTime));
         
-        // Add ping-pong parameter if enabled
+        // Add ping-pong parameter if enabled (match your server's parameter name)
         if (pingPongMode) {
             form.append('pingpong', 'true');
         }
 
-        // Try ping-pong endpoint first if enabled, fallback to regular trim
-        let endpoint = '/edit/trim-gif';
-        if (pingPongMode) {
-            endpoint = '/edit/trim-gif-pingpong';
-        }
-
-        const res = await fetch(`${this.editor.SERVER_URL}${endpoint}`, {
+        // Use your server's single endpoint
+        const res = await fetch(`${this.editor.SERVER_URL}/edit/trim-gif`, {
             method: 'POST',
             body: form
         });
-
-        // If ping-pong endpoint fails, fallback to regular trim
-        if (!res.ok && pingPongMode) {
-            console.warn('Ping-pong endpoint not available, using regular trim');
-            this.editor.uiManager.showStatus('⚠️ Ping-pong not supported by server, using regular trim', 'info');
-            
-            // Retry with regular endpoint
-            const fallbackForm = new FormData();
-            fallbackForm.append('file', this.editor.originalGifBlob, this.editor.originalGifBlob.name);
-            fallbackForm.append('start', String(this.editor.startTime));
-            fallbackForm.append('end', String(this.editor.endTime));
-
-            const fallbackRes = await fetch(`${this.editor.SERVER_URL}/edit/trim-gif`, {
-                method: 'POST',
-                body: fallbackForm
-            });
-
-            if (!fallbackRes.ok) {
-                const errorText = await fallbackRes.text();
-                console.error('Export failed:', errorText);
-                throw new Error(`Server error: ${fallbackRes.status}`);
-            }
-
-            const outBlob = await fallbackRes.blob();
-            
-            if (!outBlob || outBlob.size === 0) {
-                throw new Error('Received empty file from server');
-            }
-            
-            return outBlob;
-        }
 
         if (!res.ok) {
             const errorText = await res.text();
