@@ -190,7 +190,7 @@ def convert_gif_to_webm_preview():
 def edit_trim_gif_blob():
     """
     Returns a trimmed GIF as a BLOB (image/gif).
-    Frontend sends: file, start, end  (seconds). Optionally ping_pong=true.
+    Frontend sends: file, start, end  (seconds). Optionally pingpong=true.
     """
 
     cleanup_old_files()
@@ -210,7 +210,7 @@ def edit_trim_gif_blob():
         try:
             start_time = float(request.form.get('start', request.form.get('start_time', 0)))
             end_time = float(request.form.get('end', request.form.get('end_time', 3)))
-            ping_pong = str(request.form.get('ping_pong', 'false')).lower() == 'true'
+            ping_pong = str(request.form.get('pingpong', 'false')).lower() == 'true'
         except ValueError:
             return jsonify({'error': 'Invalid time parameters'}), 400
 
@@ -411,7 +411,7 @@ def trim_gif_json():
         try:
             start_time = float(request.form.get('start_time', 0))
             end_time = float(request.form.get('end_time', 3))
-            ping_pong = str(request.form.get('ping_pong', 'false')).lower() == 'true'
+            ping_pong = str(request.form.get('pingpong', 'false')).lower() == 'true'
         except ValueError:
             return jsonify({'error': 'Invalid time parameters'}), 400
 
