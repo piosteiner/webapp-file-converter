@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIF Editor - Ping-Pong Export Debug Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #8b5cf6;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }
+        
+        .debug-section {
+            background: #f8fafc;
+            border-left: 4px solid #8b5cf6;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .debug-section h2 {
+            color: #8b5cf6;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .icon {
+            font-size: 1.5em;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #8b5cf6, #6366f1);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, #10b981, #059669);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(45deg, #f59e0b, #d97706);
+        }
+        
+        .status-display {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            min-height: 150px;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            border: 1px solid #333;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .test-panel {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .test-panel h3 {
+            margin-top: 0;
+            color: #374151;
+        }
+        
+        .code-fix {
+            background: #1a1a1a;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid #333;
+        }
+        
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: #92400e;
+            font-weight: bold;
+        }
+        
+        .server-analysis {
+            background: #eff6ff;
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .server-analysis h4 {
+            color: #1e40af;
+            margin-top: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏓 Ping-Pong Export Debug Tool</h1>
+        
+        <div class="debug-section">
+            <h2><span class="icon">🚨</span>Problem: Server 400 Error on Ping-Pong Export</h2>
+            <p><strong>Error:</strong> <code>{"error":"GIF trimming failed"}</code> from <code>POST /edit/trim-gif</code></p>
+            
+            <div class="server-analysis">
+                <h4>📋 Server Expectation Analysis</h4>
+                <p>Based on your <code>server.py</code>, the endpoint expects:</p>
+                <ul>
+                    <li>✅ <code>file</code> - Valid GIF file</li>
+                    <li>✅ <code>start</code> - Float as string (e.g., "1.5")</li>
+                    <li>✅ <code>end</code> - Float as string (e.g., "4.2")</li>
+                    <li>✅ <code>pingpong</code> - Exactly "true" string (optional)</li>
+                </ul>
+                <p><strong>Server FFmpeg Command for Ping-Pong:</strong></p>
+                <div class="code-fix">
+# Trim first, then ping-pong
+ffmpeg -i input.gif -ss START -t DURATION -vf "split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" temp.gif
+ffmpeg -i temp.gif -filter_complex "[0:v]split[a][b];[a]split[c][d];[d]reverse[r];[c][r]concat=n=2:v=1[out];[out]split[g][h];[g]palettegen[p];[h][p]paletteuse" output.gif
+                </div>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h2><span class="icon">🔍</span>Debug Tests</h2>
+            
+            <div class="test-grid">
+                <div class="test-panel">
+                    <h3>📤 Validate Export Parameters</h3>
+                    <button class="btn" onclick="validateExportParams()">Check Parameters</button>
+                    <p style="font-size: 0.9em; color: #6b7280;">Validates all parameters match server expectations</p>
+                </div>
+                
+                <div class="test-panel">
+                    <h3>🌐 Test Server Endpoint</h3>
+                    <button class="btn btn-warning" onclick="testServerTrim()">Test Server</button>
+                    <p style="font-size: 0.9em; color: #6b7280;">Tests server with valid minimal data</p>
+                </div>
+            </div>
+            
+            <div class="test-grid">
+                <div class="test-panel">
+                    <h3>🏓 Test Ping-Pong Request</h3>
+                    <button class="btn btn-danger" onclick="testPingPongRequest()">Test Ping-Pong</button>
+                    <p style="font-size: 0.9em; color: #6b7280;">Tests actual ping-pong parameter</p>
+                </div>
+                
+                <div class="test-panel">
+                    <h3>🔧 Enhanced Debug Export</h3>
+                    <button class="btn btn-success" onclick="performEnhancedExport()">Enhanced Export</button>
+                    <p style="font-size: 0.9em; color: #6b7280;">Export with detailed logging</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h2><span class="icon">🧪</span>Debug Console</h2>
+            <div id="debugOutput" class="status-display">Ping-pong export debug tool loaded.
+Ready to diagnose the 400 error...</div>
+        </div>
+
+        <div class="debug-section">
+            <h2><span class="icon">💡</span>Recommended Fix</h2>
+            
+            <p>Update your <code>file_handler.js</code> <code>trimGifOnServer()</code> method with enhanced error handling:</p>
+            
+            <div class="code-fix">
+async trimGifOnServer() {
+    const form = new FormData();
+    form.append('file', this.editor.originalGifBlob, this.editor.originalGifBlob.name);
+    
+    // CRITICAL: Ensure numeric strings (server validates with float())
+    form.append('start', String(this.editor.startTime));
+    form.append('end', String(this.editor.endTime));
+    
+    // CRITICAL: Only send pingpong if enabled (server checks === 'true')
+    if (this.editor.pingPongMode === true) {
+        form.append('pingpong', 'true');
+    }
+    
+    // Enhanced logging before request
+    console.log('🏓 Ping-pong export request:', {
+        filename: this.editor.originalGifBlob.name,
+        fileSize: `${(this.editor.originalGifBlob.size / 1024).toFixed(0)}KB`,
+        start: this.editor.startTime,
+        end: this.editor.endTime,
+        duration: this.editor.endTime - this.editor.startTime,
+        pingpong: this.editor.pingPongMode
+    });
+    
+    // Validate duration (server might reject very short clips)
+    const duration = this.editor.endTime - this.editor.startTime;
+    if (duration < 0.5) {
+        console.warn('⚠️ Very short duration for ping-pong:', duration);
+    }
+    
+    const res = await fetch(`${this.editor.SERVER_URL}/edit/trim-gif`, {
+        method: 'POST',
+        body: form
+    });
+    
+    if (!res.ok) {
+        const errorText = await res.text();
+        console.error('🚨 Server error response:', {
+            status: res.status,
+            statusText: res.statusText,
+            body: errorText
+        });
+        
+        // Try to extract more specific error info
+        let detailedError = errorText;
+        try {
+            const errorObj = JSON.parse(errorText);
+            detailedError = errorObj.error || errorText;
+        } catch (e) {
+            // Not JSON, use raw text
+        }
+        
+        throw new Error(`Server error: ${res.status} - ${detailedError}`);
+    }
+    
+    const blob = await res.blob();
+    
+    if (!blob || blob.size === 0) {
+        throw new Error('Server returned empty file');
+    }
+    
+    console.log('✅ Ping-pong export successful:', `${(blob.size / 1024).toFixed(0)}KB`);
+    return blob;
+}
+            </div>
+            
+            <h3>🔧 Alternative: Server-Side Debug</h3>
+            <p>If client fixes don't work, add this to your <code>server.py</code> before the FFmpeg command:</p>
+            
+            <div class="code-fix">
+# Debug the ping-pong request in server.py
+print(f"🏓 Ping-pong request debug:")
+print(f"  - File: {f.filename} ({f.content_length} bytes)")
+print(f"  - Start: {start_time} (type: {type(start_time)})")
+print(f"  - End: {end_time} (type: {type(end_time)})")
+print(f"  - Duration: {duration}")
+print(f"  - Ping-pong: {ping_pong}")
+print(f"  - FFmpeg command will be: {' '.join(cmd_pingpong)}")
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let debugOutput = document.getElementById('debugOutput');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            debugOutput.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            debugOutput.scrollTop = debugOutput.scrollHeight;
+        }
+        
+        function getEditor() {
+            let editor = null;
+            
+            if (window.gifEditor) {
+                editor = window.gifEditor;
+            } else if (window.parent && window.parent.gifEditor) {
+                editor = window.parent.gifEditor;
+            } else if (window.top && window.top.gifEditor) {
+                editor = window.top.gifEditor;
+            }
+            
+            return editor;
+        }
+        
+        function validateExportParams() {
+            log("🔍 Validating export parameters...");
+            
+            const editor = getEditor();
+            if (!editor) {
+                log("❌ Editor not found! Open your GIF editor first.", 'error');
+                return;
+            }
+            
+            // Detailed parameter validation
+            const validations = [];
+            
+            // Check GIF file
+            if (!editor.originalGifBlob) {
+                validations.push({ check: "GIF file", status: "❌", message: "No file loaded" });
+            } else {
+                const sizeKB = (editor.originalGifBlob.size / 1024).toFixed(0);
+                const isValidType = editor.originalGifBlob.type.includes('gif') || editor.originalGifBlob.name.toLowerCase().endsWith('.gif');
+                validations.push({ 
+                    check: "GIF file", 
+                    status: isValidType ? "✅" : "❌", 
+                    message: `${editor.originalGifBlob.name} (${sizeKB}KB, ${editor.originalGifBlob.type})` 
+                });
+            }
+            
+            // Check times
+            const startValid = typeof editor.startTime === 'number' && editor.startTime >= 0;
+            validations.push({ 
+                check: "Start time", 
+                status: startValid ? "✅" : "❌", 
+                message: `${editor.startTime} (${typeof editor.startTime})` 
+            });
+            
+            const endValid = typeof editor.endTime === 'number' && editor.endTime > editor.startTime;
+            validations.push({ 
+                check: "End time", 
+                status: endValid ? "✅" : "❌", 
+                message: `${editor.endTime} (${typeof editor.endTime})` 
+            });
+            
+            // Check duration
+            const duration = editor.endTime - editor.startTime;
+            const durationValid = duration >= 0.1 && duration <= 60;
+            validations.push({ 
+                check: "Duration", 
+                status: durationValid ? "✅" : "❌", 
+                message: `${duration.toFixed(2)}s` 
+            });
+            
+            if (duration < 0.5) {
+                validations.push({ 
+                    check: "Duration warning", 
+                    status: "⚠️", 
+                    message: "Very short - might cause FFmpeg issues" 
+                });
+            }
+            
+            // Check ping-pong mode
+            validations.push({ 
+                check: "Ping-pong mode", 
+                status: "ℹ️", 
+                message: `${editor.pingPongMode === true ? 'enabled' : 'disabled'}` 
+            });
+            
+            // Log all validations
+            validations.forEach(v => {
+                const type = v.status === '❌' ? 'error' : v.status === '⚠️' ? 'warning' : 'info';
+                log(`${v.status} ${v.check}: ${v.message}`, type);
+            });
+            
+            // Show what would be sent
+            if (editor.originalGifBlob) {
+                log("📋 Request that would be sent:", 'info');
+                log(`   POST https://api.piogino.ch/edit/trim-gif`, 'info');
+                log(`   Content-Type: multipart/form-data`, 'info');
+                log(`   file: ${editor.originalGifBlob.name}`, 'info');
+                log(`   start: "${editor.startTime}"`, 'info');
+                log(`   end: "${editor.endTime}"`, 'info');
+                if (editor.pingPongMode === true) {
+                    log(`   pingpong: "true"`, 'info');
+                }
+            }
+        }
+        
+        async function testServerTrim() {
+            log("🌐 Testing server /edit/trim-gif endpoint...");
+            
+            // Create minimal valid GIF header
+            const gifHeader = new Uint8Array([
+                0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
+                0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // 1x1 minimal
+                0x21, 0xF9, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, // graphic control
+                0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, // image
+                0x02, 0x02, 0x04, 0x01, 0x00, 0x3B // data + trailer
+            ]);
+            
+            const testBlob = new Blob([gifHeader], { type: 'image/gif' });
+            const formData = new FormData();
+            formData.append('file', testBlob, 'test.gif');
+            formData.append('start', '0');
+            formData.append('end', '1');
+            // No pingpong for basic test
+            
+            log("📤 Sending basic trim request...", 'info');
+            
+            try {
+                const response = await fetch('https://api.piogino.ch/edit/trim-gif', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                log(`📨 Server response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const responseText = await response.text();
+                if (responseText.length > 0) {
+                    log(`📄 Response: ${responseText.substring(0, 300)}${responseText.length > 300 ? '...' : ''}`, 'info');
+                }
+                
+                if (response.ok) {
+                    log("✅ Basic server trim works! Issue might be with ping-pong specifically.", 'success');
+                } else {
+                    log("❌ Server has issues with basic trim request", 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testPingPongRequest() {
+            log("🏓 Testing ping-pong specific request...");
+            
+            // Create minimal valid GIF header (same as above)
+            const gifHeader = new Uint8Array([
+                0x47, 0x49, 0x46, 0x38, 0x39, 0x61,
+                0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+                0x21, 0xF9, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+                0x02, 0x02, 0x04, 0x01, 0x00, 0x3B
+            ]);
+            
+            const testBlob = new Blob([gifHeader], { type: 'image/gif' });
+            const formData = new FormData();
+            formData.append('file', testBlob, 'test.gif');
+            formData.append('start', '0');
+            formData.append('end', '1');
+            formData.append('pingpong', 'true'); // Test ping-pong specifically
+            
+            log("📤 Sending ping-pong request...", 'info');
+            
+            try {
+                const response = await fetch('https://api.piogino.ch/edit/trim-gif', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                log(`📨 Ping-pong response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const responseText = await response.text();
+                if (responseText.length > 0) {
+                    log(`📄 Response: ${responseText.substring(0, 300)}${responseText.length > 300 ? '...' : ''}`, 'info');
+                }
+                
+                if (response.ok) {
+                    log("✅ Ping-pong request works with test data!", 'success');
+                    log("💡 Issue might be with your specific GIF file or timing", 'info');
+                } else {
+                    log("❌ Ping-pong fails even with test data", 'error');
+                    log("💡 Server-side FFmpeg ping-pong command might have issues", 'info');
+                }
+                
+            } catch (error) {
+                log(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function performEnhancedExport() {
+            log("🔧 Performing enhanced export with detailed logging...");
+            
+            const editor = getEditor();
+            if (!editor) {
+                log("❌ Editor not found! Load a GIF in the editor first.", 'error');
+                return;
+            }
+            
+            if (!editor.originalGifBlob) {
+                log("❌ No GIF loaded for export.", 'error');
+                return;
+            }
+            
+            if (!editor.fileHandler) {
+                log("❌ FileHandler not found.", 'error');
+                return;
+            }
+            
+            log("🚀 Starting enhanced export...", 'info');
+            
+            try {
+                // Use the editor's export method but with enhanced logging
+                await editor.fileHandler.exportTrimmedGif();
+                log("✅ Export completed successfully!", 'success');
+            } catch (error) {
+                log(`❌ Export failed: ${error.message}`, 'error');
+                log("💡 Check browser console for more detailed error info", 'info');
+            }
+        }
+        
+        // Auto-run initial status
+        setTimeout(() => {
+            log("=== Ping-Pong Export Debug Tool ===");
+            log("Current issue: Server returns 400 'GIF trimming failed'");
+            log("Target: POST /edit/trim-gif with pingpong=true");
+            log("Run tests above to diagnose the issue...");
+            log("=====================================");
+        }, 1000);
+    </script>
+</body>
+</html>
