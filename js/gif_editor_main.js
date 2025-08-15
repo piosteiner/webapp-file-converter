@@ -50,6 +50,9 @@ class IntegratedGifEditor {
         this.timelineController = new TimelineController(this);
         this.videoController = new VideoController(this);
         this.inputHandler = new InputHandler(this);
+        
+        // Store reference to timeFormatter for easy access
+        this.timeFormatter = this.uiManager.timeFormatter;
     }
 
     initializeEditor() {
