@@ -4,8 +4,8 @@ class VideoController {
     constructor(editor) {
         this.editor = editor;
         
-        // Loop mode
-        this.loopInSelection = true; // Loop within selection by default
+        // Loop mode - start with OFF to match HTML
+        this.loopInSelection = false;
     }
     
     initialize() {
@@ -93,9 +93,9 @@ class VideoController {
             btn.classList.add('active');
             this.editor.uiManager.showStatus('🔁 Looping within selection', 'info');
         } else {
-            btn.textContent = 'Loop: Full';
+            btn.textContent = 'Loop: OFF';
             btn.classList.remove('active');
-            this.editor.uiManager.showStatus('🔁 Looping full video', 'info');
+            this.editor.uiManager.showStatus('🔁 Loop disabled', 'info');
         }
     }
     
@@ -263,7 +263,7 @@ class VideoController {
         // Reset loop mode button state
         const loopBtn = document.getElementById('loopBtn');
         if (loopBtn) {
-            loopBtn.textContent = this.loopInSelection ? 'Loop: Selection' : 'Loop: Full';
+            loopBtn.textContent = this.loopInSelection ? 'Loop: Selection' : 'Loop: OFF';
             loopBtn.classList.toggle('active', this.loopInSelection);
         }
         

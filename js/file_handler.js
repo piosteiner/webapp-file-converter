@@ -102,6 +102,9 @@ class FileHandler {
         console.log('Starting GIF upload process...');
         this.editor.isProcessing = true;
         
+        // Store the original file immediately
+        this.editor.originalGifBlob = file;
+        
         // Update UI state
         this.setProcessingState(true);
         this.resetVideoState();
@@ -203,7 +206,7 @@ class FileHandler {
     
     // Reset video state
     resetVideoState() {
-        this.editor.originalGifBlob = null;
+        // Don't reset originalGifBlob here - it's set in loadGifForEditing
         
         if (this.editor.previewVideoUrl) {
             URL.revokeObjectURL(this.editor.previewVideoUrl);

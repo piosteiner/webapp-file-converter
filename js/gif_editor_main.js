@@ -1,5 +1,6 @@
 // Main GIF Editor Controller
 // Coordinates between all subsystems and manages core state
+// File: gif_editor_main.js
 
 class IntegratedGifEditor {
     constructor() {
