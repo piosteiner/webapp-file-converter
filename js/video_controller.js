@@ -277,13 +277,21 @@ class VideoController {
     
     // Called when video loads
     onVideoLoaded() {
-        // Reset loop mode button state - make sure it's ON for testing
+        // FORCE update loop button state to match controller
         const loopBtn = document.getElementById('loopBtn');
         if (loopBtn) {
+            // Update button to match internal state
             loopBtn.textContent = this.loopInSelection ? 'Loop: Selection' : 'Loop: OFF';
             loopBtn.classList.toggle('active', this.loopInSelection);
             
-            console.log(`🔄 Loop button initialized. Loop in selection: ${this.loopInSelection}`);
+            // FORCE the button to show the correct state
+            if (this.loopInSelection) {
+                loopBtn.classList.add('active');
+            } else {
+                loopBtn.classList.remove('active');
+            }
+            
+            console.log(`🔄 Loop button FORCED to sync. Loop in selection: ${this.loopInSelection}, Button text: ${loopBtn.textContent}`);
         }
         
         // Reset play button
