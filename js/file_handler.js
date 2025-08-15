@@ -246,34 +246,33 @@ class FileHandler {
 
         const exportBtn = document.getElementById('exportTrimmedBtn');
         
-        // Check if ping-pong mode is enabled
-        const pingPongMode = document.getElementById('pingPongMode')?.checked || false;
-        
         // Disable export button
         if (exportBtn) exportBtn.disabled = true;
         
-        // Show progress
-        this.editor.uiManager.updateExportProgress('prepare', 10, 'Preparing to trim...');
+        // Show progress with ping-pong status
+        const modeText = this.editor.pingPongMode ? ' with ping-pong loop' : '';
+        this.editor.uiManager.updateExportProgress('prepare', 10, `Preparing to trim${modeText}...`);
         
         this.editor.isProcessing = true;
 
         try {
             this.editor.uiManager.showStatus(
-                pingPongMode ? '✂️🔄 Creating ping-pong GIF...' : '✂️ Trimming GIF on server...', 
+                `✂️ Trimming GIF on server${modeText}...`, 
                 'info'
             );
             
-            // Upload and trim
-            this.editor.uiManager.updateExportProgress('upload', 30, 'Uploading for trimming...');
-            const trimmedBlob = await this.trimGifOnServer(pingPongMode);
+            // Upload and trim with ping-pong
+            this.editor.uiManager.updateExportProgress('upload', 30, `Uploading for trimming${modeText}...`);
+            const trimmedBlob = await this.trimGifOnServer();
             
             // Download result
             this.editor.uiManager.updateExportProgress('download', 100, 'Download ready!');
-            this.downloadTrimmedGif(trimmedBlob, pingPongMode);
+            this.downloadTrimmedGif(trimmedBlob);
             
             const outputSizeKB = trimmedBlob.size / 1024;
+            const effectiveText = this.editor.pingPongMode ? ' (with ping-pong loop)' : '';
             this.editor.uiManager.showStatus(
-                `✅ ${pingPongMode ? 'Ping-Pong' : 'Trimmed'} GIF downloaded! Size: ${outputSizeKB.toFixed(0)}KB`, 
+                `✅ Trimmed GIF downloaded! Size: ${outputSizeKB.toFixed(0)}KB${effectiveText}`, 
                 'success'
             );
             
@@ -288,9 +287,12 @@ class FileHandler {
     }
     
     // Trim GIF on server with optional ping-pong mode
-    async trimGifOnServer(pingPongMode = false) {
+    async trimGifOnServer() {
+        const pingPongMode = this.editor.pingPongMode;
+        const modeText = pingPongMode ? ' with ping-pong effect' : '';
+        
         this.editor.uiManager.updateExportProgress('process', 70, 
-            pingPongMode ? 'Creating ping-pong effect...' : 'Processing trim...');
+            `Processing trim${modeText}...`);
 
         const form = new FormData();
         form.append('file', this.editor.originalGifBlob, this.editor.originalGifBlob.name);
@@ -360,14 +362,15 @@ class FileHandler {
     }
     
     // Download trimmed GIF file with appropriate naming
-    downloadTrimmedGif(blob, pingPongMode = false) {
+    downloadTrimmedGif(blob) {
         const outUrl = URL.createObjectURL(blob);
 
-        const suffix = pingPongMode ? 
-            `_pingpong_${this.editor.startTime.toFixed(1)}s-${this.editor.endTime.toFixed(1)}s` :
-            `_trimmed_${this.editor.startTime.toFixed(1)}s-${this.editor.endTime.toFixed(1)}s`;
-
-        const filename = this.makeOutputName(this.editor.originalGifBlob.name, suffix);
+        // Include ping-pong in filename if enabled
+        const pingPongSuffix = this.editor.pingPongMode ? '_pingpong' : '';
+        const filename = this.makeOutputName(
+            this.editor.originalGifBlob.name, 
+            `_trimmed_${this.editor.startTime.toFixed(1)}s-${this.editor.endTime.toFixed(1)}s${pingPongSuffix}`
+        );
 
         const a = document.createElement('a');
         a.href = outUrl;

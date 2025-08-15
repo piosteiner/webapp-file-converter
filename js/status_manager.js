@@ -36,15 +36,21 @@ class StatusManager {
         const selectionDuration = Math.max(0, (this.editor.endTime || 0) - (this.editor.startTime || 0));
         const percentage = totalSec > 0 ? Math.round((selectionDuration / totalSec) * 100) : 0;
         
-        const pingPongMode = document.getElementById('pingPongMode')?.checked || false;
+        // Enhanced ping-pong display
+        const pingPongMode = this.editor.pingPongMode;
+        const pingPongText = pingPongMode ? ' 🔄 ×2' : '';
         const effectiveDuration = pingPongMode ? selectionDuration * 2 : selectionDuration;
-        const pingPongIndicator = pingPongMode ? ' 🔄' : '';
         
-        pill.textContent = `🎬 ${selectionDuration.toFixed(1)}s selected${pingPongIndicator} (${percentage}% of original)`;
+        pill.textContent = `🎬 ${selectionDuration.toFixed(1)}s selected (${percentage}% of original)${pingPongText}`;
         
+        // Add visual indicator for ping-pong mode
         if (pingPongMode) {
+            pill.style.background = 'linear-gradient(90deg, var(--controls-bg), rgba(139, 92, 246, 0.2))';
+            pill.style.borderColor = '#8b5cf6';
             pill.title = `Ping-pong enabled: ${effectiveDuration.toFixed(1)}s total duration (forward + reverse)`;
         } else {
+            pill.style.background = 'var(--controls-bg)';
+            pill.style.borderColor = 'var(--timeline-handle)';
             pill.title = '';
         }
     }
@@ -115,14 +121,14 @@ class StatusManager {
     setupPingPongListener() {
         const pingPongCheckbox = document.getElementById('pingPongMode');
         if (pingPongCheckbox) {
-            pingPongCheckbox.addEventListener('change', () => {
-                this.updateDurationPill();
-                const isEnabled = pingPongCheckbox.checked;
-                this.showStatus(
-                    isEnabled ? '🔄 Ping-pong mode enabled - clip will play forward then reverse' : '🔄 Ping-pong mode disabled',
-                    'info'
-                );
+            pingPongCheckbox.addEventListener('change', (e) => {
+                // Call main editor's setPingPongMode method
+                this.editor.setPingPongMode(e.target.checked);
             });
+            
+            console.log('Ping-pong checkbox listener attached');
+        } else {
+            console.warn('Ping-pong checkbox not found');
         }
     }
     

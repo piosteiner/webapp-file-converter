@@ -6,6 +6,9 @@ class VideoController {
         
         // Loop mode - start with OFF to match HTML
         this.loopInSelection = false;
+        
+        // Ping-pong preview state
+        this.isPlayingBackward = false;
     }
     
     initialize() {
@@ -48,9 +51,29 @@ class VideoController {
         
         // Handle looping within selection
         if (this.loopInSelection && this.editor.previewVideo && !this.editor.previewVideo.paused) {
-            if (this.editor.previewVideo.currentTime >= this.editor.endTime || 
-                this.editor.previewVideo.currentTime < this.editor.startTime) {
-                this.editor.previewVideo.currentTime = this.editor.startTime;
+            // Enhanced ping-pong preview (simplified version)
+            if (this.editor.pingPongMode && this.isPlayingBackward) {
+                // Playing backward in ping-pong mode (simulated)
+                if (this.editor.previewVideo.currentTime <= this.editor.startTime) {
+                    this.isPlayingBackward = false;
+                    this.editor.previewVideo.currentTime = this.editor.startTime + 0.01;
+                }
+            } else {
+                // Normal forward play
+                if (this.editor.previewVideo.currentTime >= this.editor.endTime) {
+                    if (this.editor.pingPongMode) {
+                        // Start "playing backward" (restart from end for preview)
+                        this.isPlayingBackward = true;
+                        this.editor.previewVideo.currentTime = this.editor.endTime - 0.01;
+                        // Note: True ping-pong preview would require complex video manipulation
+                        // The actual ping-pong effect will be applied when exporting
+                    } else {
+                        // Normal loop
+                        this.editor.previewVideo.currentTime = this.editor.startTime;
+                    }
+                } else if (this.editor.previewVideo.currentTime < this.editor.startTime) {
+                    this.editor.previewVideo.currentTime = this.editor.startTime;
+                }
             }
         }
     }
@@ -78,6 +101,7 @@ class VideoController {
     restart() {
         if (!this.editor.previewVideo) return;
         this.editor.previewVideo.currentTime = this.editor.startTime;
+        this.isPlayingBackward = false; // Reset ping-pong state
         this.editor.uiManager.updatePlayhead();
     }
     
@@ -272,6 +296,9 @@ class VideoController {
         if (playBtn) {
             playBtn.textContent = '▶️';
         }
+        
+        // Reset ping-pong state
+        this.isPlayingBackward = false;
         
         // Ensure video starts at beginning of selection
         if (this.editor.previewVideo) {

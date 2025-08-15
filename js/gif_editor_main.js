@@ -18,6 +18,9 @@ class IntegratedGifEditor {
         this.MAX_DURATION = 30; // Maximum 30s for most platforms
         this.SERVER_URL = (window.SERVER_URL || 'https://api.piogino.ch');
         
+        // NEW: Ping-pong mode tracking
+        this.pingPongMode = false;
+        
         // UI element references
         this.initializeElementReferences();
         
@@ -220,6 +223,23 @@ class IntegratedGifEditor {
         }
         
         console.log(`Preset: ${duration} | Selection: ${this.startTime.toFixed(1)}s - ${this.endTime.toFixed(1)}s`);
+    }
+    
+    // Set ping-pong mode (called from UI)
+    setPingPongMode(enabled) {
+        this.pingPongMode = enabled;
+        
+        // Update UI via managers
+        this.uiManager.updatePingPongUI();
+        
+        // Show status
+        if (enabled) {
+            this.uiManager.showStatus('🔄 Ping-Pong mode enabled - clip will play forward then backward', 'info');
+        } else {
+            this.uiManager.showStatus('➡️ Normal mode - clip will play forward only', 'info');
+        }
+        
+        console.log('Ping-pong mode:', enabled);
     }
     
     // Enable/disable controls
