@@ -181,7 +181,7 @@ class TimelineController {
             }
         }
 
-        // Update all displays
+        // CRITICAL: Update all displays including visual timeline position
         this.updateSelectionVisual();
         this.editor.uiManager.updateTimeDisplay();
         this.editor.uiManager.updatePlayhead();
@@ -251,22 +251,38 @@ class TimelineController {
     
     // Update timeline selection visual position
     updateSelectionVisual() {
-        if (this.editor.videoDuration === 0 || !this.selectionArea) {
-            console.warn('Cannot update selection - video not loaded or selection area missing');
+        if (this.editor.videoDuration === 0) {
+            console.warn('Cannot update selection - video not loaded');
+            return;
+        }
+        
+        if (!this.selectionArea) {
+            console.error('Cannot update selection - selectionArea is null');
+            console.log('Available elements:', {
+                timelineSelection: !!this.timelineSelection,
+                selectionArea: !!this.selectionArea,
+                startHandle: !!this.startHandle,
+                endHandle: !!this.endHandle,
+                playhead: !!this.playhead
+            });
             return;
         }
         
         const startPercent = (this.editor.startTime / this.editor.videoDuration) * 100;
         const endPercent = (this.editor.endTime / this.editor.videoDuration) * 100;
         
+        // Update selection area position and width
         this.selectionArea.style.left = `${startPercent}%`;
         this.selectionArea.style.width = `${endPercent - startPercent}%`;
         
-        // Force visibility
+        // Force visibility and update
         this.selectionArea.style.display = 'block';
         this.selectionArea.style.opacity = '1';
         
-        console.log(`Selection updated: ${startPercent.toFixed(1)}% to ${endPercent.toFixed(1)}%`);
+        // CRITICAL: Force a repaint to ensure visual update
+        this.selectionArea.offsetHeight; // Force reflow
+        
+        console.log(`Selection visual updated: ${this.editor.startTime.toFixed(2)}s-${this.editor.endTime.toFixed(2)}s = ${startPercent.toFixed(1)}% to ${endPercent.toFixed(1)}%`);
     }
     
     // Setup event listeners for newly created timeline elements
@@ -309,6 +325,7 @@ class TimelineController {
     // Called when selection updates from other sources
     updateSelection() {
         this.updateSelectionVisual();
+        console.log('TimelineController: Selection updated visually');
     }
     
     // Cleanup

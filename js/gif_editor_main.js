@@ -131,11 +131,13 @@ class IntegratedGifEditor {
         this.startTime = Math.max(0, Math.min(maxStart, startTime));
         this.endTime = Math.min(this.videoDuration, Math.max(minEnd, endTime));
         
-        // Notify all subsystems of the change
+        // Notify all subsystems of the change - INCLUDING visual update
         this.timelineController.updateSelection();
         this.videoController.updateSelection();
         this.inputHandler.updateSelection();
         this.uiManager.updateSelection();
+        
+        console.log(`Selection updated: ${this.startTime.toFixed(2)}s - ${this.endTime.toFixed(2)}s`);
     }
     
     // Set preset duration (called by UI)
@@ -165,6 +167,7 @@ class IntegratedGifEditor {
             }
         }
         
+        // Use updateSelection to ensure all visuals update
         this.updateSelection(newStart, newEnd);
         
         // Seek to start of selection
