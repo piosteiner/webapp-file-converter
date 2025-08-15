@@ -232,7 +232,7 @@ class FileHandler {
         }
     }
     
-    // Export trimmed GIF
+    // Export trimmed GIF with optional ping-pong loop
     async exportTrimmedGif() {
         if (!this.editor.originalGifBlob) {
             this.editor.uiManager.showStatus('❌ No GIF loaded for export.', 'error');
@@ -246,6 +246,9 @@ class FileHandler {
 
         const exportBtn = document.getElementById('exportTrimmedBtn');
         
+        // Check if ping-pong mode is enabled
+        const pingPongMode = document.getElementById('pingPongMode')?.checked || false;
+        
         // Disable export button
         if (exportBtn) exportBtn.disabled = true;
         
@@ -255,19 +258,22 @@ class FileHandler {
         this.editor.isProcessing = true;
 
         try {
-            this.editor.uiManager.showStatus('✂️ Trimming GIF on server...', 'info');
+            this.editor.uiManager.showStatus(
+                pingPongMode ? '✂️🔄 Creating ping-pong GIF...' : '✂️ Trimming GIF on server...', 
+                'info'
+            );
             
             // Upload and trim
             this.editor.uiManager.updateExportProgress('upload', 30, 'Uploading for trimming...');
-            const trimmedBlob = await this.trimGifOnServer();
+            const trimmedBlob = await this.trimGifOnServer(pingPongMode);
             
             // Download result
             this.editor.uiManager.updateExportProgress('download', 100, 'Download ready!');
-            this.downloadTrimmedGif(trimmedBlob);
+            this.downloadTrimmedGif(trimmedBlob, pingPongMode);
             
             const outputSizeKB = trimmedBlob.size / 1024;
             this.editor.uiManager.showStatus(
-                `✅ Trimmed GIF downloaded! Size: ${outputSizeKB.toFixed(0)}KB`, 
+                `✅ ${pingPongMode ? 'Ping-Pong' : 'Trimmed'} GIF downloaded! Size: ${outputSizeKB.toFixed(0)}KB`, 
                 'success'
             );
             
@@ -281,19 +287,62 @@ class FileHandler {
         }
     }
     
-    // Trim GIF on server
-    async trimGifOnServer() {
-        this.editor.uiManager.updateExportProgress('process', 70, 'Processing trim...');
+    // Trim GIF on server with optional ping-pong mode
+    async trimGifOnServer(pingPongMode = false) {
+        this.editor.uiManager.updateExportProgress('process', 70, 
+            pingPongMode ? 'Creating ping-pong effect...' : 'Processing trim...');
 
         const form = new FormData();
         form.append('file', this.editor.originalGifBlob, this.editor.originalGifBlob.name);
         form.append('start', String(this.editor.startTime));
         form.append('end', String(this.editor.endTime));
+        
+        // Add ping-pong parameter if enabled
+        if (pingPongMode) {
+            form.append('pingpong', 'true');
+        }
 
-        const res = await fetch(`${this.editor.SERVER_URL}/edit/trim-gif`, {
+        // Try ping-pong endpoint first if enabled, fallback to regular trim
+        let endpoint = '/edit/trim-gif';
+        if (pingPongMode) {
+            endpoint = '/edit/trim-gif-pingpong';
+        }
+
+        const res = await fetch(`${this.editor.SERVER_URL}${endpoint}`, {
             method: 'POST',
             body: form
         });
+
+        // If ping-pong endpoint fails, fallback to regular trim
+        if (!res.ok && pingPongMode) {
+            console.warn('Ping-pong endpoint not available, using regular trim');
+            this.editor.uiManager.showStatus('⚠️ Ping-pong not supported by server, using regular trim', 'info');
+            
+            // Retry with regular endpoint
+            const fallbackForm = new FormData();
+            fallbackForm.append('file', this.editor.originalGifBlob, this.editor.originalGifBlob.name);
+            fallbackForm.append('start', String(this.editor.startTime));
+            fallbackForm.append('end', String(this.editor.endTime));
+
+            const fallbackRes = await fetch(`${this.editor.SERVER_URL}/edit/trim-gif`, {
+                method: 'POST',
+                body: fallbackForm
+            });
+
+            if (!fallbackRes.ok) {
+                const errorText = await fallbackRes.text();
+                console.error('Export failed:', errorText);
+                throw new Error(`Server error: ${fallbackRes.status}`);
+            }
+
+            const outBlob = await fallbackRes.blob();
+            
+            if (!outBlob || outBlob.size === 0) {
+                throw new Error('Received empty file from server');
+            }
+            
+            return outBlob;
+        }
 
         if (!res.ok) {
             const errorText = await res.text();
@@ -310,14 +359,15 @@ class FileHandler {
         return outBlob;
     }
     
-    // Download trimmed GIF file
-    downloadTrimmedGif(blob) {
+    // Download trimmed GIF file with appropriate naming
+    downloadTrimmedGif(blob, pingPongMode = false) {
         const outUrl = URL.createObjectURL(blob);
 
-        const filename = this.makeOutputName(
-            this.editor.originalGifBlob.name, 
-            `_trimmed_${this.editor.startTime.toFixed(1)}s-${this.editor.endTime.toFixed(1)}s`
-        );
+        const suffix = pingPongMode ? 
+            `_pingpong_${this.editor.startTime.toFixed(1)}s-${this.editor.endTime.toFixed(1)}s` :
+            `_trimmed_${this.editor.startTime.toFixed(1)}s-${this.editor.endTime.toFixed(1)}s`;
+
+        const filename = this.makeOutputName(this.editor.originalGifBlob.name, suffix);
 
         const a = document.createElement('a');
         a.href = outUrl;

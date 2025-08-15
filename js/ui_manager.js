@@ -19,7 +19,8 @@ class UIManager {
     initialize() {
         this.createNumericInputs();
         this.createTimelineElements();
-        this.addHandleStyles(); // Add purple handle styling
+        this.addHandleStyles();
+        this.setupPingPongListener();
         console.log('UIManager initialized');
     }
     
@@ -28,7 +29,6 @@ class UIManager {
         const timeDisplay = document.querySelector('.time-display');
         if (!timeDisplay) return;
         
-        // Clear existing content and rebuild with inputs
         timeDisplay.innerHTML = `
             <span>
                 Start: 
@@ -45,12 +45,24 @@ class UIManager {
             <span>Duration: <span id="trimDuration">0.0s</span></span>
         `;
         
-        // Store references
         this.startTimeInput = document.getElementById('startTimeInput');
         this.endTimeInput = document.getElementById('endTimeInput');
-        
-        // Add CSS for time inputs if not exists
         this.addTimeInputStyles();
+    }
+    
+    // Setup ping-pong mode listener
+    setupPingPongListener() {
+        const pingPongCheckbox = document.getElementById('pingPongMode');
+        if (pingPongCheckbox) {
+            pingPongCheckbox.addEventListener('change', () => {
+                this.updateDurationPill();
+                const isEnabled = pingPongCheckbox.checked;
+                this.showStatus(
+                    isEnabled ? '🔄 Ping-pong mode enabled - clip will play forward then reverse' : '🔄 Ping-pong mode disabled',
+                    'info'
+                );
+            });
+        }
     }
     
     // Add CSS for improved handle styling
@@ -62,7 +74,7 @@ class UIManager {
                 .selection-handle {
                     width: 8px !important;
                     height: 100% !important;
-                    background: #8b5cf6 !important; /* Dark vibrant purple */
+                    background: #8b5cf6 !important;
                     border: 2px solid #7c3aed !important;
                     border-radius: 4px !important;
                     cursor: ew-resize !important;
@@ -71,34 +83,26 @@ class UIManager {
                     z-index: 15 !important;
                     transition: all 0.2s ease !important;
                 }
-                
                 .selection-handle:hover {
                     background: #7c3aed !important;
                     border-color: #6d28d9 !important;
                     transform: scaleX(1.2) !important;
                 }
-                
                 .selection-handle.dragging {
                     background: #6d28d9 !important;
                     border-color: #5b21b6 !important;
                     transform: scaleX(1.3) !important;
                     box-shadow: 0 0 10px rgba(139, 92, 246, 0.5) !important;
                 }
-                
                 .selection-handle.left {
                     left: -4px !important;
                 }
-                
                 .selection-handle.right {
                     right: -4px !important;
                 }
-                
-                /* Remove any handle labels */
                 .handle-label {
                     display: none !important;
                 }
-                
-                /* Make selection area background slightly visible */
                 .selection-area {
                     background: rgba(139, 92, 246, 0.1) !important;
                     border: 1px solid rgba(139, 92, 246, 0.3) !important;
@@ -138,7 +142,7 @@ class UIManager {
         }
     }
     
-    // Create timeline selection elements (playhead, selection area, handles)
+    // Create timeline elements
     createTimelineElements() {
         console.log('Creating timeline UI elements...');
         
@@ -148,13 +152,9 @@ class UIManager {
             return;
         }
         
-        // Remove any existing elements first
         this.removeExistingTimelineElements();
-        
-        // Create playhead
         this.createPlayhead(timelineTrack);
         
-        // Timeline selection elements will be created when video loads
         console.log('Timeline UI elements created successfully');
     }
     
@@ -175,42 +175,35 @@ class UIManager {
             return;
         }
         
-        // Remove any existing selection elements first
         const existingSelection = document.getElementById('timelineSelection');
         if (existingSelection) {
             existingSelection.remove();
         }
         
-        // Create the selection container
         this.timelineSelection = document.createElement('div');
         this.timelineSelection.className = 'timeline-selection';
         this.timelineSelection.id = 'timelineSelection';
         timelineTrack.appendChild(this.timelineSelection);
         
-        // Create the selection area (the blue highlighted region)
         this.selectionArea = document.createElement('div');
         this.selectionArea.className = 'selection-area';
         this.selectionArea.id = 'selectionArea';
         this.timelineSelection.appendChild(this.selectionArea);
         
-        // Create the IN handle (start) - no labels, slimmer design
         this.startHandle = document.createElement('div');
         this.startHandle.className = 'selection-handle left';
         this.startHandle.id = 'startHandle';
         this.selectionArea.appendChild(this.startHandle);
         
-        // Create the OUT handle (end) - no labels, slimmer design
         this.endHandle = document.createElement('div');
         this.endHandle.className = 'selection-handle right';
         this.endHandle.id = 'endHandle';
         this.selectionArea.appendChild(this.endHandle);
         
-        // IMMEDIATELY attach event listeners to make dragging work
         this.attachDragEventListeners();
         
         console.log('Timeline selection elements created successfully');
         
-        // Return references for timeline controller to use
         return {
             timelineSelection: this.timelineSelection,
             selectionArea: this.selectionArea,
@@ -220,25 +213,22 @@ class UIManager {
         };
     }
     
-    // Attach drag event listeners immediately after creating elements
+    // Attach drag event listeners
     attachDragEventListeners() {
         if (!this.startHandle || !this.endHandle || !this.selectionArea) {
             console.error('Cannot attach drag listeners - elements not created');
             return;
         }
         
-        // Get reference to timeline controller
         const timelineController = this.editor.timelineController;
         if (!timelineController) {
             console.error('TimelineController not available');
             return;
         }
         
-        // Attach the drag listeners
         this.startHandle.addEventListener('mousedown', (e) => timelineController.startDrag(e, 'start'));
         this.endHandle.addEventListener('mousedown', (e) => timelineController.startDrag(e, 'end'));
         this.selectionArea.addEventListener('mousedown', (e) => {
-            // Only drag the area if not clicking on handles
             if (!e.target.classList.contains('selection-handle')) {
                 timelineController.startDrag(e, 'area');
             }
@@ -264,7 +254,6 @@ class UIManager {
         const timelineTrack = this.editor.timelineTrack;
         if (!timelineTrack || this.editor.videoDuration === 0) return;
         
-        // Clear but preserve selection elements if they exist
         const selection = document.getElementById('timelineSelection');
         const playhead = document.getElementById('playhead');
         
@@ -286,7 +275,6 @@ class UIManager {
             timelineTrack.appendChild(marker);
         }
         
-        // Re-add selection and playhead if they existed
         if (selection) timelineTrack.appendChild(selection);
         if (playhead) timelineTrack.appendChild(playhead);
     }
@@ -299,7 +287,6 @@ class UIManager {
         el.textContent = message;
         el.className = `status ${type}`;
         
-        // Auto-clear success/error messages
         if (type === 'success' || type === 'error') {
             setTimeout(() => {
                 if (el.textContent === message) {
@@ -310,9 +297,8 @@ class UIManager {
         }
     }
     
-    // Update time display in inputs and duration
+    // Update time display
     updateTimeDisplay() {
-        // Update numeric inputs
         if (this.startTimeInput) {
             this.startTimeInput.value = this.formatTimeForInput(this.editor.startTime);
             this.startTimeInput.classList.remove('error');
@@ -322,7 +308,6 @@ class UIManager {
             this.endTimeInput.classList.remove('error');
         }
         
-        // Update duration display
         const durationEl = document.getElementById('trimDuration');
         if (durationEl) {
             const duration = this.editor.endTime - this.editor.startTime;
@@ -330,7 +315,7 @@ class UIManager {
         }
     }
     
-    // Update duration pill
+    // Update duration pill with ping-pong info
     updateDurationPill() {
         const pill = document.getElementById('durationPill');
         if (!pill) return;
@@ -339,10 +324,20 @@ class UIManager {
         const selectionDuration = Math.max(0, (this.editor.endTime || 0) - (this.editor.startTime || 0));
         const percentage = totalSec > 0 ? Math.round((selectionDuration / totalSec) * 100) : 0;
         
-        pill.textContent = `🎬 ${selectionDuration.toFixed(1)}s selected (${percentage}% of original)`;
+        const pingPongMode = document.getElementById('pingPongMode')?.checked || false;
+        const effectiveDuration = pingPongMode ? selectionDuration * 2 : selectionDuration;
+        const pingPongIndicator = pingPongMode ? ' 🔄' : '';
+        
+        pill.textContent = `🎬 ${selectionDuration.toFixed(1)}s selected${pingPongIndicator} (${percentage}% of original)`;
+        
+        if (pingPongMode) {
+            pill.title = `Ping-pong enabled: ${effectiveDuration.toFixed(1)}s total duration (forward + reverse)`;
+        } else {
+            pill.title = '';
+        }
     }
     
-    // Update playhead position and preview info
+    // Update playhead
     updatePlayhead() {
         if (this.editor.videoDuration === 0 || !this.playhead) return;
         
@@ -350,10 +345,8 @@ class UIManager {
         const percent = (currentTime / this.editor.videoDuration) * 100;
         this.playhead.style.left = `${percent}%`;
         
-        // Update current time for display
         this.editor.currentTime = currentTime;
         
-        // Enhanced preview info
         const isInSelection = currentTime >= this.editor.startTime && currentTime <= this.editor.endTime;
         const progressInSelection = isInSelection ? 
             ((currentTime - this.editor.startTime) / (this.editor.endTime - this.editor.startTime)) * 100 : 0;
@@ -377,7 +370,7 @@ class UIManager {
         }
     }
     
-    // Format time for display in input (supports mm:ss.ms and ss.ms)
+    // Format time for display
     formatTimeForInput(seconds) {
         if (seconds >= 60) {
             const mins = Math.floor(seconds / 60);
@@ -401,7 +394,7 @@ class UIManager {
         }
     }
     
-    // Show/hide editor container
+    // Show editor container
     showEditor() {
         if (this.editor.editorContainer) {
             this.editor.editorContainer.classList.remove('hidden');
@@ -441,27 +434,19 @@ class UIManager {
     
     // Called when video loads
     onVideoLoaded() {
-        // Create timeline markers
         this.createTimeline();
-        
-        // Create selection elements
         const elements = this.createTimelineSelection();
-        
-        // Update displays
         this.updateTimeDisplay();
         this.updatePlayhead();
         this.updateDurationPill();
         
-        // Enable controls
         this.editor.enableControls(true);
         
-        // Add ready class for animations
         const container = document.getElementById('timelineContainer');
         if (container) {
             container.classList.add('ready');
         }
         
-        // Return element references for timeline controller
         return elements;
     }
     
@@ -474,10 +459,8 @@ class UIManager {
     
     // Cleanup
     cleanup() {
-        // Remove any created elements
         this.removeExistingTimelineElements();
         
-        // Clean up references
         this.timelineSelection = null;
         this.selectionArea = null;
         this.startHandle = null;

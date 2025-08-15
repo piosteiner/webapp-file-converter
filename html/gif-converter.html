@@ -222,6 +222,32 @@
     <div class="status" id="editorStatus"></div>
     <span id="loadedFilename" class="hidden"></span>
 
+    <!-- Export Section - ADD THIS IF MISSING -->
+    <div class="export-section">
+      <div class="export-controls">
+        <div class="export-options">
+          <label class="control-label">Export Quality</label>
+          <div class="quality-selector">
+            <button class="quality-btn active" data-quality="high">High</button>
+            <button class="quality-btn" data-quality="medium">Medium</button>
+            <button class="quality-btn" data-quality="low">Low</button>
+          </div>
+        </div>
+
+        <button id="exportTrimmedBtn" class="export-btn">
+          <span class="export-icon">💾</span>
+          Export Trimmed GIF
+        </button>
+      </div>
+
+      <div class="export-progress" id="exportProgress" style="display: none">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Preparing…</div>
+      </div>
+    </div>
+
     <!-- Workflow/notes -->
     <div class="features" style="margin-top: 40px; text-align: left">
       <h3>🚀 Complete GIF to WebM Workflow:</h3>
