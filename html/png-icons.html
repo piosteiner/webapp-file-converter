@@ -729,6 +729,11 @@
             resultInfo.textContent = `100×100 PNG • ${sizeKB} KB`;
             
             downloadSection.classList.remove('hidden');
+            
+            // Auto-download after conversion
+            setTimeout(() => {
+                downloadResult();
+            }, 500); // Small delay to let the UI update
         }
 
         function handleSettingsChange() {
