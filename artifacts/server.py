@@ -39,7 +39,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB hard limit
 UPLOAD_FOLDER = 'temp_uploads'
 MAX_FILE_SIZE = 100 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'gif'}
-ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'}
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg', 'ico'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename: str) -> bool:
@@ -90,28 +90,31 @@ def convert_to_icon_ffmpeg(input_path, output_path, background='transparent', sc
         bool: Success status
     """
     try:
-        # Background color mapping
-        bg_colors = {
-            'transparent': '00000000',  # Transparent
-            'white': 'ffffff',          # White
-            'black': '000000'           # Black
-        }
-        bg_color = bg_colors.get(background, '00000000')
-
         if scaling == 'contain':
             # Fit image within 100x100, maintaining aspect ratio, center with padding
-            # This ensures the entire image is visible
-            scale_filter = f"scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:color={bg_color}"
+            if background == 'transparent':
+                # For transparent background, use RGBA and black@0 (transparent black)
+                scale_filter = "scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:color=black@0"
+                pix_fmt = "rgba"
+            elif background == 'white':
+                # White background
+                scale_filter = "scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:color=white"
+                pix_fmt = "rgb24"
+            else:  # black
+                # Black background
+                scale_filter = "scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:color=black"
+                pix_fmt = "rgb24"
         else:  # cover
             # Fill 100x100, maintaining aspect ratio, crop if necessary
-            # This ensures the entire canvas is filled
-            scale_filter = f"scale=100:100:force_original_aspect_ratio=increase,crop=100:100"
+            scale_filter = "scale=100:100:force_original_aspect_ratio=increase,crop=100:100"
+            pix_fmt = "rgba" if background == 'transparent' else "rgb24"
 
-        # Build FFmpeg command
+        # Build FFmpeg command with proper pixel format
         cmd = [
             'ffmpeg', '-y',
             '-i', input_path,
             '-vf', scale_filter,
+            '-pix_fmt', pix_fmt,
             '-f', 'png',
             output_path
         ]
@@ -341,7 +344,7 @@ def edit_trim_gif_blob():
                 out_path
             ]
             print(f"🔧 Regular trim: {' '.join(cmd)}")
-            ok = run_ffmpeg_command(cmd)  # <-- This was missing!
+            ok = run_ffmpeg_command(cmd)
 
         try:
             os.remove(in_path)
@@ -393,12 +396,21 @@ def convert_image_to_icon():
         if not f.filename:
             return jsonify({'error': 'No file selected'}), 400
 
-        # Validate file type (basic check)
-        if not allowed_image_file(f.filename):
-            return jsonify({'error': 'Only image files are allowed (JPG, PNG, GIF, WebP, BMP, TIFF, SVG)'}), 400
+        # More permissive file type check - let FFmpeg handle format detection
+        allowed_types = {
+            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 
+            'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml',
+            'image/x-icon', 'image/vnd.microsoft.icon'
+        }
+        
+        # Check both MIME type and file extension
+        file_ext = f.filename.lower().split('.')[-1] if '.' in f.filename else ''
+        
+        if not (f.content_type in allowed_types or file_ext in ALLOWED_IMAGE_EXTENSIONS):
+            return jsonify({'error': f'Unsupported image format. Supported: JPG, PNG, GIF, WebP, BMP, TIFF, SVG, ICO'}), 400
 
         # Validate file size (10MB limit for images)
-        if request.content_length is None or request.content_length > 10 * 1024 * 1024:
+        if request.content_length and request.content_length > 10 * 1024 * 1024:
             return jsonify({'error': 'File too large. Maximum size for images: 10MB'}), 400
 
         # Get conversion options
@@ -414,11 +426,17 @@ def convert_image_to_icon():
         secure_name = secure_filename(f.filename)
         in_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{secure_name}")
         out_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_icon.png")
+        
+        # Save uploaded file
         f.save(in_path)
+        
+        # Verify file was saved and is readable
+        if not os.path.exists(in_path) or os.path.getsize(in_path) == 0:
+            return jsonify({'error': 'Failed to save uploaded file'}), 400
 
-        print(f"🖼️ Converting {secure_name} to 100x100 PNG icon (background: {background}, scaling: {scaling})")
+        print(f"🖼️ Converting {secure_name} ({os.path.getsize(in_path)} bytes) to 100x100 PNG icon (background: {background}, scaling: {scaling})")
 
-        # Build FFmpeg command based on options
+        # Convert using FFmpeg
         success = convert_to_icon_ffmpeg(in_path, out_path, background, scaling)
 
         # Cleanup input file
@@ -427,12 +445,24 @@ def convert_image_to_icon():
         except:
             pass
 
-        if not success or not os.path.exists(out_path):
+        if not success:
             try:
                 if os.path.exists(out_path): os.remove(out_path)
             except:
                 pass
-            return jsonify({'error': 'Image conversion failed'}), 400
+            return jsonify({'error': 'FFmpeg conversion failed - check server logs for details'}), 400
+            
+        if not os.path.exists(out_path):
+            return jsonify({'error': 'Output file was not created'}), 400
+            
+        if os.path.getsize(out_path) == 0:
+            try:
+                os.remove(out_path)
+            except:
+                pass
+            return jsonify({'error': 'Output file is empty'}), 400
+
+        print(f"✅ Icon conversion successful: {os.path.getsize(out_path)} bytes")
 
         # Return PNG blob
         def _cleanup():
@@ -453,7 +483,9 @@ def convert_image_to_icon():
         return resp
 
     except Exception as e:
-        print("Icon conversion error:", e)
+        print(f"Icon conversion endpoint error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': 'Internal server error'}), 500
 
 # ====================================================================================
