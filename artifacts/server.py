@@ -79,33 +79,17 @@ def run_ffmpeg_command(cmd) -> bool:
 def convert_to_icon_ffmpeg(input_path, output_path, background='transparent', scaling='contain'):
     """
     Convert image to 100x100 PNG icon using FFmpeg.
-    DEBUG VERSION with detailed logging.
     """
     try:
-        print(f"🔍 DEBUG: Starting icon conversion")
-        print(f"🔍 DEBUG: Input path: {input_path}")
-        print(f"🔍 DEBUG: Output path: {output_path}")
-        print(f"🔍 DEBUG: Background: {background}")
-        print(f"🔍 DEBUG: Scaling: {scaling}")
+        print(f"🖼️ Converting {os.path.basename(input_path)} to 100x100 PNG icon (background: {background}, scaling: {scaling})")
         
-        # Check if input file exists and get info
+        # Check if input file exists
         if not os.path.exists(input_path):
             print(f"❌ ERROR: Input file does not exist: {input_path}")
             return False
             
         file_size = os.path.getsize(input_path)
-        print(f"🔍 DEBUG: Input file size: {file_size} bytes")
-        
-        # Try to get file info first
-        try:
-            info_cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', input_path]
-            info_proc = subprocess.run(info_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
-            if info_proc.returncode == 0:
-                print(f"🔍 DEBUG: FFprobe successful")
-            else:
-                print(f"⚠️ WARNING: FFprobe failed: {info_proc.stderr}")
-        except Exception as e:
-            print(f"⚠️ WARNING: FFprobe error: {e}")
+        print(f"📁 Input file size: {file_size} bytes")
 
         if scaling == 'contain':
             # Fit image within 100x100, maintaining aspect ratio, center with padding
@@ -123,65 +107,28 @@ def convert_to_icon_ffmpeg(input_path, output_path, background='transparent', sc
             scale_filter = "scale=100:100:force_original_aspect_ratio=increase,crop=100:100"
             pix_fmt = "rgba" if background == 'transparent' else "rgb24"
 
-        print(f"🔍 DEBUG: Scale filter: {scale_filter}")
-        print(f"🔍 DEBUG: Pixel format: {pix_fmt}")
-
-        # Build FFmpeg command - using exact same structure as manual test
+        # Build FFmpeg command - REMOVED -f png parameter
         cmd = [
             'ffmpeg', '-y',
             '-i', input_path,
             '-vf', scale_filter,
             '-pix_fmt', pix_fmt,
-            '-f', 'png',
-            output_path
+            output_path  # Let FFmpeg auto-detect PNG format from extension
         ]
 
-        print(f"🔧 DEBUG: Full command: {' '.join(cmd)}")
-        
-        # Run with enhanced error reporting
-        try:
-            print(f"🔍 DEBUG: Starting FFmpeg execution...")
-            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=300)
-            
-            print(f"🔍 DEBUG: FFmpeg exit code: {proc.returncode}")
-            
-            if proc.stdout:
-                print(f"🔍 DEBUG: FFmpeg stdout: {proc.stdout}")
-            
-            if proc.stderr:
-                print(f"🔍 DEBUG: FFmpeg stderr: {proc.stderr}")
-            
-            if proc.returncode != 0:
-                print(f"❌ ERROR: FFmpeg failed with exit code {proc.returncode}")
-                print(f"❌ ERROR: FFmpeg stderr: {proc.stderr}")
-                return False
-                
-            # Check if output file was created
-            if not os.path.exists(output_path):
-                print(f"❌ ERROR: Output file was not created: {output_path}")
-                return False
-                
-            output_size = os.path.getsize(output_path)
-            print(f"✅ SUCCESS: Output file created, size: {output_size} bytes")
-            
-            if output_size == 0:
-                print(f"❌ ERROR: Output file is empty")
-                return False
-                
-            return True
-            
-        except subprocess.TimeoutExpired:
-            print("❌ ERROR: FFmpeg command timed out")
-            return False
-        except Exception as e:
-            print(f"❌ ERROR: FFmpeg command failed with exception: {e}")
-            return False
+        print(f"🔧 FFmpeg command: {' '.join(cmd)}")
+        return run_ffmpeg_command(cmd)
 
     except Exception as e:
-        print(f"❌ ERROR: Icon conversion function failed: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Icon conversion error: {e}")
         return False
+
+@app.route('/debug-test')
+def debug_test():
+    print("🔥 DEBUG TEST - Server is responding!")
+    print(f"🔥 Current working directory: {os.getcwd()}")
+    print(f"🔥 Server PID: {os.getpid()}")
+    return "Check logs for debug output"
 
 # ---- Simple index with status ----
 @app.route('/')
