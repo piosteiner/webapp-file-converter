@@ -93,8 +93,8 @@ def convert_to_icon_ffmpeg(input_path, output_path, background='transparent', sc
         if scaling == 'contain':
             # Fit image within 100x100, maintaining aspect ratio, center with padding
             if background == 'transparent':
-                # For transparent background, use RGBA and black@0 (transparent black)
-                scale_filter = "scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:color=black@0"
+                # FIXED: Use 0x00000000 instead of black@0
+                scale_filter = "scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:color=0x00000000"
                 pix_fmt = "rgba"
             elif background == 'white':
                 # White background
