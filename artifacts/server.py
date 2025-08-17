@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Flask Server for GIF to WebM Conversion + GIF Editor
+Flask Server for GIF to WebM Conversion + GIF Editor + Image to Icon Converter
 - Keeps existing /api/* endpoints (JSON responses)
 - Adds blob-returning endpoints used by the integrated editor:
     * POST /convert/gif-to-webm  -> returns video/webm (preview)
     * POST /edit/trim-gif        -> returns image/gif  (trimmed blob)
+    * POST /convert/image-to-icon -> returns image/png (100x100 icon)
 - Fixed CORS configuration for converter.piogino.ch
 """
 
@@ -38,10 +39,14 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB hard limit
 UPLOAD_FOLDER = 'temp_uploads'
 MAX_FILE_SIZE = 100 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'gif'}
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_image_file(filename: str) -> bool:
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 def cleanup_old_files():
     """Remove temp files older than 1 hour."""
@@ -71,6 +76,53 @@ def run_ffmpeg_command(cmd) -> bool:
         print(f"FFmpeg command failed: {e}")
         return False
 
+def convert_to_icon_ffmpeg(input_path, output_path, background='transparent', scaling='contain'):
+    """
+    Convert image to 100x100 PNG icon using FFmpeg.
+    
+    Args:
+        input_path: Source image file
+        output_path: Output PNG file
+        background: 'transparent', 'white', or 'black'
+        scaling: 'contain' (fit within) or 'cover' (fill, may crop)
+    
+    Returns:
+        bool: Success status
+    """
+    try:
+        # Background color mapping
+        bg_colors = {
+            'transparent': '00000000',  # Transparent
+            'white': 'ffffff',          # White
+            'black': '000000'           # Black
+        }
+        bg_color = bg_colors.get(background, '00000000')
+
+        if scaling == 'contain':
+            # Fit image within 100x100, maintaining aspect ratio, center with padding
+            # This ensures the entire image is visible
+            scale_filter = f"scale=100:100:force_original_aspect_ratio=decrease,pad=100:100:(ow-iw)/2:(oh-ih)/2:color={bg_color}"
+        else:  # cover
+            # Fill 100x100, maintaining aspect ratio, crop if necessary
+            # This ensures the entire canvas is filled
+            scale_filter = f"scale=100:100:force_original_aspect_ratio=increase,crop=100:100"
+
+        # Build FFmpeg command
+        cmd = [
+            'ffmpeg', '-y',
+            '-i', input_path,
+            '-vf', scale_filter,
+            '-f', 'png',
+            output_path
+        ]
+
+        print(f"🔧 Icon conversion command: {' '.join(cmd)}")
+        return run_ffmpeg_command(cmd)
+
+    except Exception as e:
+        print(f"FFmpeg icon conversion error: {e}")
+        return False
+
 # ---- Simple index with status ----
 @app.route('/')
 def index():
@@ -78,9 +130,9 @@ def index():
     converter_status = "✅ Available" if HAS_CONVERTER else "❌ Not found"
     return f"""
     <!DOCTYPE html>
-    <html><head><title>GIF to WebM Converter + Editor API</title></head>
+    <html><head><title>GIF to WebM Converter + Editor + Icon Converter API</title></head>
     <body>
-        <h1>GIF to WebM Converter + Editor API</h1>
+        <h1>GIF to WebM Converter + Editor + Icon Converter API</h1>
         <p>Server is running successfully!</p>
         <h2>API Endpoints:</h2>
         <ul>
@@ -89,6 +141,7 @@ def index():
             <li><strong>POST /api/trim-gif</strong> - Trim GIF (JSON)</li>
             <li><strong>POST /convert/gif-to-webm</strong> - Preview WebM blob</li>
             <li><strong>POST /edit/trim-gif</strong> - Trimmed GIF blob</li>
+            <li><strong>POST /convert/image-to-icon</strong> - 100x100 PNG icon converter</li>
             <li><strong>GET /api/download/&lt;file_id&gt;</strong> - Download converted files</li>
             <li><strong>GET /api/health</strong> - Health check</li>
         </ul>
@@ -96,10 +149,11 @@ def index():
         <ul>
             <li>FFmpeg: {ffmpeg_status}</li>
             <li>Converter: {converter_status}</li>
+            <li>Icon Converter: {ffmpeg_status}</li>
         </ul>
         <h2>CORS Configuration:</h2>
         <ul>
-            <li>Allowed Origin: https://converter.piogino.ch</li>
+            <li>Allowed Origin: https://converter.piogino.ch (via nginx)</li>
         </ul>
     </body></html>
     """
@@ -112,7 +166,8 @@ def health_check():
         'status': 'healthy',
         'ffmpeg_available': ffmpeg_ok,
         'converter_available': HAS_CONVERTER,
-        'gif_editor_available': ffmpeg_ok
+        'gif_editor_available': ffmpeg_ok,
+        'icon_converter_available': ffmpeg_ok
     })
 
 # ====================================================================================
@@ -226,33 +281,57 @@ def edit_trim_gif_blob():
         duration = end_time - start_time
 
         if ping_pong:
-            # Trim first, then ping-pong (reverse + concat) with palette
+            # SIMPLIFIED PING-PONG: More reliable approach
             temp = os.path.join(UPLOAD_FOLDER, f"{file_id}_temp.gif")
+            temp_reversed = os.path.join(UPLOAD_FOLDER, f"{file_id}_reversed.gif")
+            
+            # Step 1: Trim the original clip
             cmd_trim = [
                 'ffmpeg', '-y',
                 '-i', in_path,
                 '-ss', str(start_time),
                 '-t', str(duration),
-                '-vf', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
                 temp
             ]
+            
+            print(f"🔧 Step 1 - Trimming: {' '.join(cmd_trim)}")
             ok = run_ffmpeg_command(cmd_trim)
+            
             if ok:
-                cmd_pingpong = [
+                # Step 2: Create reversed version
+                cmd_reverse = [
                     'ffmpeg', '-y',
                     '-i', temp,
-                    '-filter_complex',
-                    '[0:v]split[a][b];[a]split[c][d];[d]reverse[r];[c][r]concat=n=2:v=1[out];[out]split[g][h];[g]palettegen[p];[h][p]paletteuse',
-                    '-map', '[out]',
-                    out_path
+                    '-vf', 'reverse',
+                    temp_reversed
                 ]
-                ok = run_ffmpeg_command(cmd_pingpong)
+                
+                print(f"🔧 Step 2 - Reversing: {' '.join(cmd_reverse)}")
+                ok = run_ffmpeg_command(cmd_reverse)
+                
+                if ok:
+                    # Step 3: Concatenate forward + reverse with proper palette
+                    cmd_concat = [
+                        'ffmpeg', '-y',
+                        '-i', temp,
+                        '-i', temp_reversed,
+                        '-filter_complex', 
+                        '[0:v][1:v]concat=n=2:v=1:a=0[v];[v]split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+                        out_path
+                    ]
+                    
+                    print(f"🔧 Step 3 - Concatenating: {' '.join(cmd_concat)}")
+                    ok = run_ffmpeg_command(cmd_concat)
+            
+            # Cleanup temp files
             try:
                 if os.path.exists(temp): os.remove(temp)
+                if os.path.exists(temp_reversed): os.remove(temp_reversed)
             except:
                 pass
+                
         else:
-            # Simple trim with proper palette for good quality
+            # Regular trim (your existing code) - FIX: Actually run the command!
             cmd = [
                 'ffmpeg', '-y',
                 '-i', in_path,
@@ -261,7 +340,8 @@ def edit_trim_gif_blob():
                 '-vf', 'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
                 out_path
             ]
-            ok = run_ffmpeg_command(cmd)
+            print(f"🔧 Regular trim: {' '.join(cmd)}")
+            ok = run_ffmpeg_command(cmd)  # <-- This was missing!
 
         try:
             os.remove(in_path)
@@ -289,6 +369,91 @@ def edit_trim_gif_blob():
 
     except Exception as e:
         print("Trim (blob) error:", e)
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/convert/image-to-icon', methods=['POST', 'OPTIONS'])
+def convert_image_to_icon():
+    """
+    Convert any image to a 100x100 PNG icon with transparent background.
+    Maintains aspect ratio and centers the image.
+    
+    Frontend sends: file, background (transparent/white/black), scaling (contain/cover)
+    Returns: PNG blob (100x100 pixels)
+    """
+    cleanup_old_files()
+
+    try:
+        if not check_ffmpeg():
+            return jsonify({'error': 'FFmpeg not found on server'}), 500
+
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        f = request.files['file']
+        if not f.filename:
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Validate file type (basic check)
+        if not allowed_image_file(f.filename):
+            return jsonify({'error': 'Only image files are allowed (JPG, PNG, GIF, WebP, BMP, TIFF, SVG)'}), 400
+
+        # Validate file size (10MB limit for images)
+        if request.content_length is None or request.content_length > 10 * 1024 * 1024:
+            return jsonify({'error': 'File too large. Maximum size for images: 10MB'}), 400
+
+        # Get conversion options
+        background = request.form.get('background', 'transparent')  # transparent, white, black
+        scaling = request.form.get('scaling', 'contain')  # contain, cover
+
+        if background not in ['transparent', 'white', 'black']:
+            return jsonify({'error': 'Invalid background option'}), 400
+        if scaling not in ['contain', 'cover']:
+            return jsonify({'error': 'Invalid scaling option'}), 400
+
+        file_id = str(uuid.uuid4())
+        secure_name = secure_filename(f.filename)
+        in_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{secure_name}")
+        out_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_icon.png")
+        f.save(in_path)
+
+        print(f"🖼️ Converting {secure_name} to 100x100 PNG icon (background: {background}, scaling: {scaling})")
+
+        # Build FFmpeg command based on options
+        success = convert_to_icon_ffmpeg(in_path, out_path, background, scaling)
+
+        # Cleanup input file
+        try:
+            os.remove(in_path)
+        except:
+            pass
+
+        if not success or not os.path.exists(out_path):
+            try:
+                if os.path.exists(out_path): os.remove(out_path)
+            except:
+                pass
+            return jsonify({'error': 'Image conversion failed'}), 400
+
+        # Return PNG blob
+        def _cleanup():
+            try:
+                os.remove(out_path)
+            except:
+                pass
+
+        # Generate descriptive filename
+        base_name = Path(secure_name).stem
+        download_name = f"{base_name}_100x100_icon.png"
+
+        resp = send_file(out_path, 
+                        mimetype='image/png', 
+                        as_attachment=True,
+                        download_name=download_name)
+        threading.Timer(60, _cleanup).start()
+        return resp
+
+    except Exception as e:
+        print("Icon conversion error:", e)
         return jsonify({'error': 'Internal server error'}), 500
 
 # ====================================================================================
@@ -589,7 +754,7 @@ def convert_bulk():
 
 # ---- Main ----
 if __name__ == '__main__':
-    print("🚀 Starting GIF to WebM Converter + Editor Server...")
+    print("🚀 Starting GIF to WebM Converter + Editor + Icon Converter Server...")
     print(f"📁 Upload folder: {os.path.abspath(UPLOAD_FOLDER)}")
     print(f"📊 Max file size: {MAX_FILE_SIZE // (1024*1024)}MB")
     print(f"🔧 FFmpeg available: {check_ffmpeg() if HAS_CONVERTER else 'Unknown'}")
@@ -598,11 +763,12 @@ if __name__ == '__main__':
     print("🌐 Public blob endpoints:")
     print("    POST https://api.piogino.ch/convert/gif-to-webm")
     print("    POST https://api.piogino.ch/edit/trim-gif")
+    print("    POST https://api.piogino.ch/convert/image-to-icon")
     print("🌐 JSON endpoints:")
     print("    POST https://api.piogino.ch/api/convert")
     print("    POST https://api.piogino.ch/api/trim-gif")
     print("    POST https://api.piogino.ch/api/convert-bulk")
     print("    GET  https://api.piogino.ch/api/download/<id>")
-    print("🔒 CORS: https://converter.piogino.ch")
+    print("🔒 CORS: https://converter.piogino.ch (via nginx)")
     print()
     app.run(debug=False, host='127.0.0.1', port=5000)

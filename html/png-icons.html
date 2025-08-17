@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image → 100x100 PNG Icon Converter</title>
+    <meta name="description" content="Convert any image to a 100x100 PNG icon with transparent background. Perfect for avatars, app icons, and profile pictures.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖼️</text></svg>">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary-color: #8b5cf6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            --border-color: #e5e7eb;
+            --border-focus: #6366f1;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--bg-primary);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .nav-links a {
+            color: var(--primary-color);
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-dark);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .feature-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .upload-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone {
+            border: 3px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--primary-color);
+            background: #f8faff;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--primary-color);
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+
+        .drop-zone.processing {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .drop-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .drop-text {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .drop-subtext {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .preview-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 30px;
+            align-items: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .preview-container {
+            text-align: center;
+        }
+
+        .preview-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            box-shadow: var(--shadow-md);
+            border: 2px solid var(--border-color);
+        }
+
+        .preview-info {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .arrow {
+            font-size: 2rem;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .result-preview {
+            width: 100px;
+            height: 100px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 10px 10px;
+            background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .result-image {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 4px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+        }
+
+        .radio-option:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .radio-option input[type="radio"] {
+            margin: 0;
+        }
+
+        .download-section {
+            text-align: center;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, var(--success-color), #059669);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .download-btn:disabled {
+            background: var(--text-tertiary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #3b82f6;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid var(--success-color);
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid var(--error-color);
+        }
+
+        .status.processing {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid var(--warning-color);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tech-specs {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .tech-specs h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .tech-specs ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .tech-specs li {
+            padding: 5px 0;
+            color: var(--text-secondary);
+        }
+
+        .tech-specs li::before {
+            content: "✓";
+            color: var(--success-color);
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .preview-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .arrow {
+                transform: rotate(90deg);
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Image → 100×100 PNG Converter</h1>
+        <p class="subtitle">
+            Convert any image to a perfect 100×100 pixel PNG icon with transparent background.<br>
+            Maintains aspect ratio and centers your image automatically.
+        </p>
+
+        <div class="nav-links">
+            <a href="../index.html">← Home</a>
+            <a href="gif-converter.html">GIF → WebM</a>
+            <a href="../index.html">All Tools</a>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">📐</span>
+                <div class="feature-title">Perfect Square</div>
+                <div class="feature-desc">Exactly 100×100 pixels</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🔄</span>
+                <div class="feature-title">Aspect Ratio</div>
+                <div class="feature-desc">Maintains original proportions</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">✨</span>
+                <div class="feature-title">Transparent</div>
+                <div class="feature-desc">PNG with alpha channel</div>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🎯</span>
+                <div class="feature-title">Auto Center</div>
+                <div class="feature-desc">Perfectly centered result</div>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <div class="drop-zone" id="dropZone">
+                <span class="drop-icon">📷</span>
+                <div class="drop-text">Drop your image here</div>
+                <div class="drop-subtext">or click to browse • Supports JPG, PNG, GIF, WebP, BMP</div>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+        </div>
+
+        <div class="preview-section hidden" id="previewSection">
+            <div class="preview-grid">
+                <div class="preview-container">
+                    <div class="preview-title">Original Image</div>
+                    <img id="originalPreview" class="preview-image" alt="Original image">
+                    <div class="preview-info" id="originalInfo">Loading...</div>
+                </div>
+                
+                <div class="arrow">→</div>
+                
+                <div class="preview-container">
+                    <div class="preview-title">100×100 PNG Result</div>
+                    <div class="result-preview">
+                        <img id="resultPreview" class="result-image hidden" alt="Converted image">
+                    </div>
+                    <div class="preview-info" id="resultInfo">Processing...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls hidden" id="controlsSection">
+            <div class="control-group">
+                <label class="control-label">Background</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="background" value="transparent" checked>
+                        <span>Transparent (recommended)</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="background" value="white">
+                        <span>White background</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="background" value="black">
+                        <span>Black background</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Scaling Method</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="scaling" value="contain" checked>
+                        <span>Fit within 100×100 (recommended)</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="scaling" value="cover">
+                        <span>Fill 100×100 (may crop)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="download-section hidden" id="downloadSection">
+            <button class="download-btn" id="downloadBtn">
+                <span>💾</span>
+                <span>Download 100×100 PNG</span>
+            </button>
+        </div>
+
+        <div class="status hidden" id="status"></div>
+
+        <div class="tech-specs">
+            <h3>🔧 Technical Specifications</h3>
+            <ul>
+                <li>Output format: PNG with alpha transparency</li>
+                <li>Exact dimensions: 100×100 pixels</li>
+                <li>Maintains original aspect ratio</li>
+                <li>High-quality resampling (Lanczos)</li>
+                <li>Server-side processing with ImageMagick/FFmpeg</li>
+                <li>Supports all common image formats</li>
+                <li>Perfect for: App icons, avatars, profile pictures</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'https://api.piogino.ch';
+        let currentFile = null;
+        let convertedBlob = null;
+
+        // DOM elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewSection = document.getElementById('previewSection');
+        const controlsSection = document.getElementById('controlsSection');
+        const downloadSection = document.getElementById('downloadSection');
+        const originalPreview = document.getElementById('originalPreview');
+        const resultPreview = document.getElementById('resultPreview');
+        const originalInfo = document.getElementById('originalInfo');
+        const resultInfo = document.getElementById('resultInfo');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const status = document.getElementById('status');
+
+        // Initialize
+        setupEventListeners();
+
+        function setupEventListeners() {
+            // Drag and drop
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', handleDragOver);
+            dropZone.addEventListener('dragleave', handleDragLeave);
+            dropZone.addEventListener('drop', handleDrop);
+
+            // File input
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Controls
+            document.querySelectorAll('input[name="background"], input[name="scaling"]').forEach(input => {
+                input.addEventListener('change', handleSettingsChange);
+            });
+
+            // Download
+            downloadBtn.addEventListener('click', downloadResult);
+
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                document.addEventListener(eventName, preventDefaults, false);
+            });
+        }
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function handleDragOver(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            if (!dropZone.contains(e.relatedTarget)) {
+                dropZone.classList.remove('dragover');
+            }
+        }
+
+        function handleDrop(e) {
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        }
+
+        function processFile(file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please select an image file.', 'error');
+                return;
+            }
+
+            // Validate file size (10MB limit)
+            if (file.size > 10 * 1024 * 1024) {
+                showStatus('File is too large. Maximum size: 10MB', 'error');
+                return;
+            }
+
+            currentFile = file;
+            showOriginalPreview();
+            convertImage();
+        }
+
+        function showOriginalPreview() {
+            const url = URL.createObjectURL(currentFile);
+            originalPreview.src = url;
+            originalPreview.onload = () => {
+                const { naturalWidth, naturalHeight } = originalPreview;
+                const sizeKB = (currentFile.size / 1024).toFixed(1);
+                originalInfo.textContent = `${naturalWidth}×${naturalHeight} • ${sizeKB} KB`;
+                URL.revokeObjectURL(url);
+            };
+
+            // Show sections
+            previewSection.classList.remove('hidden');
+            controlsSection.classList.remove('hidden');
+            
+            // Reset result
+            resultPreview.classList.add('hidden');
+            downloadSection.classList.add('hidden');
+            resultInfo.textContent = 'Processing...';
+        }
+
+        async function convertImage() {
+            try {
+                showStatus('Converting image to 100×100 PNG...', 'processing');
+                dropZone.classList.add('processing');
+
+                const formData = new FormData();
+                formData.append('file', currentFile);
+                formData.append('background', getSelectedBackground());
+                formData.append('scaling', getSelectedScaling());
+
+                const response = await fetch(`${SERVER_URL}/convert/image-to-icon`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Server error: ${response.status}`);
+                }
+
+                convertedBlob = await response.blob();
+                showResult();
+                showStatus('✅ Image converted successfully!', 'success');
+
+            } catch (error) {
+                console.error('Conversion error:', error);
+                showStatus(`❌ Conversion failed: ${error.message}`, 'error');
+            } finally {
+                dropZone.classList.remove('processing');
+            }
+        }
+
+        function showResult() {
+            const url = URL.createObjectURL(convertedBlob);
+            resultPreview.src = url;
+            resultPreview.classList.remove('hidden');
+            
+            const sizeKB = (convertedBlob.size / 1024).toFixed(1);
+            resultInfo.textContent = `100×100 PNG • ${sizeKB} KB`;
+            
+            downloadSection.classList.remove('hidden');
+        }
+
+        function handleSettingsChange() {
+            if (currentFile) {
+                convertImage();
+            }
+        }
+
+        function getSelectedBackground() {
+            return document.querySelector('input[name="background"]:checked').value;
+        }
+
+        function getSelectedScaling() {
+            return document.querySelector('input[name="scaling"]:checked').value;
+        }
+
+        function downloadResult() {
+            if (!convertedBlob) return;
+
+            const url = URL.createObjectURL(convertedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            const originalName = currentFile.name.replace(/\.[^/.]+$/, '');
+            a.download = `${originalName}_100x100.png`;
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus('✅ Download started!', 'success');
+        }
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.classList.remove('hidden');
+
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    status.classList.add('hidden');
+                }, 5000);
+            }
+        }
+
+        // Add spinner to processing status
+        function showProcessingStatus() {
+            status.innerHTML = '<span class="spinner"></span>Converting image...';
+            status.className = 'status processing';
+            status.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
