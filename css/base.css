@@ -26,7 +26,8 @@ body {
     padding: 40px;
     box-shadow: 0 20px 40px var(--shadow-color);
     text-align: center;
-    max-width: 600px;
+    max-width: 50vw;
+    min-width: 600px;
     width: 100%;
     transition: all 0.3s ease;
 }
@@ -74,7 +75,8 @@ h1 {
 
 /* Page-specific styles */
 .landing-page .container {
-    max-width: 800px;
+    max-width: 60vw;
+    min-width: 800px;
     padding: 50px 40px;
 }
 
@@ -90,11 +92,13 @@ h1 {
 }
 
 .converter-page .container {
-    max-width: 500px;
+    max-width: 50vw;
+    min-width: 600px;
 }
 
 .converter-page.gif-converter .container {
-    max-width: 600px;
+    max-width: 65vw;
+    min-width: 800px;
 }
 
 /* Animations */

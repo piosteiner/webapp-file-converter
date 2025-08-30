@@ -262,17 +262,20 @@ function convertToStickerBlob(file) {
             
             img.onload = () => {
                 try {
-                    // Calculate new dimensions (longest side = 512px)
+                    // Calculate new dimensions (longest side = exactly 512px)
                     let newWidth = img.width;
                     let newHeight = img.height;
                     
+                    // Find the longest side and scale to exactly 512px
                     if (newWidth > newHeight) {
-                        if (newWidth > 512) {
+                        // Width is the longest side
+                        if (newWidth !== 512) {
                             newHeight = Math.round(newHeight * (512 / newWidth));
                             newWidth = 512;
                         }
                     } else {
-                        if (newHeight > 512) {
+                        // Height is the longest side (or equal)
+                        if (newHeight !== 512) {
                             newWidth = Math.round(newWidth * (512 / newHeight));
                             newHeight = 512;
                         }

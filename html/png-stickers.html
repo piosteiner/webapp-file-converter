@@ -11,10 +11,10 @@
     <link rel="stylesheet" href="../css/styles.css">
     <script src="../js/theme-switcher.js"></script>
 </head>
-<body class="converter-page png-sticker">
+<body class="converter-page png-stickers">
     <div class="container">
         <h1>🏷️ PNG Sticker Converter</h1>
-        <p class="subtitle">Convert any image to PNG sticker format (max 512px, preserves aspect ratio)</p>
+        <p class="subtitle">Convert any image to PNG sticker format (exactly 512px longest side, preserves aspect ratio)</p>
         
         <div class="nav-links">
             <a href="../index.html">← Home</a>
@@ -26,7 +26,7 @@
         <div class="drop-zone" id="dropZone">
             <div class="drop-icon">🏷️</div>
             <div class="drop-text">Drop your image file(s) here</div>
-            <div class="drop-subtext">or click to browse • Auto-converts and downloads • Supports multiple files</div>
+            <div class="drop-subtext">or click to browse • Auto-resizes to 512px • Supports multiple files</div>
         </div>
 
         <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
