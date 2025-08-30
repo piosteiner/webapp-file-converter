@@ -3,10 +3,13 @@
  */
 
 .converters {
+    margin-bottom: 40px;
+}
+
+.converter-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 25px;
-    margin-bottom: 40px;
 }
 
 .converter-card {
@@ -85,6 +88,17 @@
     font-weight: 400;
 }
 
+.converter-description a {
+    color: var(--text-accent);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.converter-description a:hover {
+    color: var(--text-accent-hover);
+    text-decoration: underline;
+}
+
 .features {
     background: var(--features-bg);
     border-radius: 15px;
@@ -128,19 +142,63 @@
     transition: color 0.3s ease;
 }
 
-.footer {
-    color: var(--text-tertiary);
-    font-size: 0.9em;
-    margin-top: 20px;
+.use-cases {
+    background: var(--features-bg);
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 30px;
+    transition: background 0.3s ease;
+}
+
+.use-cases h3 {
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    font-size: 1.3em;
+    font-weight: 600;
     transition: color 0.3s ease;
 }
 
-.footer a {
+.use-cases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.use-case {
+    padding: 0;
+}
+
+.use-case h4 {
+    color: var(--text-primary);
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 8px;
+    transition: color 0.3s ease;
+}
+
+.use-case p {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    line-height: 1.4;
+    margin: 0;
+    transition: color 0.3s ease;
+}
+
+footer {
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.9em;
+    margin-top: 20px;
+    padding: 20px 0;
+    transition: color 0.3s ease;
+}
+
+footer a {
     color: var(--text-accent);
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
-.footer a:hover {
+footer a:hover {
     color: var(--text-accent-hover);
 }
