@@ -414,15 +414,6 @@ h1 {
     align-items: stretch;
 }
 
-/* Ensure only converter-card elements participate in grid */
-.converter-grid > :not(.converter-card) {
-    display: none;
-}
-
-.converter-grid .converter-card {
-    display: flex;
-}
-
 .converter-card {
     background: var(--card-bg);
     border-radius: 15px;
@@ -437,14 +428,6 @@ h1 {
     display: flex;
     flex-direction: column;
     min-height: 300px;
-    contain: layout style;
-    isolation: isolate;
-}
-
-/* Ensure all children stay within the card */
-.converter-card * {
-    position: relative;
-    z-index: 1;
 }
 
 .converter-card::before {
@@ -508,32 +491,19 @@ h1 {
     z-index: 1;
     transition: color 0.3s ease;
     font-weight: 400;
-    display: block;
-    width: 100%;
     flex: 1;
 }
 
-.converter-description br {
-    line-height: 1.2;
-    display: inline;
-}
-
 .converter-description strong {
-    display: inline;
     font-weight: 600;
-    margin-top: 0;
-}
-
-.converter-description * {
-    box-sizing: border-box;
-    display: inline;
+    margin-top: 10px;
+    display: inline-block;
 }
 
 .converter-description a {
     color: var(--text-accent);
     text-decoration: none;
     transition: color 0.3s ease;
-    display: inline;
 }
 
 .converter-description a:hover {
