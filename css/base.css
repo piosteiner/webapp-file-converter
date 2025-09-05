@@ -53,10 +53,134 @@ h1 {
     transition: color 0.3s ease;
 }
 
+/* ========================================
+   ENHANCED NAVIGATION SYSTEM
+   ======================================== */
+
 .nav-links {
-    margin-bottom: 30px;
+    margin-bottom: 40px;
+    padding: 0;
 }
 
+/* Modern Navigation Grid */
+.nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 40px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: var(--features-bg);
+    border: 1px solid var(--radio-border);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+    position: relative;
+    min-height: 20px;
+}
+
+.nav-item:hover {
+    background: var(--radio-hover-bg);
+    border-color: var(--text-accent);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px var(--shadow-color);
+}
+
+.nav-item.active {
+    background: var(--text-accent);
+    color: white;
+    border-color: var(--text-accent);
+    font-weight: 600;
+}
+
+.nav-item.active:hover {
+    background: var(--text-accent-hover);
+    border-color: var(--text-accent-hover);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.nav-item .nav-icon {
+    font-size: 1.2em;
+    min-width: 22px;
+    text-align: center;
+}
+
+.nav-item .nav-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+/* Home navigation item special styling */
+.nav-item.home {
+    background: var(--controls-bg);
+    border-color: var(--text-accent);
+    font-weight: 600;
+}
+
+.nav-item.home:hover {
+    background: var(--text-accent);
+    color: white;
+}
+
+/* Responsive Navigation */
+@media (max-width: 768px) {
+    .nav-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+    }
+    
+    .nav-item {
+        padding: 12px 14px;
+        font-size: 0.85em;
+    }
+    
+    .nav-item .nav-icon {
+        font-size: 1.1em;
+        min-width: 20px;
+    }
+    
+    .nav-item .nav-text {
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    
+    .nav-item {
+        justify-content: center;
+        text-align: center;
+        padding: 10px 8px;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .nav-item .nav-icon {
+        font-size: 1.3em;
+    }
+    
+    .nav-item .nav-text {
+        font-size: 0.8em;
+        line-height: 1.2;
+    }
+}
+
+/* Legacy nav-links support (fallback) */
 .nav-links a {
     color: var(--text-accent);
     text-decoration: none;
