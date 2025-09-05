@@ -510,25 +510,30 @@ h1 {
     font-weight: 400;
     display: block;
     width: 100%;
+    flex: 1;
 }
 
 .converter-description br {
     line-height: 1.2;
+    display: inline;
 }
 
 .converter-description strong {
-    display: block;
-    margin-top: 15px;
+    display: inline;
+    font-weight: 600;
+    margin-top: 0;
 }
 
 .converter-description * {
     box-sizing: border-box;
+    display: inline;
 }
 
 .converter-description a {
     color: var(--text-accent);
     text-decoration: none;
     transition: color 0.3s ease;
+    display: inline;
 }
 
 .converter-description a:hover {
