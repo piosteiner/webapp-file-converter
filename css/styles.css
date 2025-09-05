@@ -414,7 +414,12 @@ h1 {
     align-items: stretch;
 }
 
-.converter-grid > * {
+/* Ensure only converter-card elements participate in grid */
+.converter-grid > :not(.converter-card) {
+    display: none;
+}
+
+.converter-grid .converter-card {
     display: flex;
 }
 
@@ -434,6 +439,12 @@ h1 {
     min-height: 300px;
     contain: layout style;
     isolation: isolate;
+}
+
+/* Ensure all children stay within the card */
+.converter-card * {
+    position: relative;
+    z-index: 1;
 }
 
 .converter-card::before {
