@@ -294,9 +294,6 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     padding: 20px;
     transition: background 0.3s ease;
 }
@@ -408,19 +405,20 @@ h1 {
 }
 
 .converter-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 25px;
+    align-items: stretch;
+}
+
+/* Explicitly prevent any nested elements from becoming grid items */
+.converter-grid * * {
+    display: initial !important;
+    grid-column: unset !important;
+    grid-row: unset !important;
 }
 
 .converter-card {
-    flex: 1 1 calc(50% - 12.5px);
-    min-width: 300px;
-}
-
-.converter-card {
-    flex: 1 1 calc(50% - 12.5px);
-    min-width: 300px;
     background: var(--card-bg);
     border-radius: 15px;
     padding: 35px 25px;
@@ -434,7 +432,6 @@ h1 {
     display: flex;
     flex-direction: column;
     min-height: 300px;
-    box-sizing: border-box;
 }
 
 .converter-card::before {
@@ -499,6 +496,8 @@ h1 {
     transition: color 0.3s ease;
     font-weight: 400;
     flex: 1;
+    contain: layout style;
+    isolation: isolate;
 }
 
 .converter-description strong {
