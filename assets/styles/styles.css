@@ -4,22 +4,22 @@
  */
 
 /* Core Variables & Themes */
-@import url('./variables.css');
+@import url('./core/variables.css');
 
 /* Base Layout & Typography */
-@import url('./base.css');
+@import url('./core/base.css');
 
 /* Reusable Components */
-@import url('./components.css');
+@import url('./components/components.css');
 
 /* Landing Page Styles */
-@import url('./landing.css');
+@import url('./pages/landing.css');
 
 /* Theme Switcher Component */
-@import url('./theme-switcher.css');
+@import url('./themes/theme-switcher.css');
 
 /* GIF Editor Specific Styles */
-@import url('./gif-editor.css');
+@import url('./pages/gif-editor.css');
 
 /* Responsive Design */
-@import url('./responsive.css');
+@import url('./core/responsive.css');
