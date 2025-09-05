@@ -43,6 +43,18 @@
     --mode-btn-active-bg: #667eea;
     --mode-btn-active-text: white;
     
+    /* Radio Controls */
+    --radio-bg: rgba(102, 126, 234, 0.05);
+    --radio-border: rgba(102, 126, 234, 0.2);
+    --radio-hover-bg: rgba(102, 126, 234, 0.1);
+    --radio-checked-text: #667eea;
+    
+    /* Control Sections */
+    --controls-section-bg: rgba(255, 255, 255, 0.8);
+    --controls-section-border: rgba(102, 126, 234, 0.15);
+    --tech-specs-bg: rgba(102, 126, 234, 0.03);
+    --tech-specs-border: rgba(102, 126, 234, 0.1);
+    
     /* Status Messages */
     --success-bg: rgba(76, 175, 80, 0.1);
     --success-text: #4CAF50;
@@ -138,6 +150,18 @@
     --mode-btn-active-bg: #81a1f4;
     --mode-btn-active-text: #1a202c;
     
+    /* Radio Controls */
+    --radio-bg: rgba(129, 161, 244, 0.1);
+    --radio-border: rgba(129, 161, 244, 0.25);
+    --radio-hover-bg: rgba(129, 161, 244, 0.15);
+    --radio-checked-text: #81a1f4;
+    
+    /* Control Sections */
+    --controls-section-bg: rgba(45, 55, 72, 0.8);
+    --controls-section-border: rgba(129, 161, 244, 0.25);
+    --tech-specs-bg: rgba(129, 161, 244, 0.08);
+    --tech-specs-border: rgba(129, 161, 244, 0.2);
+    
     /* Status Messages */
     --success-bg: rgba(104, 211, 145, 0.15);
     --success-text: #68d391;
@@ -229,6 +253,14 @@
         --mode-btn-active-border: #81a1f4;
         --mode-btn-active-bg: #81a1f4;
         --mode-btn-active-text: #1a202c;
+        --radio-bg: rgba(129, 161, 244, 0.1);
+        --radio-border: rgba(129, 161, 244, 0.25);
+        --radio-hover-bg: rgba(129, 161, 244, 0.15);
+        --radio-checked-text: #81a1f4;
+        --controls-section-bg: rgba(45, 55, 72, 0.8);
+        --controls-section-border: rgba(129, 161, 244, 0.25);
+        --tech-specs-bg: rgba(129, 161, 244, 0.08);
+        --tech-specs-border: rgba(129, 161, 244, 0.2);
         --success-bg: rgba(104, 211, 145, 0.15);
         --success-text: #68d391;
         --success-border: rgba(104, 211, 145, 0.3);
