@@ -411,6 +411,7 @@ h1 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 25px;
+    align-items: stretch;
 }
 
 .converter-card {
@@ -424,6 +425,9 @@ h1 {
     position: relative;
     overflow: hidden;
     transform-style: preserve-3d;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
 }
 
 .converter-card::before {
@@ -487,6 +491,15 @@ h1 {
     z-index: 1;
     transition: color 0.3s ease;
     font-weight: 400;
+}
+
+.converter-description br {
+    line-height: 1.2;
+}
+
+.converter-description strong {
+    display: block;
+    margin-top: 15px;
 }
 
 .converter-description a {
