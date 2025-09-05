@@ -298,54 +298,5 @@
   <script src="../js/file_handler.js"></script>
   <script src="../js/gif_editor_main.js"></script>
 
-  <!-- (Optional) Guard: only boot editor JS if markup exists -->
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      if (!document.querySelector('.gif-editor-container')) {
-        console.warn('[gif-converter] Editor markup missing; editor JS will not run.');
-      }
-    });
-  </script>
-
-  <script>
-  // TEMPORARY DEBUG SCRIPT - Remove after testing
-  window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      const editor = window.gifEditor;
-      const loopBtn = document.getElementById('loopBtn');
-      const pingPongCheckbox = document.getElementById('pingPongMode');
-      
-      console.log('🔍 === DEBUG INFO ===');
-      console.log('Editor exists:', !!editor);
-      console.log('Loop button exists:', !!loopBtn);
-      console.log('Loop button text:', loopBtn?.textContent);
-      console.log('Loop button active class:', loopBtn?.classList.contains('active'));
-      console.log('Video controller exists:', !!editor?.videoController);
-      console.log('Video controller loopInSelection:', editor?.videoController?.loopInSelection);
-      console.log('Ping-pong checkbox checked:', pingPongCheckbox?.checked);
-      console.log('Editor ping-pong mode:', editor?.pingPongMode);
-      
-      if (loopBtn) {
-        loopBtn.addEventListener('click', () => {
-          console.log('🔄 Loop button clicked!');
-          setTimeout(() => {
-            console.log('After click - loopInSelection:', editor?.videoController?.loopInSelection);
-            console.log('After click - button text:', loopBtn.textContent);
-          }, 100);
-        });
-      }
-      
-      if (pingPongCheckbox) {
-        pingPongCheckbox.addEventListener('change', () => {
-          console.log('🔄 Ping-pong checkbox changed to:', pingPongCheckbox.checked);
-          setTimeout(() => {
-            console.log('After change - editor.pingPongMode:', editor?.pingPongMode);
-          }, 100);
-        });
-      }
-    }, 2000);
-  });
-  </script>
-
 </body>
 </html>

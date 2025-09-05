@@ -518,3 +518,33 @@
     animation: spin 1s linear infinite;
     margin-right: 8px;
 }
+
+/* ========================================
+   PNG ICONS CONVERTER COMPONENTS
+   ======================================== */
+
+/* PNG Icons page-specific styles */
+.result-preview {
+    width: 100px;
+    height: 100px;
+    border: 2px solid var(--drop-zone-border);
+    border-radius: 8px;
+    background: 
+        linear-gradient(45deg, var(--features-bg) 25%, transparent 25%), 
+        linear-gradient(-45deg, var(--features-bg) 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, var(--features-bg) 75%), 
+        linear-gradient(-45deg, transparent 75%, var(--features-bg) 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    position: relative;
+}
+
+.result-image {
+    max-width: 100px;
+    max-height: 100px;
+    border-radius: 4px;
+}
