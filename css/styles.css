@@ -414,8 +414,8 @@ h1 {
     align-items: stretch;
 }
 
-.converter-grid > .converter-card {
-    grid-column: span 1;
+.converter-grid > * {
+    display: flex;
 }
 
 .converter-card {
@@ -508,14 +508,6 @@ h1 {
 .converter-description strong {
     display: block;
     margin-top: 15px;
-}
-
-.converter-description .resources-section {
-    margin-top: 15px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(102, 126, 234, 0.1);
-    display: block;
-    width: 100%;
 }
 
 .converter-description * {
