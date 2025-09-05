@@ -408,13 +408,19 @@ h1 {
 }
 
 .converter-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-wrap: wrap;
     gap: 25px;
-    align-items: stretch;
 }
 
 .converter-card {
+    flex: 1 1 calc(50% - 12.5px);
+    min-width: 300px;
+}
+
+.converter-card {
+    flex: 1 1 calc(50% - 12.5px);
+    min-width: 300px;
     background: var(--card-bg);
     border-radius: 15px;
     padding: 35px 25px;
@@ -428,6 +434,7 @@ h1 {
     display: flex;
     flex-direction: column;
     min-height: 300px;
+    box-sizing: border-box;
 }
 
 .converter-card::before {
