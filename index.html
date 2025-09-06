@@ -15,8 +15,13 @@
     <meta name="apple-mobile-web-app-title" content="File Converter">
     <link rel="stylesheet" href="assets/styles/styles.css">
     <script src="assets/scripts/core/logger.js"></script>
+    <script src="assets/scripts/core/error-handler.js"></script>
+    <script src="assets/scripts/core/performance-monitor.js"></script>
+    <script src="assets/scripts/core/icon-generator.js"></script>
+    <script src="assets/scripts/core/file-validator.js"></script>
     <script src="assets/scripts/core/theme-switcher.js"></script>
     <script src="assets/scripts/core/pwa-manager.js"></script>
+    <script src="assets/scripts/core/pwa-install-guide.js"></script>
 </head>
 <body class="landing-page">
     <div class="container">
@@ -111,6 +116,41 @@
                     <div class="use-case">
                         <h4>🎬 Content Creation</h4>
                         <p>Edit GIF animations, create loops, and convert to modern formats for social media.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PWA Features Section -->
+            <section class="pwa-info-section">
+                <div class="pwa-info-card">
+                    <div class="pwa-info-header">
+                        <h3>📱 Install as Mobile App</h3>
+                        <button class="pwa-info-btn" onclick="pwaInstallGuide.showGuide()">
+                            Learn How
+                        </button>
+                    </div>
+                    <p class="pwa-info-description">
+                        Get the best experience by installing our converter as an app on your phone or computer. 
+                        It works offline, loads faster, and feels just like a native app!
+                    </p>
+                    
+                    <div class="pwa-benefits-grid">
+                        <div class="pwa-benefit">
+                            <span class="pwa-benefit-icon">⚡</span>
+                            <span>Lightning Fast</span>
+                        </div>
+                        <div class="pwa-benefit">
+                            <span class="pwa-benefit-icon">📱</span>
+                            <span>Works Offline</span>
+                        </div>
+                        <div class="pwa-benefit">
+                            <span class="pwa-benefit-icon">🚀</span>
+                            <span>App-like Feel</span>
+                        </div>
+                        <div class="pwa-benefit">
+                            <span class="pwa-benefit-icon">💾</span>
+                            <span>Less Storage</span>
+                        </div>
                     </div>
                 </div>
             </section>

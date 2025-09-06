@@ -25,7 +25,7 @@ class TimelineController {
     initialize() {
         this.setupTimelineEventListeners();
         this.setupGlobalMouseListeners();
-        console.log('TimelineController initialized');
+        logger.debug('TimelineController initialized');
     }
     
     setupTimelineEventListeners() {

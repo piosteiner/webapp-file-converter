@@ -21,7 +21,7 @@ class UIManager {
         // Setup ping-pong listener
         this.statusManager.setupPingPongListener();
         
-        console.log('UIManager initialized with modular architecture');
+        logger.debug('UIManager initialized with modular architecture');
     }
     
     // Delegate methods to appropriate sub-modules
@@ -136,6 +136,6 @@ class UIManager {
         this.timeFormatter.cleanup();
         this.styleManager.cleanup();
         
-        console.log('UIManager cleanup completed');
+        logger.debug('UIManager cleanup completed');
     }
 }
