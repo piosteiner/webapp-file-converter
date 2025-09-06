@@ -8,7 +8,7 @@ class StyleManager {
     initialize() {
         this.addHandleStyles();
         this.addTimeInputStyles();
-        console.log('StyleManager initialized');
+        logger.debug('StyleManager initialized');
     }
     
     // Add CSS for improved handle styling
@@ -118,6 +118,6 @@ class StyleManager {
     
     // Cleanup
     cleanup() {
-        console.log('StyleManager cleanup completed');
+        logger.debug('StyleManager cleanup completed');
     }
 }

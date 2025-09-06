@@ -8,7 +8,7 @@ class FileHandler {
     initialize() {
         this.setupDragAndDrop();
         this.setupFileClickHandlers();
-        console.log('FileHandler initialized');
+        logger.debug('FileHandler initialized');
     }
     
     setupFileClickHandlers() {
@@ -99,7 +99,7 @@ class FileHandler {
             return;
         }
 
-        console.log('Starting GIF upload process...');
+        logger.info('Starting GIF upload process...');
         this.editor.isProcessing = true;
         
         // Store the original file immediately
@@ -129,7 +129,7 @@ class FileHandler {
             );
 
         } catch (err) {
-            console.error('Error loading GIF:', err);
+            logger.error('Error loading GIF:', err);
             this.editor.uiManager.showStatus(`❌ Failed to load preview: ${err.message}`, 'error');
             this.cleanupVideoState();
         } finally {
@@ -277,7 +277,7 @@ class FileHandler {
             );
             
         } catch (err) {
-            console.error('Export error:', err);
+            logger.error('Export error:', err);
             this.editor.uiManager.showStatus(`❌ Export failed: ${err.message}`, 'error');
         } finally {
             this.editor.isProcessing = false;
@@ -312,7 +312,7 @@ class FileHandler {
 
         if (!res.ok) {
             const errorText = await res.text();
-            console.error('Export failed:', errorText);
+            logger.error('Export failed:', errorText);
             throw new Error(`Server error: ${res.status}`);
         }
 
@@ -400,7 +400,7 @@ class FileHandler {
             this.editor.previewVideoUrl = null;
         }
         
-        console.log('FileHandler cleanup completed');
+        logger.debug('FileHandler cleanup completed');
     }
 }
 

@@ -30,7 +30,7 @@ function initializePngConverter() {
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             const files = Array.from(e.target.files);
-            console.log('Selected files:', files.length);
+            logger.debug('Selected files:', files.length);
             processFiles(files);
         }
     });
@@ -59,7 +59,7 @@ function setupDragDrop(dropZone) {
         
         if (!isProcessing) {
             const files = Array.from(e.dataTransfer.files);
-            console.log('Dropped files:', files.length);
+            logger.debug('Dropped files:', files.length);
             if (files.length > 0) {
                 processFiles(files);
             }
@@ -67,29 +67,52 @@ function setupDragDrop(dropZone) {
     });
 }
 
-// NEW: Main file processing function that handles both single and multiple files
+// NEW: Main file processing function with enhanced validation
 async function processFiles(files) {
     if (isProcessing) {
         addMessage('❌ Please wait for current conversion to complete.', 'error');
         return;
     }
 
-    console.log(`Starting processing of ${files.length} files`);
+    logger.debug(`Starting processing of ${files.length} files`);
+    
+    // Validate files first
+    const validation = fileValidator.validateFiles(files, ['png'], 50 * 1024 * 1024);
+    
+    // Show validation summary
+    if (validation.summary.total > 0) {
+        const summary = fileValidator.createBatchSummary(validation);
+        addMessage(summary, validation.summary.invalid > 0 ? 'error' : 'info');
+        
+        // Show individual file errors
+        validation.invalidFiles.forEach(({ file, validation: fileValidation }) => {
+            const errorMsg = fileValidator.createErrorMessage(fileValidation);
+            if (errorMsg) {
+                addMessage(errorMsg, 'error');
+            }
+        });
+        
+        // If no valid files, stop processing
+        if (validation.validFiles.length === 0) {
+            return;
+        }
+    }
+    
     isProcessing = true;
 
     const dropZone = document.getElementById('dropZone');
     dropZone.classList.add('processing');
 
-    // Filter to PNG files only
-    const pngFiles = files.filter(file => file.type.includes('png'));
+    // Use only valid files
+    const pngFiles = validation.validFiles.map(item => item.file);
     
     if (pngFiles.length === 0) {
-        finishProcessing('❌ No PNG files found. Please select PNG files only.', 'error', []);
+        finishProcessing('❌ No valid PNG files found. Please select PNG files only.', 'error', []);
         return;
     }
 
     if (pngFiles.length !== files.length) {
-        console.log(`Filtered to ${pngFiles.length} PNG files from ${files.length} total files`);
+        logger.debug(`Filtered to ${pngFiles.length} valid PNG files from ${files.length} total files`);
     }
 
     let successCount = 0;
@@ -106,7 +129,7 @@ async function processFiles(files) {
     // Process each file
     for (let i = 0; i < pngFiles.length; i++) {
         const file = pngFiles[i];
-        console.log(`Processing file ${i + 1}/${pngFiles.length}: ${file.name}`);
+        logger.debug(`Processing file ${i + 1}/${pngFiles.length}: ${file.name}`);
         
         // Update progress
         updateProgress(pngFiles.length, i + 1, file.name);
@@ -147,7 +170,7 @@ async function processFiles(files) {
                     converted: outputFilename
                 });
                 
-                console.log(`Successfully converted: ${file.name}`);
+                logger.debug(`Successfully converted: ${file.name}`);
             } else {
                 errorCount++;
                 console.error(`Failed to convert: ${file.name}`);

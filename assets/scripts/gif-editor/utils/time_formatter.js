@@ -11,7 +11,7 @@ class TimeFormatter {
     
     initialize() {
         this.createNumericInputs();
-        console.log('TimeFormatter initialized');
+        logger.debug('TimeFormatter initialized');
     }
     
     // Create numeric time inputs for precise control
@@ -163,7 +163,7 @@ class TimeFormatter {
             this.editor.previewVideo.currentTime = type === 'start' ? newStart : newEnd;
         }
         
-        console.log(`Time input changed: ${type} = ${time.toFixed(2)}s`);
+        logger.debug(`Time input changed: ${type} = ${time.toFixed(2)}s`);
     }
     
     // Focus time input for quick editing
@@ -233,6 +233,6 @@ class TimeFormatter {
         this.startTimeInput = null;
         this.endTimeInput = null;
         
-        console.log('TimeFormatter cleanup completed');
+        logger.debug('TimeFormatter cleanup completed');
     }
 }
