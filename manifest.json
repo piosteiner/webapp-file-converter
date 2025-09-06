@@ -2,7 +2,7 @@
   "name": "File Converter & Editor",
   "short_name": "FileConverter",
   "description": "Professional file conversion and editing tools for images and animations. PNG to JPEG, GIF to WebM, and advanced editing capabilities.",
-  "start_url": "/pages/index.html",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#667eea",
   "theme_color": "#667eea",

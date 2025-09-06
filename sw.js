@@ -9,7 +9,7 @@ const STATIC_CACHE = 'static-cache-v1.0.0';
 // Assets to cache for offline functionality
 const STATIC_ASSETS = [
   '/',
-  '/pages/index.html',
+  '/index.html',
   '/pages/converters/png-to-jpeg.html',
   '/pages/converters/gif-to-webm.html',
   '/pages/converters/png-icons.html',
@@ -108,7 +108,7 @@ self.addEventListener('fetch', (event) => {
           .catch(() => {
             // If offline and no cache, return a custom offline page
             if (event.request.destination === 'document') {
-              return caches.match('/pages/index.html');
+              return caches.match('/index.html');
             }
           });
       })
