@@ -25,10 +25,7 @@
     gap: 20px;
 }
 
-.converter-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-}
+/* .converter-grid now uses auto-fit in landing.css - no override needed */
 
 .features-grid {
     display: grid;
@@ -109,10 +106,7 @@
         gap: 30px;
     }
     
-    .converter-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 30px;
-    }
+    /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
     .features-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -188,10 +182,7 @@
         gap: 40px;
     }
     
-    .converter-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 60px;  /* Larger gap for better space utilization */
-    }
+    /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
     .features-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -264,10 +255,7 @@
         gap: 50px;
     }
     
-    .converter-grid {
-        grid-template-columns: repeat(3, 1fr);  /* 3 columns for large screens */
-        gap: 40px;
-    }
+    /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
     .features-grid {
         grid-template-columns: repeat(4, 1fr);
@@ -332,10 +320,7 @@
         gap: 60px;
     }
     
-    .converter-grid {
-        grid-template-columns: repeat(3, 1fr);  /* 3 columns for extra large screens */
-        gap: 50px;
-    }
+    /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
     .features-grid {
         grid-template-columns: repeat(4, 1fr);
