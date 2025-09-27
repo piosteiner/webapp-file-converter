@@ -97,7 +97,9 @@
         font-size: 3em;
     }
     
-    /* .converters section no longer needs grid layout - child .converter-grid handles it */
+    .converter-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
     
     /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
