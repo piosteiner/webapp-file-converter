@@ -15,6 +15,9 @@ class PWAInstallGuide {
      * Initialize the PWA install guide
      */
     initialize() {
+        // TEMPORARILY DISABLED - PWA install guide completely disabled
+        // Uncomment the code below to re-enable the PWA installation guide
+        /*
         if (this.initialized) return;
 
         this.createGuideModal();
@@ -23,6 +26,11 @@ class PWAInstallGuide {
 
         this.initialized = true;
         logger.debug('PWA Install Guide initialized');
+        */
+        
+        // Mark as initialized to prevent multiple calls
+        this.initialized = true;
+        logger.debug('PWA Install Guide disabled');
     }
 
     /**
@@ -629,6 +637,10 @@ class PWAInstallGuide {
      * Show the installation guide
      */
     showGuide() {
+        // TEMPORARILY DISABLED - Guide showing is disabled
+        return;
+        
+        /*
         const modal = document.getElementById('pwa-install-guide');
         if (modal) {
             modal.classList.remove('hidden');
@@ -638,6 +650,7 @@ class PWAInstallGuide {
             logger.info('PWA installation guide shown');
             performanceMonitor.trackEvent('pwa_guide_shown', { platform: this.platform });
         }
+        */
     }
 
     /**
