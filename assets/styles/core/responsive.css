@@ -190,7 +190,7 @@
     
     .converter-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 40px;
+        gap: 60px;  /* Larger gap for better space utilization */
     }
     
     .features-grid {
@@ -265,8 +265,8 @@
     }
     
     .converter-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 50px;
+        grid-template-columns: repeat(3, 1fr);  /* 3 columns for large screens */
+        gap: 40px;
     }
     
     .features-grid {
@@ -333,8 +333,8 @@
     }
     
     .converter-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 60px;
+        grid-template-columns: repeat(3, 1fr);  /* 3 columns for extra large screens */
+        gap: 50px;
     }
     
     .features-grid {
