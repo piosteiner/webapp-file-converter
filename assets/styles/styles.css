@@ -25,5 +25,8 @@
 /* Image Splitter Specific Styles */
 @import url('./pages/image-splitter.css');
 
+/* Grid Generator Specific Styles */
+@import url('./pages/grid-generator.css');
+
 /* Responsive Design */
 @import url('./core/responsive.css');
