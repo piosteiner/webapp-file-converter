@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle Map Splitter - Print Large Images on A4</title>
+    <meta name="description" content="Split large battle maps and images into printable A4-sized tiles. Perfect for tabletop RPG maps, posters, and large format printing.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
+    <link rel="stylesheet" href="../../assets/styles/styles.css">
+    <script src="../../assets/scripts/core/logger.js"></script>
+    <script src="../../assets/scripts/core/error-handler.js"></script>
+    <script src="../../assets/scripts/core/performance-monitor.js"></script>
+    <script src="../../assets/scripts/core/file-validator.js"></script>
+    <script src="../../assets/scripts/core/theme-switcher.js"></script>
+    <script src="../../assets/scripts/core/pwa-manager.js"></script>
+    <script src="../../assets/scripts/core/pwa-install-guide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="../../assets/scripts/converters/image-splitter.js"></script>
+</head>
+<body class="converter-page image-splitter">
+    <div class="container">
+        <h1>🗺️ Battle Map Splitter</h1>
+        <p class="subtitle">
+            Split your large battle maps and images into A4-sized tiles for easy printing.<br>
+            Perfect for tabletop RPG maps, large posters, and any image that needs to be printed in sections.
+            <br><br>
+            <strong>📖 How it works:</strong> Choose a grid layout (2×3 or 3×3), upload your image, and get perfectly sized tiles with print margins.
+        </p>
+
+        <nav class="nav-links">
+            <div class="nav-grid">
+                <a href="../../index.html" class="nav-item home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="png-to-jpeg.html" class="nav-item">
+                    <span class="nav-icon">📸</span>
+                    <span class="nav-text">PNG → JPEG</span>
+                </a>
+                <a href="png-icons.html" class="nav-item">
+                    <span class="nav-icon">🖼️</span>
+                    <span class="nav-text">100×100 PNG</span>
+                </a>
+                <a href="png-stickers.html" class="nav-item">
+                    <span class="nav-icon">🏷️</span>
+                    <span class="nav-text">PNG Stickers</span>
+                </a>
+                <a href="gif-to-webm.html" class="nav-item">
+                    <span class="nav-icon">🎬</span>
+                    <span class="nav-text">GIF → WebM</span>
+                </a>
+                <span class="nav-item active">
+                    <span class="nav-icon">🗺️</span>
+                    <span class="nav-text">Map Splitter</span>
+                </span>
+            </div>
+        </nav>
+
+        <!-- Grid Selection Section -->
+        <section class="grid-selection-section">
+            <h3>Choose Your Grid Layout</h3>
+            <div class="grid-options">
+                <div class="grid-option" data-grid="2x3">
+                    <div class="grid-preview">
+                        <div class="grid-visual grid-2x3">
+                            <div class="grid-cell">1</div>
+                            <div class="grid-cell">2</div>
+                            <div class="grid-cell">3</div>
+                            <div class="grid-cell">4</div>
+                            <div class="grid-cell">5</div>
+                            <div class="grid-cell">6</div>
+                        </div>
+                    </div>
+                    <div class="grid-info">
+                        <h4>2×3 Grid (6 tiles)</h4>
+                        <p><strong>Input:</strong> 3366 × 3276 px</p>
+                        <p><strong>Size:</strong> 570 × 554 mm</p>
+                        <p><strong>Perfect for:</strong> Standard battle maps</p>
+                    </div>
+                </div>
+                
+                <div class="grid-option" data-grid="3x3">
+                    <div class="grid-preview">
+                        <div class="grid-visual grid-3x3">
+                            <div class="grid-cell">1</div>
+                            <div class="grid-cell">2</div>
+                            <div class="grid-cell">3</div>
+                            <div class="grid-cell">4</div>
+                            <div class="grid-cell">5</div>
+                            <div class="grid-cell">6</div>
+                            <div class="grid-cell">7</div>
+                            <div class="grid-cell">8</div>
+                            <div class="grid-cell">9</div>
+                        </div>
+                    </div>
+                    <div class="grid-info">
+                        <h4>3×3 Grid (9 tiles)</h4>
+                        <p><strong>Input:</strong> 3366 × 4911 px</p>
+                        <p><strong>Size:</strong> 570 × 831 mm</p>
+                        <p><strong>Perfect for:</strong> Large dungeon maps</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- File Upload Section -->
+        <section class="upload-section" style="display: none;">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-content">
+                    <div class="upload-icon">🗺️</div>
+                    <h3>Upload Your Battle Map</h3>
+                    <p id="uploadDescription">Upload your battle map image</p>
+                    <p>Supported formats: PNG, JPG, JPEG</p>
+                    <input type="file" id="fileInput" accept="image/*" hidden>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        Choose File
+                    </button>
+                    <button class="back-btn" id="backToGridBtn">← Change Grid Layout</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Preview Section -->
+        <section class="preview-section" id="previewSection" style="display: none;">
+            <h3>Preview & Split Settings</h3>
+            <div class="preview-container">
+                <div class="image-preview">
+                    <canvas id="previewCanvas"></canvas>
+                    <div class="grid-overlay" id="gridOverlay"></div>
+                </div>
+                <div class="settings-panel">
+                    <div class="image-info" id="imageInfo"></div>
+                    <div class="split-info">
+                        <h4>Split Configuration</h4>
+                        <p id="gridConfig"><strong>Grid:</strong> 2 rows × 3 columns (6 tiles)</p>
+                        <p><strong>Tile Size:</strong> 190mm × 277mm (1122 × 1638 pixels)</p>
+                        <p><strong>Margins:</strong> 1cm white border around each tile</p>
+                    </div>
+                    <div class="export-options">
+                        <h4>Export Options</h4>
+                        <label>
+                            <input type="radio" name="format" value="png" checked>
+                            PNG Images
+                        </label>
+                        <label>
+                            <input type="radio" name="format" value="pdf">
+                            PDF Files
+                        </label>
+                        <button class="export-btn" id="exportBtn">
+                            Export Tiles
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Export Progress -->
+        <section class="export-section" id="exportSection" style="display: none;">
+            <h3>Exporting Tiles...</h3>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0 tiles exported</div>
+            </div>
+            <div class="download-links" id="downloadLinks"></div>
+        </section>
+
+        <div class="tech-specs">
+            <h3>🔧 Perfect for Procreate Users</h3>
+            <div class="procreate-guide">
+                <div class="guide-section">
+                    <h4>For Standard Battle Maps (2×3 Grid):</h4>
+                    <ol>
+                        <li>Set canvas size to <strong>570mm × 554mm</strong> at <strong>150 DPI</strong></li>
+                        <li>Create your battle map</li>
+                        <li>Export as PNG or JPG</li>
+                        <li>Upload to web app and select <strong>2×3 Grid</strong></li>
+                        <li>Print 6 tiles and assemble your battle map!</li>
+                    </ol>
+                </div>
+                <div class="guide-section">
+                    <h4>For Large Dungeon Maps (3×3 Grid):</h4>
+                    <ol>
+                        <li>Set canvas size to <strong>570mm × 831mm</strong> at <strong>150 DPI</strong></li>
+                        <li>Create your large dungeon or outdoor map</li>
+                        <li>Export as PNG or JPG</li>
+                        <li>Upload to web app and select <strong>3×3 Grid</strong></li>
+                        <li>Print 9 tiles and assemble your massive battle map!</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <h4>📋 Technical Specifications</h4>
+            <ul>
+                <li><strong>2×3 Grid:</strong> 6 tiles for standard battle maps (3366 × 3276 pixels)</li>
+                <li><strong>3×3 Grid:</strong> 9 tiles for large dungeon maps (3366 × 4911 pixels)</li>
+                <li><strong>Output:</strong> Each tile is 190mm × 277mm (fits A4 with margins)</li>
+                <li><strong>Resolution:</strong> 1122 × 1638 pixels at 150 DPI</li>
+                <li><strong>Margins:</strong> 1cm white border around each tile for clean printing</li>
+                <li><strong>Formats:</strong> PNG images or PDF files</li>
+                <li><strong>Browser-based:</strong> No server uploads, works offline</li>
+            </ul>
+            
+            <h4>💡 Tips for Best Results</h4>
+            <ul>
+                <li>Use the recommended Procreate settings for optimal tile sizing</li>
+                <li>Check image dimensions before exporting from Procreate</li>
+                <li>Print at 100% scale - do not allow your printer to resize</li>
+                <li>Use high-quality paper for better results</li>
+                <li>Test print one tile first to verify scaling</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -22,5 +22,8 @@
 /* GIF Editor Specific Styles */
 @import url('./pages/gif-editor.css');
 
+/* Image Splitter Specific Styles */
+@import url('./pages/image-splitter.css');
+
 /* Responsive Design */
 @import url('./core/responsive.css');
