@@ -15,22 +15,15 @@ class PWAInstallGuide {
      * Initialize the PWA install guide
      */
     initialize() {
-        // TEMPORARILY DISABLED - PWA install guide completely disabled
-        // Uncomment the code below to re-enable the PWA installation guide
-        /*
         if (this.initialized) return;
 
         this.createGuideModal();
         this.setupTriggers();
-        this.checkFirstVisit();
+        // DISABLED: Auto-show on first visit
+        // this.checkFirstVisit();
 
         this.initialized = true;
-        logger.debug('PWA Install Guide initialized');
-        */
-        
-        // Mark as initialized to prevent multiple calls
-        this.initialized = true;
-        logger.debug('PWA Install Guide disabled');
+        logger.debug('PWA Install Guide initialized (auto-show disabled)');
     }
 
     /**
@@ -346,7 +339,7 @@ class PWAInstallGuide {
             }
             
             .pwa-guide-close:hover {
-                background: var(--hover-bg, #f7fafc);
+                background: var(--controls-section-bg, #f7fafc);
                 color: var(--text-primary, #1a202c);
             }
             
@@ -360,13 +353,14 @@ class PWAInstallGuide {
                 gap: 16px;
                 margin-bottom: 24px;
                 padding: 16px;
-                background: var(--accent-bg, #f0f7ff);
+                background: var(--controls-section-bg, #f0f7ff);
                 border-radius: 12px;
+                border: 1px solid var(--controls-section-border, rgba(102, 126, 234, 0.15));
             }
             
             .platform-icon {
                 font-size: 32px;
-                background: var(--primary-color, #667eea);
+                background: var(--text-accent, #667eea);
                 border-radius: 50%;
                 width: 56px;
                 height: 56px;
@@ -431,7 +425,7 @@ class PWAInstallGuide {
                 position: absolute;
                 left: -40px;
                 top: 0;
-                background: var(--primary-color, #667eea);
+                background: var(--text-accent, #667eea);
                 color: white;
                 width: 24px;
                 height: 24px;
@@ -446,9 +440,9 @@ class PWAInstallGuide {
             .step-content {
                 margin-left: -16px;
                 padding: 12px 16px;
-                background: var(--step-bg, #f8fafc);
+                background: var(--controls-section-bg, #f8fafc);
                 border-radius: 8px;
-                border-left: 3px solid var(--primary-color, #667eea);
+                border-left: 3px solid var(--text-accent, #667eea);
             }
             
             .step-text {
@@ -483,21 +477,22 @@ class PWAInstallGuide {
             }
             
             .pwa-guide-btn.secondary {
-                background: var(--secondary-bg, #e2e8f0);
+                background: var(--controls-section-bg, #e2e8f0);
                 color: var(--text-secondary, #4a5568);
+                border: 1px solid var(--controls-section-border, rgba(102, 126, 234, 0.15));
             }
             
             .pwa-guide-btn.secondary:hover {
-                background: var(--secondary-hover, #cbd5e0);
+                background: var(--radio-hover-bg, #cbd5e0);
             }
             
             .pwa-guide-btn.primary {
-                background: var(--primary-color, #667eea);
+                background: var(--text-accent, #667eea);
                 color: white;
             }
             
             .pwa-guide-btn.primary:hover {
-                background: var(--primary-hover, #5a67d8);
+                background: var(--text-accent-hover, #5a67d8);
                 transform: translateY(-1px);
             }
             
@@ -574,12 +569,12 @@ class PWAInstallGuide {
         // Add install button to header
         this.addInstallButton();
         
-        // Show guide on first visit (if not installed)
-        setTimeout(() => {
-            if (!this.isAppInstalled() && !this.hasSeenGuide()) {
-                this.showGuide();
-            }
-        }, 3000);
+        // DISABLED: Automatic popup on first visit
+        // setTimeout(() => {
+        //     if (!this.isAppInstalled() && !this.hasSeenGuide()) {
+        //         this.showGuide();
+        //     }
+        // }, 3000);
     }
 
     /**
@@ -637,10 +632,6 @@ class PWAInstallGuide {
      * Show the installation guide
      */
     showGuide() {
-        // TEMPORARILY DISABLED - Guide showing is disabled
-        return;
-        
-        /*
         const modal = document.getElementById('pwa-install-guide');
         if (modal) {
             modal.classList.remove('hidden');
@@ -650,7 +641,6 @@ class PWAInstallGuide {
             logger.info('PWA installation guide shown');
             performanceMonitor.trackEvent('pwa_guide_shown', { platform: this.platform });
         }
-        */
     }
 
     /**

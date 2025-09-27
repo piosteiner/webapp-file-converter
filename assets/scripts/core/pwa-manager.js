@@ -66,9 +66,6 @@ class PWAManager {
     }
 
     showInstallButton() {
-        // TEMPORARILY DISABLED - Install button hidden
-        // Uncomment the code below to re-enable the PWA install button
-        /*
         // Create install button if it doesn't exist
         if (!document.getElementById('pwa-install-btn')) {
             const installBtn = document.createElement('button');
@@ -94,7 +91,6 @@ class PWAManager {
             // Add CSS styles
             this.addInstallButtonStyles();
         }
-        */
     }
 
     hideInstallButton() {
