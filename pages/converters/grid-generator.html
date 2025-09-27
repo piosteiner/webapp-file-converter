@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25mm Grid Generator - File Converter</title>
+    <meta name="description" content="Generate precise 25mm grids for battle maps and tabletop gaming. Perfect for Procreate and other digital art tools.">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../../assets/styles/core/variables.css">
+    <link rel="stylesheet" href="../../assets/styles/core/base.css">
+    <link rel="stylesheet" href="../../assets/styles/core/responsive.css">
+    <link rel="stylesheet" href="../../assets/styles/components/components.css">
+    <link rel="stylesheet" href="../../assets/styles/pages/grid-generator.css">
+    <link rel="stylesheet" href="../../assets/styles/components/pwa-info.css">
+    <link rel="stylesheet" href="../../assets/styles/themes/theme-switcher.css">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="../../manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../../assets/icons/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../assets/icons/apple-touch-icon.png">
+</head>
+<body class="converter-page grid-generator">
+    <!-- Theme Switcher -->
+    <div class="theme-toggle-container">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+            <span class="theme-icon">🌙</span>
+        </button>
+        <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="light">
+                <span class="theme-icon">☀️</span>
+                <span class="theme-label">Light</span>
+            </button>
+            <button class="theme-option" data-theme="dark">
+                <span class="theme-icon">🌙</span>
+                <span class="theme-label">Dark</span>
+            </button>
+            <button class="theme-option" data-theme="system">
+                <span class="theme-icon">💻</span>
+                <span class="theme-label">System</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- PWA Install Info -->
+    <div id="pwaInstallInfo" class="pwa-install-info">
+        <div class="pwa-install-content">
+            <button class="pwa-close-btn" id="pwaCloseBtn">×</button>
+            <div class="pwa-install-icon">📱</div>
+            <h3>Install File Converter App</h3>
+            <p>Add this app to your home screen for quick access to all conversion tools!</p>
+            <div class="pwa-install-buttons">
+                <button id="pwaInstallBtn" class="pwa-install-btn">Install App</button>
+                <button id="pwaLaterBtn" class="pwa-later-btn">Maybe Later</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="converter-nav">
+            <a href="../../index.html" class="nav-home">🏠 Home</a>
+            <div class="nav-links">
+                <a href="gif-to-webm.html" class="nav-link">🎬 GIF to WebM</a>
+                <a href="png-to-jpeg.html" class="nav-link">🖼️ PNG to JPEG</a>
+                <a href="png-icons.html" class="nav-link">📱 PNG Icons</a>
+                <a href="png-stickers.html" class="nav-link">🏷️ PNG Stickers</a>
+                <a href="image-splitter.html" class="nav-link">🗺️ Image Splitter</a>
+                <a href="grid-generator.html" class="nav-link active">⚏ Grid Generator</a>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <header class="converter-header">
+            <div class="converter-icon">⚏</div>
+            <h1>25mm Grid Generator</h1>
+            <p class="converter-desc">Generate precise 25mm grids for battle maps, perfect for tabletop gaming and Procreate artwork</p>
+        </header>
+
+        <!-- Grid Configuration Section -->
+        <section class="grid-config-section" id="gridConfigSection">
+            <h3>🎯 Grid Configuration</h3>
+            
+            <div class="config-grid">
+                <!-- Canvas Size Configuration -->
+                <div class="config-group">
+                    <h4>📐 Canvas Size</h4>
+                    
+                    <!-- Unit Selector -->
+                    <div class="unit-selector">
+                        <label class="radio-option">
+                            <input type="radio" name="unit" value="pixels" checked>
+                            <span>Pixels</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="unit" value="mm">
+                            <span>Millimeters</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Size Inputs -->
+                    <div class="size-inputs">
+                        <div class="input-group">
+                            <label for="canvasWidth">Width:</label>
+                            <input type="number" id="canvasWidth" value="3366" min="100" max="10000">
+                            <span class="unit-label" id="widthUnit">px</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="canvasHeight">Height:</label>
+                            <input type="number" id="canvasHeight" value="4911" min="100" max="10000">
+                            <span class="unit-label" id="heightUnit">px</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Preset Sizes -->
+                    <div class="preset-sizes">
+                        <h5>Quick Presets:</h5>
+                        <div class="preset-buttons">
+                            <button class="preset-btn" data-width="3366" data-height="3276">2×3 Battle Map</button>
+                            <button class="preset-btn" data-width="3366" data-height="4911">3×3 Battle Map</button>
+                            <button class="preset-btn" data-width="2480" data-height="3508">A4 Portrait</button>
+                            <button class="preset-btn" data-width="3508" data-height="2480">A4 Landscape</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Grid Appearance -->
+                <div class="config-group">
+                    <h4>🎨 Grid Appearance</h4>
+                    
+                    <div class="appearance-controls">
+                        <div class="input-group">
+                            <label for="gridColor">Grid Color:</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="gridColor" value="#000000">
+                                <span class="color-preview" id="colorPreview"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="lineThickness">Line Thickness:</label>
+                            <input type="range" id="lineThickness" min="1" max="10" value="2">
+                            <span class="range-value" id="thicknessValue">2px</span>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="gridOpacity">Opacity:</label>
+                            <input type="range" id="gridOpacity" min="10" max="100" value="80">
+                            <span class="range-value" id="opacityValue">80%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Major Grid Lines -->
+                    <div class="major-grid-options">
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="enableMajorGrid" checked>
+                            <span>Enable Major Grid Lines (every 5 squares)</span>
+                        </label>
+                        <div class="major-grid-controls" id="majorGridControls">
+                            <div class="input-group">
+                                <label for="majorLineThickness">Major Line Thickness:</label>
+                                <input type="range" id="majorLineThickness" min="2" max="15" value="4">
+                                <span class="range-value" id="majorThicknessValue">4px</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Generation Controls -->
+            <div class="generation-controls">
+                <button id="generateGridBtn" class="primary-btn">
+                    ⚏ Generate 25mm Grid
+                </button>
+                <button id="previewToggleBtn" class="secondary-btn">
+                    👁️ Toggle Preview
+                </button>
+            </div>
+        </section>
+
+        <!-- Preview Section -->
+        <section class="preview-section" id="previewSection" style="display: none;">
+            <h3>📋 Grid Preview</h3>
+            
+            <div class="preview-container">
+                <div class="canvas-container">
+                    <canvas id="gridCanvas"></canvas>
+                    <div class="canvas-info" id="canvasInfo"></div>
+                </div>
+                
+                <div class="preview-controls">
+                    <div class="zoom-controls">
+                        <button id="zoomOutBtn">🔍-</button>
+                        <span id="zoomLevel">100%</span>
+                        <button id="zoomInBtn">🔍+</button>
+                        <button id="fitToScreenBtn">📱 Fit Screen</button>
+                    </div>
+                    
+                    <div class="grid-info" id="gridInfo">
+                        <h4>Grid Information</h4>
+                        <p id="gridDimensions"></p>
+                        <p id="gridSquares"></p>
+                        <p id="physicalSize"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Download Section -->
+        <section class="download-section" id="downloadSection" style="display: none;">
+            <h3>💾 Download Grid</h3>
+            
+            <div class="download-options">
+                <div class="download-info">
+                    <p><strong>📏 Grid Specifications:</strong></p>
+                    <ul id="downloadSpecs">
+                        <li>25mm grid spacing (147.6 pixels at 150 DPI)</li>
+                        <li>Transparent background</li>
+                        <li>Perfect for Procreate import</li>
+                        <li>Ready for battle map creation</li>
+                    </ul>
+                </div>
+                
+                <div class="download-buttons">
+                    <button id="downloadPNGBtn" class="download-btn">
+                        📁 Download PNG Grid
+                    </button>
+                    <button id="regenerateBtn" class="secondary-btn">
+                        🔄 Generate New Grid
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Instructions -->
+        <section class="instructions-section">
+            <h3>📚 How to Use</h3>
+            
+            <div class="instructions-grid">
+                <div class="instruction-card">
+                    <h4>1️⃣ Set Canvas Size</h4>
+                    <p>Enter your desired canvas dimensions in pixels or millimeters. Use the presets for common battle map sizes.</p>
+                </div>
+                
+                <div class="instruction-card">
+                    <h4>2️⃣ Customize Appearance</h4>
+                    <p>Choose grid color, line thickness, and opacity. Enable major grid lines for easier counting.</p>
+                </div>
+                
+                <div class="instruction-card">
+                    <h4>3️⃣ Generate & Preview</h4>
+                    <p>Click generate to create your grid. Use the preview to check the appearance and zoom to inspect details.</p>
+                </div>
+                
+                <div class="instruction-card">
+                    <h4>4️⃣ Download & Import</h4>
+                    <p>Download the PNG with transparent background. Import into Procreate or your preferred art software.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Procreate Guide -->
+        <section class="procreate-guide">
+            <h3>🎨 Procreate Integration Guide</h3>
+            
+            <div class="guide-steps">
+                <div class="guide-section">
+                    <h4>📱 Importing into Procreate</h4>
+                    <ol>
+                        <li>Download the generated grid PNG</li>
+                        <li>Open Procreate and create a <strong>new canvas</strong></li>
+                        <li>Set canvas size to match your generated grid</li>
+                        <li>Set <strong>DPI to 150</strong> for perfect scale</li>
+                        <li>Add a new layer and <strong>import your grid</strong></li>
+                        <li>Set grid layer to 60-70% opacity</li>
+                        <li>Lock the grid layer to prevent accidental edits</li>
+                    </ol>
+                </div>
+                
+                <div class="guide-section">
+                    <h4>⚔️ Battle Map Creation Tips</h4>
+                    <ol>
+                        <li>Keep the grid on the <strong>top layer</strong> for reference</li>
+                        <li>Draw terrain and details on <strong>separate layers</strong> below</li>
+                        <li>Each grid square = <strong>5 feet</strong> in most RPG systems</li>
+                        <li>Use the <strong>Image Splitter tool</strong> after completion</li>
+                        <li>Print tiles at <strong>150 DPI</strong> for perfect 25mm scale</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/scripts/core/theme-switcher.js"></script>
+    <script src="../../assets/scripts/core/pwa-manager.js"></script>
+    <script src="../../assets/scripts/converters/grid-generator.js"></script>
+</body>
+</html>
