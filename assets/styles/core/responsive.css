@@ -19,11 +19,7 @@
     padding: 25px 15px;
 }
 
-.converters {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-}
+/* .converters section no longer needs grid layout - child .converter-grid handles it */
 
 /* .converter-grid now uses auto-fit in landing.css - no override needed */
 
@@ -101,10 +97,7 @@
         font-size: 3em;
     }
     
-    .converters {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 30px;
-    }
+    /* .converters section no longer needs grid layout - child .converter-grid handles it */
     
     /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
@@ -177,10 +170,7 @@
         font-size: 3.5em;
     }
     
-    .converters {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 40px;
-    }
+    /* .converters section no longer needs grid layout - child .converter-grid handles it */
     
     /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
@@ -250,10 +240,7 @@
         font-size: 4em;
     }
     
-    .converters {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 50px;
-    }
+    /* .converters section no longer needs grid layout - child .converter-grid handles it */
     
     /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
@@ -315,10 +302,7 @@
         font-size: 4.5em;
     }
     
-    .converters {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 60px;
-    }
+    /* .converters section no longer needs grid layout - child .converter-grid handles it */
     
     /* .converter-grid now uses auto-fit in landing.css - no override needed */
     
