@@ -170,12 +170,12 @@
 
 @media (min-width: 992px) {
     .container {
-        max-width: var(--container-lg);
+        max-width: 80vw;  /* Use viewport width instead of fixed pixels */
         padding: 50px 40px;
     }
     
     .landing-page .container {
-        max-width: var(--container-lg);
+        max-width: 80vw;  /* Use viewport width instead of fixed pixels */
         padding: 60px 50px;
     }
     
@@ -246,12 +246,12 @@
 
 @media (min-width: 1200px) {
     .container {
-        max-width: var(--container-xl);
+        max-width: 80vw;  /* Use viewport width instead of fixed pixels */
         padding: 60px 50px;
     }
     
     .landing-page .container {
-        max-width: var(--container-xl);
+        max-width: 80vw;  /* Use viewport width instead of fixed pixels */
         padding: 80px 60px;
     }
     
@@ -314,12 +314,12 @@
 
 @media (min-width: 1400px) {
     .container {
-        max-width: var(--container-xxl);
+        max-width: 80vw;  /* Use viewport width instead of fixed pixels */
         padding: 80px 60px;
     }
     
     .landing-page .container {
-        max-width: var(--container-xxl);
+        max-width: 80vw;  /* Use viewport width instead of fixed pixels */
         padding: 100px 80px;
     }
     

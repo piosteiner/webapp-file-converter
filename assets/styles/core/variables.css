@@ -14,9 +14,9 @@
     /* Container max-widths for each breakpoint */
     --container-sm: 540px;
     --container-md: 720px;
-    --container-lg: 960px;
-    --container-xl: 1140px;
-    --container-xxl: 1320px;
+    --container-lg: 1100px;    /* Increased from 960px */
+    --container-xl: 1300px;    /* Increased from 1140px */
+    --container-xxl: 1500px;   /* Increased from 1320px */
     
     /* Grid system */
     --grid-columns: 12;
