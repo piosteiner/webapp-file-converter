@@ -116,6 +116,9 @@ class BattleMapSplitter {
             return;
         }
 
+        // Store the current file for size calculations
+        this.currentFile = file;
+
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
@@ -138,27 +141,64 @@ class BattleMapSplitter {
         const imageInfo = document.getElementById('imageInfo');
         const previewSection = document.getElementById('previewSection');
 
+        // Get actual file size from the original file if available
+        const actualFileSize = this.currentFile ? this.currentFile.size : this.getImageFileSize();
+
         // Update image info
         imageInfo.innerHTML = `
             <h4>Image Information</h4>
             <p><strong>Dimensions:</strong> ${img.width} × ${img.height} pixels</p>
             <p><strong>Expected:</strong> ${config.expectedWidth} × ${config.expectedHeight} pixels</p>
-            <p><strong>File Size:</strong> ${this.formatFileSize(this.getImageFileSize())}</p>
+            <p><strong>File Size:</strong> ${this.formatFileSize(actualFileSize)}</p>
         `;
 
         // Update grid configuration display
         document.getElementById('gridConfig').innerHTML = 
             `<strong>Grid:</strong> ${config.description}`;
 
-        // Check if dimensions are close to expected (allow some tolerance)
-        const widthTolerance = Math.abs(img.width - config.expectedWidth) / config.expectedWidth;
-        const heightTolerance = Math.abs(img.height - config.expectedHeight) / config.expectedHeight;
+        // Orientation-agnostic dimension validation
+        const imageWidth = Math.max(img.width, img.height);  // Longest side
+        const imageHeight = Math.min(img.width, img.height); // Shortest side
+        const expectedWidth = Math.max(config.expectedWidth, config.expectedHeight);  // Longest side
+        const expectedHeight = Math.min(config.expectedWidth, config.expectedHeight); // Shortest side
 
-        if (widthTolerance > 0.1 || heightTolerance > 0.1) {
+        // Calculate tolerances
+        const widthTolerance = Math.abs(imageWidth - expectedWidth) / expectedWidth;
+        const heightTolerance = Math.abs(imageHeight - expectedHeight) / expectedHeight;
+        const maxTolerance = Math.max(widthTolerance, heightTolerance);
+
+        // Tiered warning system
+        let warningMessage = '';
+        let warningColor = '';
+        let warningBg = '';
+        let warningIcon = '';
+
+        if (maxTolerance <= 0.02) {
+            // Perfect or very close (≤2% difference) - no warning
+        } else if (maxTolerance <= 0.05) {
+            // Minor deviation (2-5% difference) - info message
+            warningColor = '#3182ce';
+            warningBg = '#bee3f8';
+            warningIcon = 'ℹ️';
+            warningMessage = `Minor size difference detected. Your image will work perfectly, but dimensions are slightly different from the optimal ${config.sizeMM} size.`;
+        } else if (maxTolerance <= 0.15) {
+            // Moderate deviation (5-15% difference) - warning
+            warningColor = '#d69e2e';
+            warningBg = '#faf089';
+            warningIcon = '⚠️';
+            warningMessage = `Image dimensions differ from the expected ${config.sizeMM} size. The app will work, but print results may not be perfectly optimized for A4.`;
+        } else {
+            // Large deviation (>15% difference) - strong warning
+            warningColor = '#e53e3e';
+            warningBg = '#fed7d7';
+            warningIcon = '❗';
+            warningMessage = `Significant size mismatch! Expected ${config.sizeMM}, but got different dimensions. Tiles may not fit properly on A4 pages. Consider resizing your image.`;
+        }
+
+        if (warningMessage) {
             imageInfo.innerHTML += `
-                <div style="color: #e53e3e; margin-top: 10px; padding: 10px; background: #fed7d7; border-radius: 5px;">
-                    <strong>⚠️ Warning:</strong> Image dimensions don't match the expected ${config.sizeMM} size. 
-                    The app will still work, but tiles may not be optimal for A4 printing.
+                <div style="color: ${warningColor}; margin-top: 10px; padding: 10px; background: ${warningBg}; border-radius: 5px; border-left: 4px solid ${warningColor};">
+                    <strong>${warningIcon} ${maxTolerance <= 0.05 ? 'Info:' : maxTolerance <= 0.15 ? 'Warning:' : 'Important:'}</strong> ${warningMessage}
                 </div>
             `;
         }
@@ -373,7 +413,12 @@ class BattleMapSplitter {
     }
 
     getImageFileSize() {
-        // This is an approximation since we can't get the exact file size from canvas
+        // Try to get actual file size first, fall back to canvas estimation if needed
+        if (this.currentFile) {
+            return this.currentFile.size;
+        }
+        
+        // Fallback to canvas estimation only if no file available
         if (!this.originalImage) return 0;
         return this.originalImage.width * this.originalImage.height * 4; // 4 bytes per pixel (RGBA)
     }

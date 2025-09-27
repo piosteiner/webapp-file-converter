@@ -379,13 +379,220 @@
 
 .guide-section strong {
     color: var(--text-accent);
+    margin: 0 0.15em;
 }
 
 /* ========================================
    IMAGE SPLITTER - RESPONSIVE DESIGN
    ======================================== */
 
-@media (max-width: 768px) {
+/* Small Devices - Landscape Phones (≥576px) */
+@media (min-width: 576px) {
+    .grid-options {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    
+    .upload-area {
+        padding: 60px 40px;
+    }
+    
+    .upload-icon {
+        font-size: 4.5rem;
+    }
+    
+    .download-links {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    
+    .procreate-guide {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+}
+
+/* Medium Devices - Tablets (≥768px) */
+@media (min-width: 768px) {
+    .grid-selection-section {
+        padding: 40px;
+    }
+    
+    .grid-options {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 40px;
+    }
+    
+    .grid-option {
+        padding: 30px;
+    }
+    
+    .upload-area {
+        padding: 70px 50px;
+    }
+    
+    .upload-icon {
+        font-size: 5rem;
+    }
+    
+    .preview-container {
+        grid-template-columns: 2fr 1fr;
+        gap: 40px;
+    }
+    
+    .settings-panel {
+        position: sticky;
+        top: 20px;
+    }
+    
+    .export-section {
+        padding: 40px;
+    }
+    
+    .download-links {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+    
+    .procreate-guide {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+    }
+}
+
+/* Large Devices - Desktops (≥992px) */
+@media (min-width: 992px) {
+    .grid-selection-section {
+        padding: 50px;
+    }
+    
+    .grid-options {
+        gap: 50px;
+    }
+    
+    .grid-option {
+        padding: 35px;
+        transition: all 0.3s ease, transform 0.3s ease;
+    }
+    
+    .grid-option:hover {
+        transform: translateY(-8px) scale(1.02);
+    }
+    
+    .upload-area {
+        padding: 80px 60px;
+    }
+    
+    .upload-icon {
+        font-size: 5.5rem;
+    }
+    
+    .preview-container {
+        gap: 50px;
+    }
+    
+    .settings-panel {
+        padding: 30px;
+    }
+    
+    .export-section {
+        padding: 50px;
+    }
+    
+    .download-links {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 25px;
+    }
+    
+    .procreate-guide {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 35px;
+    }
+    
+    /* Enhanced hover effects */
+    .download-link:hover {
+        transform: translateY(-3px) scale(1.02);
+    }
+    
+    .export-btn:hover {
+        transform: translateY(-3px);
+    }
+}
+
+/* Extra Large Devices - Large Desktops (≥1200px) */
+@media (min-width: 1200px) {
+    .grid-selection-section {
+        padding: 60px;
+        margin-bottom: 40px;
+    }
+    
+    .grid-options {
+        gap: 60px;
+    }
+    
+    .grid-option {
+        padding: 40px;
+    }
+    
+    .upload-area {
+        padding: 100px 80px;
+    }
+    
+    .upload-icon {
+        font-size: 6rem;
+    }
+    
+    .preview-container {
+        gap: 60px;
+    }
+    
+    .settings-panel {
+        padding: 35px;
+        min-width: 350px;
+    }
+    
+    .export-section {
+        padding: 60px;
+        margin-bottom: 40px;
+    }
+    
+    .download-links {
+        gap: 30px;
+    }
+    
+    .procreate-guide {
+        gap: 40px;
+    }
+}
+
+/* Extra Extra Large Devices (≥1400px) */
+@media (min-width: 1400px) {
+    .grid-selection-section,
+    .export-section {
+        padding: 80px;
+    }
+    
+    .grid-options {
+        gap: 80px;
+    }
+    
+    .grid-option {
+        padding: 50px;
+    }
+    
+    .upload-area {
+        padding: 120px 100px;
+    }
+    
+    .preview-container {
+        gap: 80px;
+    }
+    
+    .settings-panel {
+        padding: 40px;
+        min-width: 400px;
+    }
+}
+
+/* Legacy Mobile Support */
+@media (max-width: 575px) {
     .grid-options {
         grid-template-columns: 1fr;
         gap: 20px;
@@ -410,6 +617,7 @@
     
     .settings-panel {
         order: -1;
+        padding: 20px;
     }
     
     .back-btn {
@@ -425,19 +633,13 @@
     .download-links {
         grid-template-columns: 1fr;
     }
-}
-
-@media (max-width: 480px) {
+    
     .grid-visual {
         transform: scale(0.8);
     }
     
     .upload-content h3 {
         font-size: 1.3rem;
-    }
-    
-    .settings-panel {
-        padding: 20px;
     }
     
     .guide-section {

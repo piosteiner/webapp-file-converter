@@ -2,6 +2,29 @@
  * CSS Variables & Theme System
  */
 
+/* Responsive Breakpoints */
+:root {
+    /* Standard responsive breakpoints (mobile-first) */
+    --breakpoint-sm: 576px;    /* Small devices (landscape phones) */
+    --breakpoint-md: 768px;    /* Medium devices (tablets) */
+    --breakpoint-lg: 992px;    /* Large devices (desktops) */
+    --breakpoint-xl: 1200px;   /* Extra large devices (large desktops) */
+    --breakpoint-xxl: 1400px;  /* Extra extra large devices */
+    
+    /* Container max-widths for each breakpoint */
+    --container-sm: 540px;
+    --container-md: 720px;
+    --container-lg: 960px;
+    --container-xl: 1140px;
+    --container-xxl: 1320px;
+    
+    /* Grid system */
+    --grid-columns: 12;
+    --grid-gutter-width: 1.5rem;
+    --grid-gutter-x: calc(var(--grid-gutter-width) * 0.5);
+    --grid-gutter-y: 0;
+}
+
 /* Light mode colors (default) */
 :root,
 :root.theme-light {

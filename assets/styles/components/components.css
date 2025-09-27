@@ -245,7 +245,293 @@
 }
 
 /* Responsive Helpers */
-@media (max-width: 768px) {
+
+/* Small Devices - Landscape Phones (≥576px) */
+@media (min-width: 576px) {
+    .features-grid {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 25px;
+    }
+    
+    .feature-card {
+        padding: 25px;
+    }
+    
+    .feature-icon {
+        font-size: 3rem;
+    }
+    
+    .upload-section,
+    .preview-section {
+        padding: 35px;
+    }
+    
+    .drop-zone {
+        padding: 70px 40px;
+    }
+    
+    .drop-icon {
+        font-size: 4.5em;
+    }
+    
+    .controls {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+    }
+    
+    .download-btn,
+    .primary-btn {
+        padding: 16px 35px;
+        font-size: 1.15rem;
+    }
+}
+
+/* Medium Devices - Tablets (≥768px) */
+@media (min-width: 768px) {
+    .features-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+    }
+    
+    .feature-card {
+        padding: 30px;
+        transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px var(--shadow-color);
+    }
+    
+    .upload-section,
+    .preview-section {
+        padding: 40px;
+    }
+    
+    .drop-zone {
+        padding: 80px 50px;
+    }
+    
+    .drop-icon {
+        font-size: 5em;
+    }
+    
+    .preview-grid {
+        grid-template-columns: 1fr auto 1fr;
+        gap: 30px;
+    }
+
+    .arrow {
+        font-size: 2.5rem;
+        transform: none;
+    }
+
+    .controls {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 30px;
+    }
+    
+    .control-group {
+        padding: 25px;
+    }
+    
+    .tech-specs {
+        padding: 30px;
+    }
+    
+    .radio-group {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .radio-option {
+        flex: 1;
+        min-width: 150px;
+        justify-content: center;
+    }
+}
+
+/* Large Devices - Desktops (≥992px) */
+@media (min-width: 992px) {
+    .features-grid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 35px;
+    }
+    
+    .feature-card {
+        padding: 35px;
+    }
+    
+    .feature-icon {
+        font-size: 3.5rem;
+    }
+    
+    .upload-section,
+    .preview-section {
+        padding: 50px;
+    }
+    
+    .drop-zone {
+        padding: 100px 60px;
+    }
+    
+    .drop-icon {
+        font-size: 6em;
+    }
+    
+    .preview-grid {
+        gap: 40px;
+        max-width: 800px;
+    }
+    
+    .arrow {
+        font-size: 3rem;
+    }
+    
+    .controls {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 35px;
+        padding: 30px;
+    }
+    
+    .control-group {
+        padding: 30px;
+    }
+    
+    .download-btn,
+    .primary-btn {
+        padding: 18px 40px;
+        font-size: 1.2rem;
+    }
+    
+    .tech-specs {
+        padding: 35px;
+    }
+    
+    .radio-option {
+        padding: 15px;
+        min-width: 180px;
+    }
+    
+    .mode-selector {
+        gap: 15px;
+    }
+    
+    .mode-btn {
+        padding: 10px 20px;
+    }
+}
+
+/* Extra Large Devices - Large Desktops (≥1200px) */
+@media (min-width: 1200px) {
+    .features-grid {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 40px;
+    }
+    
+    .feature-card {
+        padding: 40px;
+    }
+    
+    .upload-section,
+    .preview-section {
+        padding: 60px;
+    }
+    
+    .drop-zone {
+        padding: 120px 80px;
+    }
+    
+    .drop-icon {
+        font-size: 7em;
+    }
+    
+    .preview-grid {
+        gap: 50px;
+        max-width: 1000px;
+    }
+    
+    .arrow {
+        font-size: 3.5rem;
+    }
+    
+    .controls {
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 40px;
+        padding: 40px;
+    }
+    
+    .control-group {
+        padding: 35px;
+    }
+    
+    .download-btn,
+    .primary-btn {
+        padding: 20px 45px;
+        font-size: 1.25rem;
+    }
+    
+    .tech-specs {
+        padding: 40px;
+    }
+    
+    .radio-option {
+        min-width: 200px;
+        padding: 18px;
+    }
+}
+
+/* Extra Extra Large Devices (≥1400px) */
+@media (min-width: 1400px) {
+    .features-grid {
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        gap: 50px;
+    }
+    
+    .feature-card {
+        padding: 50px;
+    }
+    
+    .upload-section,
+    .preview-section {
+        padding: 80px;
+    }
+    
+    .drop-zone {
+        padding: 150px 100px;
+    }
+    
+    .drop-icon {
+        font-size: 8em;
+    }
+    
+    .preview-grid {
+        gap: 60px;
+        max-width: 1200px;
+    }
+    
+    .arrow {
+        font-size: 4rem;
+    }
+    
+    .controls {
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 50px;
+        padding: 50px;
+    }
+    
+    .control-group {
+        padding: 40px;
+    }
+    
+    .tech-specs {
+        padding: 50px;
+    }
+}
+
+/* Legacy Mobile Support */
+@media (max-width: 575px) {
     .preview-grid {
         grid-template-columns: 1fr;
         gap: 20px;
@@ -253,14 +539,57 @@
 
     .arrow {
         transform: rotate(90deg);
+        font-size: 2rem;
     }
 
     .controls {
         grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 20px;
     }
 
     .features-grid {
         grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .feature-card {
+        padding: 20px;
+    }
+    
+    .upload-section,
+    .preview-section {
+        padding: 25px;
+    }
+    
+    .drop-zone {
+        padding: 40px 20px;
+    }
+    
+    .drop-icon {
+        font-size: 3em;
+    }
+    
+    .radio-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .radio-option {
+        min-width: auto;
+        flex: none;
+    }
+    
+    .mode-selector {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .download-btn,
+    .primary-btn {
+        width: 100%;
+        padding: 15px;
+        font-size: 1rem;
     }
 }
 
