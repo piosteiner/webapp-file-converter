@@ -6,16 +6,10 @@
 const CACHE_NAME = 'file-converter-v2.0.0';
 const STATIC_CACHE = 'static-cache-v2.0.0';
 
-// Assets to cache for offline functionality
+// Assets to cache for offline functionality (excluding HTML for fresh updates)
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/pages/converters/png-to-jpeg.html',
-  '/pages/converters/gif-to-webm.html',
-  '/pages/converters/png-icons.html',
-  '/pages/converters/png-stickers.html',
-  '/pages/converters/image-splitter.html',
-  '/pages/converters/grid-generator.html',
   '/assets/styles/styles.css',
   '/assets/scripts/core/navigation.js',
   '/assets/scripts/core/logger.js',
@@ -93,12 +87,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
   
-  // Force network fetch for versioned resources (cache busting)
+  // Force network fetch for HTML documents (network-first strategy)
+  const isHTMLDocument = event.request.destination === 'document' || url.pathname.endsWith('.html');
   const hasVersionParam = url.searchParams.has('v');
   const isNavigationJS = url.pathname.includes('navigation.js');
   
-  if (hasVersionParam || isNavigationJS) {
-    // Always fetch from network for versioned resources
+  if (hasVersionParam || isNavigationJS || isHTMLDocument) {
+    // Always fetch from network for HTML documents and versioned resources
     event.respondWith(
       fetch(event.request)
         .then((response) => {
