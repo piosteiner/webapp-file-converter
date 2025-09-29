@@ -58,6 +58,9 @@ class ModernColorPicker {
                     </div>
                 </div>
                 <div class="color-inputs">
+                    <div class="current-color-preview">
+                        <div class="color-preview-bar"></div>
+                    </div>
                     <div class="input-group">
                         <label>HEX</label>
                         <input type="text" class="hex-input" maxlength="7">
@@ -264,6 +267,12 @@ class ModernColorPicker {
         this.colorButton.querySelector('.color-display').style.backgroundColor = hex;
         this.colorButton.querySelector('.color-value').textContent = hex.toUpperCase();
         
+        // Update color preview bar
+        const colorPreviewBar = this.picker.querySelector('.color-preview-bar');
+        if (colorPreviewBar) {
+            colorPreviewBar.style.backgroundColor = hex;
+        }
+        
         // Update inputs
         this.picker.querySelector('.hex-input').value = hex;
         this.picker.querySelector('[data-channel="r"]').value = rgb.r;
@@ -278,13 +287,16 @@ class ModernColorPicker {
         const slCursor = this.picker.querySelector('.sl-cursor');
         const hueCursor = this.picker.querySelector('.hue-cursor');
         
+        if (!slCursor || !hueCursor) return;
+        
         const x = (this.currentColor.s / 100) * 200;
         const y = 200 - (this.currentColor.l / 100) * 200;
         const hueY = (this.currentColor.h / 360) * 200;
         
-        slCursor.style.left = `${x - 6}px`;
-        slCursor.style.top = `${y - 6}px`;
-        hueCursor.style.top = `${hueY - 2}px`;
+        // Position cursors with proper bounds checking
+        slCursor.style.left = `${Math.max(0, Math.min(194, x - 6))}px`;
+        slCursor.style.top = `${Math.max(0, Math.min(194, y - 6))}px`;
+        hueCursor.style.top = `${Math.max(0, Math.min(196, hueY - 2))}px`;
     }
 
     setColor(hex) {
@@ -312,8 +324,12 @@ class ModernColorPicker {
         this.picker.style.top = `${rect.bottom + 8}px`;
         this.picker.style.left = `${rect.left}px`;
         
-        // Update cursors for current color
-        this.updateCursors();
+        // Force update display and cursors after a small delay to ensure DOM is ready
+        setTimeout(() => {
+            this.drawSaturationLightness();
+            this.updateDisplay();
+            this.updateCursors();
+        }, 10);
     }
 
     close() {
