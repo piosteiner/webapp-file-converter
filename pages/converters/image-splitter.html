@@ -9,7 +9,13 @@
     <title>Battle Map Splitter - Print Large Images on A4</title>
     <meta name="description" content="Split large battle maps and images into printable A4-sized tiles. Perfect for tabletop RPG maps, posters, and large format printing.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
-    <link rel="stylesheet" href="../../assets/styles/styles.css">
+        <script>
+        // Cache-bust CSS with timestamp
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = '../../assets/styles/styles.css?t=' + Date.now();
+        document.head.appendChild(cssLink);
+    </script>
 </head>
 <body class="converter-page image-splitter">
     <div class="container">
@@ -214,18 +220,26 @@
                 </div>
             </div>
         </section>
-    </div>
-
-    <!-- Scripts loaded at bottom for better performance -->
-    <script src="../../assets/scripts/core/navigation.js"></script>
-    <script src="../../assets/scripts/core/logger.js"></script>
-    <script src="../../assets/scripts/core/error-handler.js"></script>
-    <script src="../../assets/scripts/core/performance-monitor.js"></script>
-    <script src="../../assets/scripts/core/file-validator.js"></script>
-    <script src="../../assets/scripts/core/theme-switcher.js"></script>
-    <script src="../../assets/scripts/core/pwa-manager.js"></script>
-    <script src="../../assets/scripts/core/pwa-install-guide.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="../../assets/scripts/converters/image-splitter.js"></script>
-</body>
+    </div>    <!-- Scripts with dynamic cache busting -->
+    <script>
+        // Auto-generated timestamps to force fresh script loading
+        const t = Date.now();
+        const scripts = [
+            '../../assets/scripts/core/navigation.js',
+            '../../assets/scripts/core/logger.js',
+            '../../assets/scripts/core/error-handler.js',
+            '../../assets/scripts/core/performance-monitor.js',
+            '../../assets/scripts/core/file-validator.js',
+            '../../assets/scripts/core/theme-switcher.js',
+            '../../assets/scripts/core/pwa-manager.js',
+            '../../assets/scripts/core/pwa-install-guide.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+            '../../assets/scripts/converters/image-splitter.js'
+        ];
+        scripts.forEach(src => {
+            const script = document.createElement('script');
+            script.src = src + '?t=' + t;
+            document.head.appendChild(script);
+        });
+    </script></body>
 </html>

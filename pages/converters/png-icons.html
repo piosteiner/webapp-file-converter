@@ -9,7 +9,13 @@
     <title>Image → 100x100 PNG Icon Converter</title>
     <meta name="description" content="Convert any image to a 100x100 PNG icon with transparent background. Perfect for avatars, app icons, and profile pictures.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖼️</text></svg>">
-    <link rel="stylesheet" href="../../assets/styles/styles.css">
+        <script>
+        // Cache-bust CSS with timestamp
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = '../../assets/styles/styles.css?t=' + Date.now();
+        document.head.appendChild(cssLink);
+    </script>
 </head>
 <body class="converter-page png-icons">
     <div class="container">
@@ -168,19 +174,27 @@
                 </div>
             </div>
         </section>
-    </div>
-
-    <!-- Scripts loaded at bottom for better performance -->
-    <script src="../../assets/scripts/core/logger.js"></script>
-    <script src="../../assets/scripts/core/error-handler.js"></script>
-    <script src="../../assets/scripts/core/performance-monitor.js"></script>
-    <script src="../../assets/scripts/core/file-validator.js"></script>
-    <script src="../../assets/scripts/core/theme-switcher.js"></script>
-    <script src="../../assets/scripts/core/navigation.js"></script>
-    <script src="../../assets/scripts/core/pwa-manager.js"></script>
-    <script src="../../assets/scripts/core/pwa-install-guide.js"></script>
-    <script src="../../assets/scripts/core/api_client.js"></script>
-    <script src="../../assets/scripts/core/ui_helpers.js"></script>
-    <script src="../../assets/scripts/converters/png-icons.js"></script>
-</body>
+    </div>    <!-- Scripts with dynamic cache busting -->
+    <script>
+        // Auto-generated timestamps to force fresh script loading
+        const t = Date.now();
+        const scripts = [
+            '../../assets/scripts/core/logger.js',
+            '../../assets/scripts/core/error-handler.js',
+            '../../assets/scripts/core/performance-monitor.js',
+            '../../assets/scripts/core/file-validator.js',
+            '../../assets/scripts/core/theme-switcher.js',
+            '../../assets/scripts/core/navigation.js',
+            '../../assets/scripts/core/pwa-manager.js',
+            '../../assets/scripts/core/pwa-install-guide.js',
+            '../../assets/scripts/core/api_client.js',
+            '../../assets/scripts/core/ui_helpers.js',
+            '../../assets/scripts/converters/png-icons.js'
+        ];
+        scripts.forEach(src => {
+            const script = document.createElement('script');
+            script.src = src + '?t=' + t;
+            document.head.appendChild(script);
+        });
+    </script></body>
 </html>

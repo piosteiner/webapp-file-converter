@@ -11,7 +11,13 @@
     <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="../../assets/icons/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="../../assets/icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="../../assets/styles/styles.css">
+    <script>
+        // Cache-bust CSS with timestamp
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = '../../assets/styles/styles.css?t=' + Date.now();
+        document.head.appendChild(cssLink);
+    </script>
 </head>
 <body class="converter-page grid-generator">
     <div class="container">
@@ -269,15 +275,26 @@
         </section>
     </div>
 
-    <!-- Scripts -->
-    <script src="../../assets/scripts/core/navigation.js"></script>
-    <script src="../../assets/scripts/core/logger.js"></script>
-    <script src="../../assets/scripts/core/error-handler.js"></script>
-    <script src="../../assets/scripts/core/performance-monitor.js"></script>
-    <script src="../../assets/scripts/core/file-validator.js"></script>
-    <script src="../../assets/scripts/core/theme-switcher.js"></script>
-    <script src="../../assets/scripts/core/pwa-manager.js"></script>
-    <script src="../../assets/scripts/core/pwa-install-guide.js"></script>
-    <script src="../../assets/scripts/converters/grid-generator.js"></script>
+    <!-- Scripts with dynamic cache busting -->
+    <script>
+        // Auto-generated timestamps to force fresh script loading
+        const t = Date.now();
+        const scripts = [
+            '../../assets/scripts/core/navigation.js',
+            '../../assets/scripts/core/logger.js', 
+            '../../assets/scripts/core/error-handler.js',
+            '../../assets/scripts/core/performance-monitor.js',
+            '../../assets/scripts/core/file-validator.js',
+            '../../assets/scripts/core/theme-switcher.js',
+            '../../assets/scripts/core/pwa-manager.js',
+            '../../assets/scripts/core/pwa-install-guide.js',
+            '../../assets/scripts/converters/grid-generator.js'
+        ];
+        scripts.forEach(src => {
+            const script = document.createElement('script');
+            script.src = src + '?t=' + t;
+            document.head.appendChild(script);
+        });
+    </script>
 </body>
 </html>
