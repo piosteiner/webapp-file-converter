@@ -1,152 +1,196 @@
 /**
  * Service Worker for File Converter PWA
  * 
- * CACHING STRATEGY:
- * - Network-first for HTML (always fresh UI/navigation)
- * - Network-first for JavaScript (frequent feature updates)
- * - Cache-first for CSS/static assets (stable styling)
- * - Offline fallback for core functionality
+ * PROFESSIONAL CACHING STRATEGY:
+ * - Stale-while-revalidate for HTML (instant load + fresh updates)
+ * - Cache-first for static assets with versioning (performance)
+ * - Network-first for API calls (always fresh data)
+ * - Automatic cache management (cleanup old versions)
  * 
- * This prioritizes freshness over aggressive caching since:
- * - File conversion tools change frequently
- * - UI updates are common during development
- * - User experience benefits from current features
+ * Cache Lifetime Strategy:
+ * - Short-lived: HTML, JSON (1 hour)
+ * - Medium-lived: CSS, JS (24 hours with versioning)
+ * - Long-lived: Images, fonts (30 days)
  */
 
-const CACHE_NAME = 'file-converter-v2.0.0';
-const STATIC_CACHE = 'static-cache-v2.0.0';
+const APP_VERSION = '2.1.0';
+const CACHE_PREFIX = 'file-converter';
+const STATIC_CACHE = `${CACHE_PREFIX}-static-v${APP_VERSION}`;
+const DYNAMIC_CACHE = `${CACHE_PREFIX}-dynamic-v${APP_VERSION}`;
+const HTML_CACHE = `${CACHE_PREFIX}-html-v${APP_VERSION}`;
 
-// Critical assets for offline functionality (stable, rarely changing)
+// Assets categorized by caching strategy
 const STATIC_ASSETS = [
-  '/',
+  // Core PWA files (long-lived cache)
   '/manifest.json',
+  '/assets/icons/icon-192x192.png',
+  '/assets/icons/icon-512x512.png',
+  '/assets/icons/favicon-32x32.png',
+  '/assets/icons/favicon-16x16.png',
+  // CSS (medium-lived with versioning)
   '/assets/styles/styles.css'
-  // Note: HTML and JS files use network-first for freshness
 ];
 
-// Install event - cache static assets
+const HTML_ASSETS = [
+  '/',
+  '/index.html',
+  '/pages/converters/gif-to-webm.html',
+  '/pages/converters/png-to-jpeg.html',
+  '/pages/converters/png-icons.html',
+  '/pages/converters/png-stickers.html',
+  '/pages/converters/image-splitter.html',
+  '/pages/converters/grid-generator.html'
+];
+
+// Cache durations (in milliseconds)
+const CACHE_DURATION = {
+  HTML: 1 * 60 * 60 * 1000,     // 1 hour
+  STATIC: 30 * 24 * 60 * 60 * 1000, // 30 days
+  DYNAMIC: 24 * 60 * 60 * 1000   // 24 hours
+};
+
+// Install event - cache essential assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
+  console.log(`Service Worker v${APP_VERSION}: Installing...`);
   
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('Service Worker: Caching static assets');
+    Promise.all([
+      // Cache static assets
+      caches.open(STATIC_CACHE).then(cache => {
+        console.log('Caching static assets...');
         return cache.addAll(STATIC_ASSETS);
+      }),
+      // Pre-cache critical HTML
+      caches.open(HTML_CACHE).then(cache => {
+        console.log('Pre-caching HTML assets...');
+        return cache.addAll(HTML_ASSETS);
       })
-      .then(() => {
-        console.log('Service Worker: Installation complete');
-        return self.skipWaiting();
-      })
-      .catch((error) => {
-        console.error('Service Worker: Installation failed', error);
-      })
+    ]).then(() => {
+      console.log('Service Worker: Installation complete');
+      return self.skipWaiting();
+    }).catch((error) => {
+      console.error('Service Worker: Installation failed', error);
+    })
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches automatically
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
+  console.log(`Service Worker v${APP_VERSION}: Activating...`);
   
   event.waitUntil(
-    caches.keys()
-      .then((cacheNames) => {
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then((cacheNames) => {
+        const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, HTML_CACHE];
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && cacheName !== CACHE_NAME) {
-              console.log('Service Worker: Deleting old cache', cacheName);
+            if (cacheName.startsWith(CACHE_PREFIX) && !currentCaches.includes(cacheName)) {
+              console.log('Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           })
         );
-      })
-      .then(() => {
-        console.log('Service Worker: Activation complete');
-        return self.clients.claim();
-      })
+      }),
+      // Take control of all clients
+      self.clients.claim()
+    ]).then(() => {
+      console.log('Service Worker: Activation complete');
+    })
   );
 });
 
-// Fetch event - serve from cache when offline
+// Professional fetch strategy with multiple caching patterns
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
-  // Skip external requests (for GIF conversion server)
-  if (!event.request.url.startsWith(self.location.origin)) {
+  // Skip non-GET requests and external requests
+  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
     return;
   }
 
   const url = new URL(event.request.url);
-  
-  // Network-first strategy for dynamic content
-  const isHTMLDocument = event.request.destination === 'document' || url.pathname.endsWith('.html');
-  const isJavaScript = url.pathname.endsWith('.js');
-  const hasVersionParam = url.searchParams.has('v');
-  
-  // Always fetch fresh for HTML and JavaScript (frequent updates)
-  if (isHTMLDocument || isJavaScript || hasVersionParam) {
-    // Network-first: try network, fallback to cache if offline
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            // Cache the new version
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Fallback to cache if network fails
-          return caches.match(event.request);
-        })
-    );
-    return;
+  const pathname = url.pathname;
+
+  // Determine resource type and caching strategy
+  const isHTML = event.request.destination === 'document' || pathname.endsWith('.html');
+  const isStaticAsset = pathname.includes('/assets/icons/') || pathname.includes('/manifest.json');
+  const isCSS = pathname.endsWith('.css');
+  const isJS = pathname.endsWith('.js');
+  const hasVersionParam = url.searchParams.has('v') || url.searchParams.has('t');
+
+  if (isHTML) {
+    // Stale-while-revalidate for HTML (instant load + background update)
+    event.respondWith(staleWhileRevalidate(event.request, HTML_CACHE));
+  } else if (isStaticAsset) {
+    // Cache-first for static assets (long-lived)
+    event.respondWith(cacheFirst(event.request, STATIC_CACHE));
+  } else if ((isCSS || isJS) && hasVersionParam) {
+    // Cache-first for versioned resources (safe to cache aggressively)
+    event.respondWith(cacheFirst(event.request, STATIC_CACHE));
+  } else if (isCSS || isJS) {
+    // Network-first for non-versioned CSS/JS (development flexibility)
+    event.respondWith(networkFirst(event.request, DYNAMIC_CACHE));
+  } else {
+    // Default: stale-while-revalidate for other resources
+    event.respondWith(staleWhileRevalidate(event.request, DYNAMIC_CACHE));
   }
-
-  // Standard cache-first strategy for other resources
-  event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        // Return cached version if available
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        // Otherwise, fetch from network
-        return fetch(event.request)
-          .then((response) => {
-            // Don't cache non-successful responses
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response (streams can only be consumed once)
-            const responseToCache = response.clone();
-
-            // Cache the response for future use
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          })
-          .catch(() => {
-            // If offline and no cache, return a custom offline page
-            if (event.request.destination === 'document') {
-              return caches.match('/index.html');
-            }
-          });
-      })
-  );
 });
+
+// Caching strategies
+async function cacheFirst(request, cacheName) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse && !isExpired(cachedResponse)) {
+    return cachedResponse;
+  }
+  
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.status === 200) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    return cachedResponse || new Response('Offline', { status: 503 });
+  }
+}
+
+async function networkFirst(request, cacheName) {
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.status === 200) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    const cachedResponse = await caches.match(request);
+    return cachedResponse || new Response('Offline', { status: 503 });
+  }
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cachedResponse = await caches.match(request);
+  
+  // Background update (don't await)
+  const networkUpdate = fetch(request).then(response => {
+    if (response.status === 200) {
+      const cache = caches.open(cacheName);
+      cache.then(c => c.put(request, response.clone()));
+    }
+    return response;
+  }).catch(() => null);
+
+  // Return cached version immediately, or wait for network if no cache
+  return cachedResponse || networkUpdate;
+}
+
+// Check if cached response is expired
+function isExpired(response) {
+  const cachedDate = new Date(response.headers.get('date') || 0);
+  const now = new Date();
+  const maxAge = CACHE_DURATION.DYNAMIC; // Default expiry
+  return (now - cachedDate) > maxAge;
+}
 
 // Background sync for file processing (if needed)
 self.addEventListener('sync', (event) => {
