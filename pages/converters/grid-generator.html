@@ -17,6 +17,12 @@
         cssLink.rel = 'stylesheet';
         cssLink.href = '../../assets/styles/styles.css?t=' + Date.now();
         document.head.appendChild(cssLink);
+        
+        // Add color picker CSS
+        const colorPickerCSS = document.createElement('link');
+        colorPickerCSS.rel = 'stylesheet';
+        colorPickerCSS.href = '../../assets/styles/components/color-picker.css?t=' + Date.now();
+        document.head.appendChild(colorPickerCSS);
     </script>
 </head>
 <body class="converter-page grid-generator">
@@ -81,10 +87,7 @@
                     <div class="appearance-controls">
                         <div class="input-group">
                             <label for="gridColor">Grid Color:</label>
-                            <div class="color-input-wrapper">
-                                <input type="color" id="gridColor" value="#000000">
-                                <span class="color-preview" id="colorPreview"></span>
-                            </div>
+                            <div id="gridColorPicker"></div>
                         </div>
                         
                         <div class="input-group">
@@ -275,8 +278,9 @@
         </section>
     </div>
 
-        <!-- Scripts -->    <!-- Scripts -->
+        <!-- Scripts -->
     <script src="../../assets/scripts/core/navigation.js?v=202509292053"></script>
+    <script src="../../assets/scripts/core/color-picker.js?v=202509292053"></script>
     <script src="../../assets/scripts/core/logger.js?v=202509292036"></script>
     <script src="../../assets/scripts/core/error-handler.js?v=202509292036"></script>
     <script src="../../assets/scripts/core/performance-monitor.js?v=202509292036"></script>

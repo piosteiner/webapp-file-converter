@@ -12,6 +12,7 @@
 /* Reusable Components */
 @import url('./components/components.css');
 @import url('./components/pwa-info.css');
+@import url('./components/color-picker.css');
 
 /* Landing Page Styles */
 @import url('./pages/landing.css');

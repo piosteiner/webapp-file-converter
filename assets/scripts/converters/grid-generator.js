@@ -26,7 +26,22 @@ class GridGenerator {
         this.maxDisplayHeight = 600;
         
         this.initializeEventListeners();
+        this.initializeColorPicker();
         this.updateUnits();
+    }
+
+    initializeColorPicker() {
+        // Initialize the modern color picker
+        const colorPickerContainer = document.getElementById('gridColorPicker');
+        
+        this.colorPicker = new ModernColorPicker(colorPickerContainer, {
+            initialColor: this.settings.gridColor,
+            showPresets: true,
+            onChange: (color) => {
+                this.settings.gridColor = color;
+                this.updateGrid();
+            }
+        });
     }
 
     // Conversion utilities
@@ -64,11 +79,7 @@ class GridGenerator {
             });
         });
 
-        // Appearance controls
-        document.getElementById('gridColor').addEventListener('change', (e) => {
-            this.settings.gridColor = e.target.value;
-            this.updateColorPreview();
-        });
+        // Appearance controls - color picker is initialized separately
 
         document.getElementById('lineThickness').addEventListener('input', (e) => {
             this.settings.lineThickness = parseInt(e.target.value);
@@ -104,8 +115,7 @@ class GridGenerator {
         document.getElementById('downloadPNGBtn').addEventListener('click', () => this.downloadGrid());
         document.getElementById('regenerateBtn').addEventListener('click', () => this.showConfigSection());
 
-        // Initial setup
-        this.updateColorPreview();
+        // Initial setup complete
     }
 
     handleUnitChange() {
@@ -173,10 +183,7 @@ class GridGenerator {
         this.updateGridInfo();
     }
 
-    updateColorPreview() {
-        const colorPreview = document.getElementById('colorPreview');
-        colorPreview.style.backgroundColor = this.settings.gridColor;
-    }
+    // Color preview is now handled by the ModernColorPicker component
 
     updateGridInfo() {
         // Get dimensions in pixels
