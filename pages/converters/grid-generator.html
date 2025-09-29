@@ -39,40 +39,42 @@
         </div>
     </div>
 
-    <!-- PWA Install Info -->
-    <div id="pwaInstallInfo" class="pwa-install-info">
-        <div class="pwa-install-content">
-            <button class="pwa-close-btn" id="pwaCloseBtn">×</button>
-            <div class="pwa-install-icon">📱</div>
-            <h3>Install File Converter App</h3>
-            <p>Add this app to your home screen for quick access to all conversion tools!</p>
-            <div class="pwa-install-buttons">
-                <button id="pwaInstallBtn" class="pwa-install-btn">Install App</button>
-                <button id="pwaLaterBtn" class="pwa-later-btn">Maybe Later</button>
-            </div>
-        </div>
-    </div>
-
     <div class="container">
-        <!-- Navigation -->
-        <nav class="converter-nav">
-            <a href="../../index.html" class="nav-home">🏠 Home</a>
-            <div class="nav-links">
-                <a href="gif-to-webm.html" class="nav-link">🎬 GIF to WebM</a>
-                <a href="png-to-jpeg.html" class="nav-link">🖼️ PNG to JPEG</a>
-                <a href="png-icons.html" class="nav-link">📱 PNG Icons</a>
-                <a href="png-stickers.html" class="nav-link">🏷️ PNG Stickers</a>
-                <a href="image-splitter.html" class="nav-link">🗺️ Image Splitter</a>
-                <a href="grid-generator.html" class="nav-link active">⚏ Grid Generator</a>
+        <h1>⚏ 25mm Grid Generator</h1>
+        <p class="subtitle">Generate precise 25mm grids for battle maps, perfect for tabletop gaming and Procreate artwork</p>
+        
+        <nav class="nav-links">
+            <div class="nav-grid">
+                <a href="../../index.html" class="nav-item home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="gif-to-webm.html" class="nav-item">
+                    <span class="nav-icon">🎬</span>
+                    <span class="nav-text">GIF → WebM</span>
+                </a>
+                <a href="png-to-jpeg.html" class="nav-item">
+                    <span class="nav-icon">�</span>
+                    <span class="nav-text">PNG → JPEG</span>
+                </a>
+                <a href="png-icons.html" class="nav-item">
+                    <span class="nav-icon">�️</span>
+                    <span class="nav-text">100×100 PNG</span>
+                </a>
+                <a href="png-stickers.html" class="nav-item">
+                    <span class="nav-icon">🏷️</span>
+                    <span class="nav-text">PNG Stickers</span>
+                </a>
+                <a href="image-splitter.html" class="nav-item">
+                    <span class="nav-icon">🗺️</span>
+                    <span class="nav-text">Image Splitter</span>
+                </a>
+                <span class="nav-item active">
+                    <span class="nav-icon">⚏</span>
+                    <span class="nav-text">Grid Generator</span>
+                </span>
             </div>
         </nav>
-
-        <!-- Header -->
-        <header class="converter-header">
-            <div class="converter-icon">⚏</div>
-            <h1>25mm Grid Generator</h1>
-            <p class="converter-desc">Generate precise 25mm grids for battle maps, perfect for tabletop gaming and Procreate artwork</p>
-        </header>
 
         <!-- Grid Configuration Section -->
         <section class="grid-config-section" id="gridConfigSection">
@@ -283,6 +285,40 @@
                         <li>Use the <strong>Image Splitter tool</strong> after completion</li>
                         <li>Print tiles at <strong>150 DPI</strong> for perfect 25mm scale</li>
                     </ol>
+                </div>
+            </div>
+        </section>
+        <!-- PWA Features Section -->
+        <section class="pwa-info-section">
+            <div class="pwa-info-card">
+                <div class="pwa-info-header">
+                    <h3>📱 Install as Mobile App</h3>
+                    <button class="pwa-info-btn" onclick="pwaInstallGuide.showGuide()">
+                        Learn How
+                    </button>
+                </div>
+                <p class="pwa-info-description">
+                    Get the best experience by installing our converter as an app on your phone or computer. 
+                    It works offline, loads faster, and feels just like a native app!
+                </p>
+                
+                <div class="pwa-benefits-grid">
+                    <div class="pwa-benefit">
+                        <span class="pwa-benefit-icon">⚡</span>
+                        <span>Lightning Fast</span>
+                    </div>
+                    <div class="pwa-benefit">
+                        <span class="pwa-benefit-icon">📱</span>
+                        <span>Works Offline</span>
+                    </div>
+                    <div class="pwa-benefit">
+                        <span class="pwa-benefit-icon">🚀</span>
+                        <span>App-like Feel</span>
+                    </div>
+                    <div class="pwa-benefit">
+                        <span class="pwa-benefit-icon">💾</span>
+                        <span>Less Storage</span>
+                    </div>
                 </div>
             </div>
         </section>
