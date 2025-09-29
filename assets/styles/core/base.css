@@ -15,7 +15,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 10px;
     transition: background 0.3s ease;
 }
 
@@ -23,11 +23,10 @@ body {
     background: var(--container-bg);
     backdrop-filter: var(--backdrop-blur);
     border-radius: 20px;
-    padding: 40px;
+    padding: 20px;
     box-shadow: 0 20px 40px var(--shadow-color);
     text-align: center;
-    max-width: 80vw;
-    min-width: 600px;
+    max-width: 95vw;
     width: 100%;
     transition: all 0.3s ease;
 }
@@ -199,9 +198,8 @@ h1 {
 
 /* Page-specific styles */
 .landing-page .container {
-    max-width: 100vw;  /* Use full viewport width for maximum space utilization */
-    min-width: 800px;
-    padding: 50px 40px;
+    max-width: 95vw;  /* Use most of viewport width but leave some margin */
+    padding: 30px 20px;
 }
 
 .landing-page h1 {
@@ -217,12 +215,10 @@ h1 {
 
 .converter-page .container {
     max-width: 50vw;
-    min-width: 600px;
 }
 
 .converter-page.gif-converter .container {
     max-width: 65vw;
-    min-width: 800px;
 }
 
 /* Animations */

@@ -10,13 +10,29 @@
 .container {
     width: 100%;
     max-width: 95vw;
-    padding: 25px 15px;
+    padding: 20px 15px;
     margin: 0 auto;
 }
 
 .landing-page .container {
     max-width: 95vw;
     padding: 25px 15px;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+    body {
+        padding: 5px;
+    }
+    
+    .container {
+        max-width: 98vw;
+        border-radius: 15px;
+    }
+    
+    .converter-page .container {
+        max-width: 98vw;
+    }
 }
 
 /* .converters section no longer needs grid layout - child .converter-grid handles it */
@@ -345,8 +361,19 @@
 
 /* Extra small mobile devices */
 @media (max-width: 480px) {
+    body {
+        padding: 5px;
+    }
+    
+    .container {
+        max-width: 98vw;
+        padding: 15px 10px;
+        border-radius: 15px;
+    }
+    
     .landing-page .container {
         padding: 20px 10px;
+        max-width: 98vw;
     }
 
     .landing-page h1 {
