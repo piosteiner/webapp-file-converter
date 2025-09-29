@@ -18,38 +18,8 @@
             <strong>📖 How it works:</strong> Choose a grid layout (2×3 or 3×3), upload your image, and get perfectly sized tiles with print margins.
         </p>
 
-        <nav class="nav-links">
-            <div class="nav-grid">
-                <a href="../../index.html" class="nav-item home">
-                    <span class="nav-icon">🏠</span>
-                    <span class="nav-text">Home</span>
-                </a>
-                <a href="png-to-jpeg.html" class="nav-item">
-                    <span class="nav-icon">📸</span>
-                    <span class="nav-text">PNG → JPEG</span>
-                </a>
-                <a href="png-icons.html" class="nav-item">
-                    <span class="nav-icon">🖼️</span>
-                    <span class="nav-text">100×100 PNG</span>
-                </a>
-                <a href="png-stickers.html" class="nav-item">
-                    <span class="nav-icon">🏷️</span>
-                    <span class="nav-text">PNG Stickers</span>
-                </a>
-                <a href="gif-to-webm.html" class="nav-item">
-                    <span class="nav-icon">🎬</span>
-                    <span class="nav-text">GIF → WebM</span>
-                </a>
-                <span class="nav-item active">
-                    <span class="nav-icon">🗺️</span>
-                    <span class="nav-text">Map Splitter</span>
-                </span>
-                <a href="grid-generator.html" class="nav-item">
-                    <span class="nav-icon">⚏</span>
-                    <span class="nav-text">Grid Generator</span>
-                </a>
-            </div>
-        </nav>
+        <!-- Navigation will be dynamically loaded -->
+        <div id="navigation-placeholder"></div>
 
         <!-- Grid Selection Section -->
         <section class="grid-selection-section">
@@ -244,6 +214,7 @@
     </div>
 
     <!-- Scripts loaded at bottom for better performance -->
+    <script src="../../assets/scripts/core/navigation.js"></script>
     <script src="../../assets/scripts/core/logger.js"></script>
     <script src="../../assets/scripts/core/error-handler.js"></script>
     <script src="../../assets/scripts/core/performance-monitor.js"></script>
