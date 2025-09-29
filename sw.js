@@ -1,33 +1,27 @@
 /**
  * Service Worker for File Converter PWA
- * Provides offline functionality and asset caching
+ * 
+ * CACHING STRATEGY:
+ * - Network-first for HTML (always fresh UI/navigation)
+ * - Network-first for JavaScript (frequent feature updates)
+ * - Cache-first for CSS/static assets (stable styling)
+ * - Offline fallback for core functionality
+ * 
+ * This prioritizes freshness over aggressive caching since:
+ * - File conversion tools change frequently
+ * - UI updates are common during development
+ * - User experience benefits from current features
  */
 
 const CACHE_NAME = 'file-converter-v2.0.0';
 const STATIC_CACHE = 'static-cache-v2.0.0';
 
-// Assets to cache for offline functionality (excluding HTML for fresh updates)
+// Critical assets for offline functionality (stable, rarely changing)
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
-  '/assets/styles/styles.css',
-  '/assets/scripts/core/navigation.js',
-  '/assets/scripts/core/logger.js',
-  '/assets/scripts/core/error-handler.js',
-  '/assets/scripts/core/performance-monitor.js',
-  '/assets/scripts/core/file-validator.js',
-  '/assets/scripts/core/theme-switcher.js',
-  '/assets/scripts/core/pwa-manager.js',
-  '/assets/scripts/core/pwa-install-guide.js',
-  '/assets/scripts/core/api_client.js',
-  '/assets/scripts/core/ui_helpers.js',
-  '/assets/scripts/converters/png-converter.js',
-  '/assets/scripts/converters/png-icons.js',
-  '/assets/scripts/converters/png-stickers.js',
-  '/assets/scripts/converters/gif-converter.js',
-  '/assets/scripts/converters/grid-generator.js',
-  '/assets/scripts/converters/image-splitter.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/assets/styles/styles.css'
+  // Note: HTML and JS files use network-first for freshness
 ];
 
 // Install event - cache static assets
@@ -87,13 +81,14 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
   
-  // Force network fetch for HTML documents (network-first strategy)
+  // Network-first strategy for dynamic content
   const isHTMLDocument = event.request.destination === 'document' || url.pathname.endsWith('.html');
+  const isJavaScript = url.pathname.endsWith('.js');
   const hasVersionParam = url.searchParams.has('v');
-  const isNavigationJS = url.pathname.includes('navigation.js');
   
-  if (hasVersionParam || isNavigationJS || isHTMLDocument) {
-    // Always fetch from network for HTML documents and versioned resources
+  // Always fetch fresh for HTML and JavaScript (frequent updates)
+  if (isHTMLDocument || isJavaScript || hasVersionParam) {
+    // Network-first: try network, fallback to cache if offline
     event.respondWith(
       fetch(event.request)
         .then((response) => {
