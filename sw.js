@@ -3,8 +3,8 @@
  * Provides offline functionality and asset caching
  */
 
-const CACHE_NAME = 'file-converter-v1.0.0';
-const STATIC_CACHE = 'static-cache-v1.0.0';
+const CACHE_NAME = 'file-converter-v2.0.0';
+const STATIC_CACHE = 'static-cache-v2.0.0';
 
 // Assets to cache for offline functionality
 const STATIC_ASSETS = [
@@ -14,12 +14,25 @@ const STATIC_ASSETS = [
   '/pages/converters/gif-to-webm.html',
   '/pages/converters/png-icons.html',
   '/pages/converters/png-stickers.html',
+  '/pages/converters/image-splitter.html',
+  '/pages/converters/grid-generator.html',
   '/assets/styles/styles.css',
+  '/assets/scripts/core/navigation.js',
   '/assets/scripts/core/logger.js',
+  '/assets/scripts/core/error-handler.js',
+  '/assets/scripts/core/performance-monitor.js',
+  '/assets/scripts/core/file-validator.js',
   '/assets/scripts/core/theme-switcher.js',
+  '/assets/scripts/core/pwa-manager.js',
+  '/assets/scripts/core/pwa-install-guide.js',
+  '/assets/scripts/core/api_client.js',
+  '/assets/scripts/core/ui_helpers.js',
   '/assets/scripts/converters/png-converter.js',
   '/assets/scripts/converters/png-icons.js',
   '/assets/scripts/converters/png-stickers.js',
+  '/assets/scripts/converters/gif-converter.js',
+  '/assets/scripts/converters/grid-generator.js',
+  '/assets/scripts/converters/image-splitter.js',
   '/manifest.json'
 ];
 
@@ -78,6 +91,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const url = new URL(event.request.url);
+  
+  // Force network fetch for versioned resources (cache busting)
+  const hasVersionParam = url.searchParams.has('v');
+  const isNavigationJS = url.pathname.includes('navigation.js');
+  
+  if (hasVersionParam || isNavigationJS) {
+    // Always fetch from network for versioned resources
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            // Cache the new version
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if network fails
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // Standard cache-first strategy for other resources
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
@@ -121,6 +164,24 @@ self.addEventListener('sync', (event) => {
     event.waitUntil(
       // Handle background file processing if needed
       console.log('Service Worker: Background sync triggered')
+    );
+  }
+});
+
+// Message handler for cache clearing
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            console.log('Service Worker: Force clearing cache', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      }).then(() => {
+        event.ports[0].postMessage({ success: true });
+      })
     );
   }
 });

@@ -96,9 +96,44 @@ class Navigation {
      */
     init() {
         console.log('Navigation: Init method called');
+        this.checkAndUpdateServiceWorker();
         this.renderNavigation();
         console.log('Navigation: Init completed');
         logger?.info('Navigation component initialized', { currentPage: this.currentPage });
+    }
+
+    /**
+     * Check for service worker updates and force refresh if needed
+     */
+    async checkAndUpdateServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                if (registration) {
+                    // Force check for updates
+                    await registration.update();
+                    
+                    // Listen for new service worker installing
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('Navigation: New service worker available, clearing cache...');
+                                    // Force cache clear and reload
+                                    this.clearCache().then(() => {
+                                        console.log('Navigation: Cache cleared, reloading...');
+                                        window.location.reload(true);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Navigation: Service worker update check failed:', error);
+            }
+        }
     }
 
     /**
@@ -186,6 +221,49 @@ class Navigation {
         this.converters = this.converters.filter(c => c.id !== converterId);
         this.renderNavigation();
     }
+
+    /**
+     * Force clear PWA cache (for development/troubleshooting)
+     */
+    async clearCache() {
+        if ('serviceWorker' in navigator && 'caches' in window) {
+            try {
+                // Send message to service worker to clear cache
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.active) {
+                    const messageChannel = new MessageChannel();
+                    return new Promise((resolve) => {
+                        messageChannel.port1.onmessage = (event) => {
+                            resolve(event.data.success);
+                        };
+                        registration.active.postMessage(
+                            { type: 'CLEAR_CACHE' },
+                            [messageChannel.port2]
+                        );
+                    });
+                }
+            } catch (error) {
+                console.error('Navigation: Failed to clear cache:', error);
+            }
+        }
+    }
+}
+
+// Force cache bypass for this script load
+if (typeof window !== 'undefined' && 'caches' in window) {
+    // Clear any cached versions of this navigation script
+    caches.keys().then(cacheNames => {
+        return Promise.all(
+            cacheNames.map(cacheName => {
+                return caches.open(cacheName).then(cache => {
+                    const navScriptUrl = window.location.origin + '/assets/scripts/core/navigation.js';
+                    return cache.delete(navScriptUrl);
+                });
+            })
+        );
+    }).catch(error => {
+        console.log('Navigation: Cache clear attempt:', error);
+    });
 }
 
 // Auto-initialize when DOM is ready
@@ -205,3 +283,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export for manual initialization if needed
 window.Navigation = Navigation;
+
+// Global cache clearing function for manual use
+window.clearAllCaches = async function() {
+    console.log('Manual cache clear initiated...');
+    
+    // Clear all browser caches
+    if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+            cacheNames.map(cacheName => {
+                console.log('Clearing cache:', cacheName);
+                return caches.delete(cacheName);
+            })
+        );
+    }
+    
+    // Force service worker update
+    if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+            await registration.unregister();
+            console.log('Service worker unregistered');
+        }
+    }
+    
+    console.log('All caches cleared! Reloading page...');
+    setTimeout(() => {
+        window.location.reload(true);
+    }, 500);
+};
+
+// Keyboard shortcut for cache clearing (Ctrl+Shift+R)
+document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.shiftKey && event.key === 'R') {
+        event.preventDefault();
+        console.log('Cache clear shortcut triggered');
+        window.clearAllCaches();
+    }
+});
+
+console.log('Navigation: Cache clearing available - use clearAllCaches() or Ctrl+Shift+R');
