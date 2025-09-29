@@ -58,6 +58,7 @@ class Navigation {
         ];
 
         this.currentPage = this.detectCurrentPage();
+        console.log('Navigation: Detected current page:', this.currentPage);
         this.init();
     }
 
@@ -94,7 +95,9 @@ class Navigation {
      * Initialize the navigation system
      */
     init() {
+        console.log('Navigation: Init method called');
         this.renderNavigation();
+        console.log('Navigation: Init completed');
         logger?.info('Navigation component initialized', { currentPage: this.currentPage });
     }
 
@@ -136,10 +139,15 @@ class Navigation {
      * Render the navigation into the page
      */
     renderNavigation() {
+        console.log('Navigation: Rendering navigation...');
         const navContainer = document.getElementById('navigation-placeholder');
+        console.log('Navigation: Found container:', navContainer);
         
         if (navContainer) {
-            navContainer.innerHTML = this.generateNavigationHTML();
+            const html = this.generateNavigationHTML();
+            console.log('Navigation: Generated HTML length:', html.length);
+            navContainer.innerHTML = html;
+            console.log('Navigation: Successfully inserted into placeholder');
         } else {
             // Fallback: look for existing nav-links and replace
             const existingNav = document.querySelector('.nav-links');
@@ -182,9 +190,16 @@ class Navigation {
 
 // Auto-initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Navigation: DOM Content Loaded');
     // Small delay to ensure other scripts are loaded
     setTimeout(() => {
-        window.navigation = new Navigation();
+        console.log('Navigation: Initializing...');
+        try {
+            window.navigation = new Navigation();
+            console.log('Navigation: Initialized successfully');
+        } catch (error) {
+            console.error('Navigation: Failed to initialize:', error);
+        }
     }, 50);
 });
 

@@ -275,26 +275,15 @@
         </section>
     </div>
 
-    <!-- Scripts with dynamic cache busting -->
-    <script>
-        // Auto-generated timestamps to force fresh script loading
-        const t = Date.now();
-        const scripts = [
-            '../../assets/scripts/core/navigation.js',
-            '../../assets/scripts/core/logger.js', 
-            '../../assets/scripts/core/error-handler.js',
-            '../../assets/scripts/core/performance-monitor.js',
-            '../../assets/scripts/core/file-validator.js',
-            '../../assets/scripts/core/theme-switcher.js',
-            '../../assets/scripts/core/pwa-manager.js',
-            '../../assets/scripts/core/pwa-install-guide.js',
-            '../../assets/scripts/converters/grid-generator.js'
-        ];
-        scripts.forEach(src => {
-            const script = document.createElement('script');
-            script.src = src + '?t=' + t;
-            document.head.appendChild(script);
-        });
-    </script>
+        <!-- Scripts -->    <!-- Scripts -->
+    <script src="../../assets/scripts/core/navigation.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/logger.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/error-handler.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/performance-monitor.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/file-validator.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/theme-switcher.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/pwa-manager.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/pwa-install-guide.js?v=202509292036"></script>
+    <script src="../../assets/scripts/converters/grid-generator.js?v=202509292036"></script>
 </body>
 </html>

@@ -11,13 +11,7 @@
     <meta name="keywords" content="PNG converter, image converter, 512px, aspect ratio, sticker maker">
     <link rel="canonical" href="https://converter.piogino.ch/html/png-stickers.html">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏷️</text></svg>">
-        <script>
-        // Cache-bust CSS with timestamp
-        const cssLink = document.createElement('link');
-        cssLink.rel = 'stylesheet';
-        cssLink.href = '../../assets/styles/styles.css?t=' + Date.now();
-        document.head.appendChild(cssLink);
-    </script>
+        <link rel="stylesheet" href="../../assets/styles/styles.css?v=202509292036">
 </head>
 <body class="converter-page png-stickers">
     <div class="container">
@@ -77,25 +71,18 @@
                 </div>
             </div>
         </section>
-    </div>    <!-- Scripts with dynamic cache busting -->
-    <script>
-        // Auto-generated timestamps to force fresh script loading
-        const t = Date.now();
-        const scripts = [
-            '../../assets/scripts/core/logger.js',
-            '../../assets/scripts/core/error-handler.js',
-            '../../assets/scripts/core/performance-monitor.js',
-            '../../assets/scripts/core/file-validator.js',
-            '../../assets/scripts/core/theme-switcher.js',
-            '../../assets/scripts/core/navigation.js',
-            '../../assets/scripts/core/pwa-manager.js',
-            '../../assets/scripts/core/pwa-install-guide.js',
-            '../../assets/scripts/converters/png-stickers.js'
-        ];
-        scripts.forEach(src => {
-            const script = document.createElement('script');
-            script.src = src + '?t=' + t;
-            document.head.appendChild(script);
-        });
-    </script></body>
+    </div>        <!-- Scripts -->
+    <!-- Scripts -->
+    <script src="../../assets/scripts/core/navigation.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/logger.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/error-handler.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/performance-monitor.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/file-validator.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/theme-switcher.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/pwa-manager.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/pwa-install-guide.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/api_client.js?v=202509292036"></script>
+    <script src="../../assets/scripts/core/ui_helpers.js?v=202509292036"></script>
+    <script src="../../assets/scripts/converters/png-stickers.js?v=202509292036"></script>
+</body>
 </html>
