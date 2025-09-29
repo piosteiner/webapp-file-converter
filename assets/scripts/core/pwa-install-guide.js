@@ -113,7 +113,6 @@ class PWAInstallGuide {
                 </div>
                 
                 <div class="pwa-guide-footer">
-                    <button class="pwa-guide-btn secondary" data-action="remind-later">Remind Me Later</button>
                     <button class="pwa-guide-btn primary" data-action="try-install">Got It, Thanks!</button>
                 </div>
             </div>
@@ -463,7 +462,7 @@ class PWAInstallGuide {
                 border-top: 1px solid var(--border-color, #e2e8f0);
                 display: flex;
                 gap: 12px;
-                justify-content: flex-end;
+                justify-content: center;
             }
             
             .pwa-guide-btn {
@@ -540,26 +539,52 @@ class PWAInstallGuide {
      * Setup modal event listeners
      */
     setupModalEvents(modal) {
+        // Handle clicks on the overlay to close
         modal.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
             
-            switch (action) {
-                case 'close-guide':
-                    this.hideGuide();
-                    break;
-                case 'remind-later':
-                    this.remindLater();
-                    break;
-                case 'try-install':
-                    this.completeGuide();
-                    break;
+            if (action === 'close-guide') {
+                console.log('PWA Guide: Close button clicked');
+                this.hideGuide();
+                return;
+            }
+            
+            // If clicking directly on overlay, close
+            if (e.target === modal) {
+                console.log('PWA Guide: Overlay clicked');
+                this.hideGuide();
+                return;
             }
         });
 
+        // Handle specific button clicks
+        const closeBtn = modal.querySelector('.pwa-guide-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('PWA Guide: Close button clicked directly');
+                this.hideGuide();
+            });
+        }
+
+        const gotItBtn = modal.querySelector('[data-action="try-install"]');
+        if (gotItBtn) {
+            gotItBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('PWA Guide: Got It button clicked');
+                this.completeGuide();
+            });
+        }
+
         // Prevent modal content clicks from closing
-        modal.querySelector('.pwa-guide-content').addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+        const content = modal.querySelector('.pwa-guide-content');
+        if (content) {
+            content.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
     }
 
     /**
@@ -647,36 +672,32 @@ class PWAInstallGuide {
      * Hide the installation guide
      */
     hideGuide() {
+        console.log('PWA Guide: hideGuide() called');
         const modal = document.getElementById('pwa-install-guide');
         if (modal) {
+            console.log('PWA Guide: Modal found, adding hidden class');
             modal.classList.add('hidden');
             this.isVisible = false;
             document.body.style.overflow = '';
             
-            logger.debug('PWA installation guide hidden');
+            logger?.debug('PWA installation guide hidden');
+        } else {
+            console.log('PWA Guide: Modal not found');
         }
     }
 
-    /**
-     * Handle "remind later" action
-     */
-    remindLater() {
-        this.hideGuide();
-        localStorage.setItem('pwa-guide-remind', Date.now() + (7 * 24 * 60 * 60 * 1000)); // Remind in 7 days
-        
-        logger.info('PWA guide reminder set for 7 days');
-        performanceMonitor.trackEvent('pwa_guide_remind_later', { platform: this.platform });
-    }
+    // "Remind Later" functionality removed as requested
 
     /**
      * Handle guide completion
      */
     completeGuide() {
+        console.log('PWA Guide: completeGuide() called');
         this.hideGuide();
         localStorage.setItem('pwa-guide-seen', 'true');
         
-        logger.info('PWA guide completed');
-        performanceMonitor.trackEvent('pwa_guide_completed', { platform: this.platform });
+        logger?.info('PWA guide completed');
+        performanceMonitor?.trackEvent('pwa_guide_completed', { platform: this.platform });
     }
 
     /**
@@ -684,12 +705,7 @@ class PWAInstallGuide {
      */
     hasSeenGuide() {
         const seen = localStorage.getItem('pwa-guide-seen');
-        const remindTime = localStorage.getItem('pwa-guide-remind');
-        
-        if (seen) return true;
-        if (remindTime && Date.now() < parseInt(remindTime)) return true;
-        
-        return false;
+        return !!seen;
     }
 
     /**
