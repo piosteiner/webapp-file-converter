@@ -35,6 +35,15 @@ app = Flask(__name__)
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB hard limit
 
+# ---- Disable caching for development ----
+@app.after_request
+def add_no_cache_headers(response):
+    """Add headers to prevent browser caching during development."""
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 # ---- Storage / validation ----
 UPLOAD_FOLDER = 'temp_uploads'
 MAX_FILE_SIZE = 100 * 1024 * 1024
