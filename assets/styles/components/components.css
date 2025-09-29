@@ -976,3 +976,11 @@
         transform: rotate(90deg);
     }
 }
+
+/* ========================================
+   UTILITY CLASSES TO REPLACE INLINE STYLES
+   ======================================== */
+
+.hidden-section {
+    display: none;
+}

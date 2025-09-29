@@ -17,8 +17,8 @@
     href="https://converter.piogino.ch/html/gif-converter.html" />
   <link
     rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>" />
-  <link rel="stylesheet" href="../../assets/styles/styles.css" />
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+  <link rel="stylesheet" href="../../assets/styles/styles.css">
 </head>
 
 <body class="converter-page gif-converter">
@@ -118,41 +118,20 @@
     <!-- ======================================== -->
 
     <div
-      class="editor-separator"
-      style="margin: 50px 0 40px 0; text-align: center">
-      <div style="border-top: 2px solid var(--timeline-handle); position: relative">
-        <span
-          style="
-            background: var(--container-bg);
-            padding: 0 20px;
-            color: var(--text-accent);
-            font-weight: 600;
-            position: relative;
-            top: -12px;
-          ">
+      class="editor-separator timeline-section">
+      <div class="timeline-border">
+        <span class="timeline-label">
           ✂️ GIF EDITOR
         </span>
       </div>
     </div>
 
     <div
-      class="editor-intro"
-      style="
-        margin-bottom: 30px;
-        padding: 20px;
-        background: var(--features-bg);
-        border-radius: 15px;
-        border-left: 4px solid var(--text-accent);
-      ">
-      <h3
-        style="
-          margin: 0 0 10px 0;
-          color: var(--text-primary);
-          font-size: 1.1em;
-        ">
+      class="editor-intro editor-intro-box">
+      <h3 class="editor-intro-title">
         📝 Edit your GIF before converting to WebM
       </h3>
-      <p style="margin: 0; color: var(--text-secondary); line-height: 1.5">
+      <p class="timeline-text">
         <strong>Advised for GIFs longer than 3 seconds.</strong> Telegram
         stickers have a 3-second limit, so use the editor below to trim your GIF
         to the perfect moment before converting to WebM.
@@ -173,9 +152,8 @@
 
     <!-- Editor Container (initially hidden) -->
     <div
-      class="gif-editor-container hidden"
-      id="editorContainer"
-      style="margin-top: 30px;">
+      class="gif-editor-container hidden export-section-spacing"
+      id="editorContainer">
       <!-- Preview -->
       <div class="preview-section">
         <div class="preview-controls">
@@ -270,7 +248,7 @@
         </button>
       </div>
 
-      <div class="export-progress" id="exportProgress" style="display: none">
+      <div class="export-progress hidden-section" id="exportProgress">
         <div class="progress-bar">
           <div class="progress-fill" id="progressFill"></div>
         </div>
@@ -279,9 +257,9 @@
     </div>
 
     <!-- Workflow/notes -->
-    <div class="features" style="margin-top: 40px; text-align: left">
+    <div class="features features-section">
       <h3>🚀 Complete GIF to WebM Workflow:</h3>
-      <ul style="margin-top: 10px; padding-left: 20px; color: var(--text-secondary)">
+      <ul class="features-list">
         <li>✂️ <strong>Built-in GIF Editor</strong> — trim long GIFs to perfect 3-second clips</li>
         <li>🎥 <strong>Full video controls</strong> — pause, seek, and preview your selections</li>
         <li>✅ <strong>Server-side FFmpeg</strong> — VP9 encoding with transparency</li>
@@ -293,15 +271,7 @@
     </div>
 
     <div
-      class="tech-note"
-      style="
-        margin-top: 15px;
-        padding: 15px;
-        background: var(--features-bg);
-        border-radius: 10px;
-        font-size: 0.9em;
-        color: var(--text-tertiary);
-      ">
+      class="tech-note tech-note-box">
       <strong>Complete workflow:</strong>
       1) Upload your GIF to the editor if it's longer than 3 seconds
       2) Trim it to the perfect moment using full video controls

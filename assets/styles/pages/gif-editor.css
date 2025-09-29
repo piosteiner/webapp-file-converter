@@ -821,3 +821,74 @@
     visibility: visible !important;
     opacity: 1 !important;
 }
+
+/* ========================================
+   UTILITY CLASSES TO REPLACE INLINE STYLES
+   ======================================== */
+
+.timeline-section {
+    margin: 50px 0 40px 0;
+    text-align: center;
+}
+
+.timeline-border {
+    border-top: 2px solid var(--timeline-handle);
+    position: relative;
+}
+
+.timeline-text {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.export-section-spacing {
+    margin-top: 30px;
+}
+
+.features-section {
+    margin-top: 40px;
+    text-align: left;
+}
+
+.features-list {
+    margin-top: 10px;
+    padding-left: 20px;
+    color: var(--text-secondary);
+}
+
+.hidden-section {
+    display: none;
+}
+
+.timeline-label {
+    background: var(--container-bg);
+    padding: 0 20px;
+    color: var(--text-accent);
+    font-weight: 600;
+    position: relative;
+    top: -12px;
+}
+
+.editor-intro-box {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: var(--features-bg);
+    border-radius: 15px;
+    border-left: 4px solid var(--text-accent);
+}
+
+.editor-intro-title {
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+    font-size: 1.1em;
+}
+
+.tech-note-box {
+    margin-top: 15px;
+    padding: 15px;
+    background: var(--features-bg);
+    border-radius: 10px;
+    font-size: 0.9em;
+    color: var(--text-tertiary);
+}
