@@ -268,14 +268,20 @@ class BattleMapSplitter {
                 const x = (width / config.cols) * col + (width / (config.cols * 2));
                 const y = (height / config.rows) * row + (height / (config.rows * 2));
                 
-                // Draw background circle
+                // Draw background circle with border for better visibility
                 ctx.beginPath();
-                ctx.arc(x, y, 20, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.arc(x, y, 22, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 1.0)'; // Fully opaque white
                 ctx.fill();
                 
-                // Draw number
-                ctx.fillStyle = 'rgba(102, 126, 234, 1)';
+                // Draw border around circle for extra contrast
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Draw number with high contrast color
+                ctx.fillStyle = '#1a202c'; // Dark text for maximum readability
+                ctx.font = 'bold 18px Arial';
                 ctx.fillText(tileNumber.toString(), x, y);
                 tileNumber++;
             }
