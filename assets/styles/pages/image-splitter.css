@@ -317,6 +317,25 @@
     margin-bottom: 25px;
 }
 
+.format-info {
+    background: var(--features-bg);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 3px solid var(--text-accent);
+}
+
+.format-info p {
+    margin: 6px 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.format-info strong {
+    color: var(--text-primary);
+}
+
 .image-info h4,
 .split-info h4,
 .export-options h4 {

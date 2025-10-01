@@ -491,6 +491,7 @@ class BattleMapSplitter {
 
     async exportAsPNG(canvas, filename, tileNumber) {
         return new Promise((resolve) => {
+            // Use higher quality PNG export
             canvas.toBlob((blob) => {
                 const url = URL.createObjectURL(blob);
                 const downloadLinks = document.getElementById('downloadLinks');
@@ -499,11 +500,11 @@ class BattleMapSplitter {
                 link.href = url;
                 link.download = `${filename}.png`;
                 link.className = 'download-link';
-                link.textContent = `📄 Download ${filename}.png`;
+                link.textContent = `�️ Download ${filename}.png`;
                 
                 downloadLinks.appendChild(link);
                 resolve();
-            }, 'image/png');
+            }, 'image/png', 1.0); // Maximum quality
         });
     }
 
