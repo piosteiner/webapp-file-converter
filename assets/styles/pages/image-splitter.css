@@ -4,6 +4,30 @@
  */
 
 /* ========================================
+   GLOBAL HEADING STYLES - DARK MODE FIX
+   ======================================== */
+
+h3, h4, h5, h6 {
+    color: var(--text-primary);
+    margin: 0 0 15px 0;
+}
+
+h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+h5 {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* ========================================
    IMAGE SPLITTER - GRID SELECTION
    ======================================== */
 
@@ -393,6 +417,11 @@
     margin-bottom: 30px;
     box-shadow: 0 10px 30px var(--shadow-color);
     text-align: center;
+}
+
+.export-section h3 {
+    color: var(--text-primary);
+    margin-bottom: 20px;
 }
 
 .progress-container {
