@@ -373,6 +373,9 @@ class BattleMapSplitter {
                     this.marginPixels, this.marginPixels, actualTileWidth, actualTileHeight
                 );
 
+                // Add tile numbers in all four corners for easy reassembly
+                this.addTileNumbers(ctx, canvas.width, canvas.height, row + 1, col + 1);
+
                 // Store tile for bulk download
                 const tileFilename = `${this.baseFileName}_tile_${tileNumber}`;
                 this.generatedTiles.push({
@@ -571,6 +574,43 @@ class BattleMapSplitter {
         // Fallback to canvas estimation only if no file available
         if (!this.originalImage) return 0;
         return this.originalImage.width * this.originalImage.height * 4; // 4 bytes per pixel (RGBA)
+    }
+
+    // Add tile numbers in all four corners for easy reassembly
+    addTileNumbers(ctx, canvasWidth, canvasHeight, row, col) {
+        const tileId = `${row}-${col}`;
+        
+        // Configure text styling
+        const fontSize = Math.min(canvasWidth, canvasHeight) * 0.02; // 2% of smaller dimension
+        ctx.font = `bold ${Math.max(12, fontSize)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Add text with outline for visibility
+        const drawTextWithOutline = (text, x, y) => {
+            // White outline for visibility on any background
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.strokeText(text, x, y);
+            
+            // Black text
+            ctx.fillStyle = '#000000';
+            ctx.fillText(text, x, y);
+        };
+
+        const margin = 15; // Distance from corner
+
+        // Top-left corner
+        drawTextWithOutline(tileId, margin, margin);
+        
+        // Top-right corner
+        drawTextWithOutline(tileId, canvasWidth - margin, margin);
+        
+        // Bottom-left corner
+        drawTextWithOutline(tileId, margin, canvasHeight - margin);
+        
+        // Bottom-right corner
+        drawTextWithOutline(tileId, canvasWidth - margin, canvasHeight - margin);
     }
 }
 
