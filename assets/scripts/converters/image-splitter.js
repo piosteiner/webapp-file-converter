@@ -598,19 +598,22 @@ class BattleMapSplitter {
             ctx.fillText(text, x, y);
         };
 
-        const margin = 15; // Distance from corner
+        // Position numbers at the inner edge of the 10mm border (59px from outer edge)
+        // This ensures they're in the printable area, right at the image corners
+        const borderOffset = this.marginPixels; // 59px (10mm at 150 DPI)
+        const textOffset = 8; // Small offset from the exact border edge for readability
 
-        // Top-left corner
-        drawTextWithOutline(tileId, margin, margin);
+        // Top-left corner (at inner border edge)
+        drawTextWithOutline(tileId, borderOffset + textOffset, borderOffset + textOffset);
         
-        // Top-right corner
-        drawTextWithOutline(tileId, canvasWidth - margin, margin);
+        // Top-right corner (at inner border edge)
+        drawTextWithOutline(tileId, canvasWidth - borderOffset - textOffset, borderOffset + textOffset);
         
-        // Bottom-left corner
-        drawTextWithOutline(tileId, margin, canvasHeight - margin);
+        // Bottom-left corner (at inner border edge)
+        drawTextWithOutline(tileId, borderOffset + textOffset, canvasHeight - borderOffset - textOffset);
         
-        // Bottom-right corner
-        drawTextWithOutline(tileId, canvasWidth - margin, canvasHeight - margin);
+        // Bottom-right corner (at inner border edge)
+        drawTextWithOutline(tileId, canvasWidth - borderOffset - textOffset, canvasHeight - borderOffset - textOffset);
     }
 }
 
