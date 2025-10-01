@@ -8,13 +8,7 @@ class BattleMapSplitter {
         
         // Grid configurations
         this.gridConfigs = {
-                        downloadBtn.disabled = false;
-            downloadBtn.textContent = '✅ Downloads Complete!';     // Show completion message
-            downloadBtn.textContent = '✅ All files downloaded!';
-            setTimeout(() => {
-                downloadBtn.disabled = false;
-                downloadBtn.textContent = '📁 Download All Tiles';
-            }, 2000);   '2x3': {
+            '2x3': {
                 rows: 2,
                 cols: 3,
                 expectedWidth: 3366,
@@ -50,7 +44,9 @@ class BattleMapSplitter {
         const backToGridBtn = document.getElementById('backToGridBtn');
 
         // Grid selection
+        console.log(`Found ${gridOptions.length} grid options`);
         gridOptions.forEach(option => {
+            console.log(`Adding click handler to:`, option.dataset.grid);
             option.addEventListener('click', () => this.selectGrid(option.dataset.grid));
         });
 
@@ -88,8 +84,10 @@ class BattleMapSplitter {
     }
 
     selectGrid(gridType) {
+        console.log(`Grid selected: ${gridType}`);
         this.selectedGrid = gridType;
         const config = this.gridConfigs[gridType];
+        console.log(`Grid config:`, config);
         
         // Update UI
         document.querySelectorAll('.grid-option').forEach(opt => {
