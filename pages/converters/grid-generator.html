@@ -11,19 +11,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="../../assets/icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="../../assets/icons/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="../../assets/icons/apple-touch-icon.png">
-    <script>
-        // Cache-bust CSS with timestamp
-        const cssLink = document.createElement('link');
-        cssLink.rel = 'stylesheet';
-        cssLink.href = '../../assets/styles/styles.css?t=' + Date.now();
-        document.head.appendChild(cssLink);
-        
-        // Add color picker CSS
-        const colorPickerCSS = document.createElement('link');
-        colorPickerCSS.rel = 'stylesheet';
-        colorPickerCSS.href = '../../assets/styles/components/color-picker.css?t=' + Date.now();
-        document.head.appendChild(colorPickerCSS);
-    </script>
+    <link rel="stylesheet" href="../../assets/styles/styles.css">
+    <link rel="stylesheet" href="../../assets/styles/components/color-picker.css">
 </head>
 <body class="converter-page grid-generator">
     <div class="container">
