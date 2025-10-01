@@ -89,6 +89,12 @@ class BattleMapSplitter {
         document.getElementById('uploadDescription').textContent = 
             `Upload a ${config.expectedWidth} × ${config.expectedHeight} pixel image (${config.sizeMM})`;
         
+        // Update input dimensions in the size requirements box
+        const inputDimensions = document.getElementById('inputDimensions');
+        if (inputDimensions) {
+            inputDimensions.innerHTML = `<strong>${config.expectedWidth} × ${config.expectedHeight} pixels</strong> (${config.sizeMM})`;
+        }
+        
         // Show upload section
         document.querySelector('.grid-selection-section').style.display = 'none';
         document.querySelector('.upload-section').style.display = 'block';
@@ -340,10 +346,17 @@ class BattleMapSplitter {
                 );
 
                 // Export based on format
-                if (format === 'png') {
-                    await this.exportAsPNG(canvas, `tile_${tileNumber}`, tileNumber);
-                } else {
-                    await this.exportAsPDF(canvas, `tile_${tileNumber}`, tileNumber);
+                try {
+                    if (format === 'png') {
+                        await this.exportAsPNG(canvas, `tile_${tileNumber}`, tileNumber);
+                    } else {
+                        await this.exportAsPDF(canvas, `tile_${tileNumber}`, tileNumber);
+                    }
+                } catch (error) {
+                    console.error(`Export failed for tile ${tileNumber}:`, error);
+                    ErrorHandler.showError(`Tile ${tileNumber} Export Failed`, 
+                        `Failed to export tile ${tileNumber} as ${format.toUpperCase()}: ${error.message}`);
+                    // Continue with other tiles
                 }
 
                 processedTiles++;
@@ -376,37 +389,48 @@ class BattleMapSplitter {
     }
 
     async exportAsPDF(canvas, filename, tileNumber) {
-        return new Promise((resolve) => {
-            // Convert canvas to image data
-            const imgData = canvas.toDataURL('image/png');
-            
-            // Create PDF (A4 size: 210 × 297 mm)
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
-            
-            // Add image to PDF (fit to A4 with margins)
-            const pdfWidth = 210 - 20; // A4 width minus 1cm margins on each side
-            const pdfHeight = 297 - 20; // A4 height minus 1cm margins on each side
-            
-            pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, pdfHeight);
-            
-            // Create download link
-            const pdfBlob = pdf.output('blob');
-            const url = URL.createObjectURL(pdfBlob);
-            const downloadLinks = document.getElementById('downloadLinks');
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${filename}.pdf`;
-            link.className = 'download-link';
-            link.textContent = `📄 Download Tile ${tileNumber} (PDF)`;
-            
-            downloadLinks.appendChild(link);
-            resolve();
+        return new Promise((resolve, reject) => {
+            try {
+                // Check if jsPDF is available
+                if (!window.jspdf || !window.jspdf.jsPDF) {
+                    throw new Error('jsPDF library not loaded. Please refresh the page and try again.');
+                }
+                
+                // Convert canvas to image data
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Create PDF (A4 size: 210 × 297 mm)
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                // Add image to PDF (fit to A4 with margins)
+                const pdfWidth = 210 - 20; // A4 width minus 1cm margins on each side
+                const pdfHeight = 297 - 20; // A4 height minus 1cm margins on each side
+                
+                pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, pdfHeight);
+                
+                // Create download link
+                const pdfBlob = pdf.output('blob');
+                const url = URL.createObjectURL(pdfBlob);
+                const downloadLinks = document.getElementById('downloadLinks');
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${filename}.pdf`;
+                link.className = 'download-link';
+                link.textContent = `📄 Download Tile ${tileNumber} (PDF)`;
+                
+                downloadLinks.appendChild(link);
+                resolve();
+            } catch (error) {
+                console.error('PDF export failed:', error);
+                ErrorHandler.showError('PDF Export Failed', error.message);
+                reject(error);
+            }
         });
     }
 
@@ -432,5 +456,13 @@ class BattleMapSplitter {
 
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if jsPDF is loaded
+    if (window.jspdf && window.jspdf.jsPDF) {
+        console.log('✓ jsPDF library loaded successfully');
+    } else {
+        console.error('✗ jsPDF library not loaded');
+        ErrorHandler.showError('Library Missing', 'PDF export functionality requires jsPDF library. Please refresh the page.');
+    }
+    
     new BattleMapSplitter();
 });

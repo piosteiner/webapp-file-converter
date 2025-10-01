@@ -46,10 +46,14 @@
                         </div>
                     </div>
                     <div class="grid-info">
-                        <h4>2×3 Grid (6 tiles)</h4>
-                        <p><strong>Input:</strong> 3366 × 3276 px</p>
-                        <p><strong>Size:</strong> 570 × 554 mm</p>
-                        <p><strong>Perfect for:</strong> Standard battle maps</p>
+                        <h4>2×3 Grid - Standard Battle Maps</h4>
+                        <div class="grid-specs">
+                            <p><strong>📐 Input Required:</strong> 3366 × 3276 pixels (570 × 554 mm at 150 DPI)</p>
+                            <p><strong>🎯 Why This Size:</strong> Optimized for standard tabletop battle encounters. Each tile prints at exactly 190×277mm, fitting perfectly on A4 paper with 1cm margins for clean printing and easy handling.</p>
+                            <p><strong>📄 Output:</strong> 6 printable A4 pages that assemble into a 57×55cm battle map</p>
+                            <p><strong>🎲 Perfect For:</strong> Standard D&D encounters, small dungeon rooms, tavern interiors, single-room battles</p>
+                            <p><strong>⚡ Print Quality:</strong> 150 DPI ensures crisp 25mm grid squares for miniatures</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -68,10 +72,14 @@
                         </div>
                     </div>
                     <div class="grid-info">
-                        <h4>3×3 Grid (9 tiles)</h4>
-                        <p><strong>Input:</strong> 3366 × 4911 px</p>
-                        <p><strong>Size:</strong> 570 × 831 mm</p>
-                        <p><strong>Perfect for:</strong> Large dungeon maps</p>
+                        <h4>3×3 Grid - Large Dungeon Maps</h4>
+                        <div class="grid-specs">
+                            <p><strong>📐 Input Required:</strong> 3366 × 4911 pixels (570 × 831 mm at 150 DPI)</p>
+                            <p><strong>🎯 Why This Size:</strong> Designed for epic encounters and large exploration areas. The 50% taller format accommodates sprawling dungeon complexes, outdoor wilderness, and multi-room encounters that need more vertical space.</p>
+                            <p><strong>📄 Output:</strong> 9 printable A4 pages that assemble into a massive 57×83cm battle map</p>
+                            <p><strong>🎲 Perfect For:</strong> Large dungeons, outdoor wilderness encounters, castle layouts, town squares, boss battle arenas</p>
+                            <p><strong>⚡ Print Quality:</strong> Same 150 DPI standard ensures perfect 25mm grid alignment across all 9 tiles</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -84,6 +92,28 @@
                     <div class="upload-icon">🗺️</div>
                     <h3>Upload Your Battle Map</h3>
                     <p id="uploadDescription">Upload your battle map image</p>
+                    
+                    <div class="size-requirements">
+                        <div class="requirement-box">
+                            <h4>📏 Exact Size Required</h4>
+                            <p>Your image must be <strong>exactly</strong> the specified pixel dimensions. The app will automatically add <strong>10mm borders</strong> (1cm) around each tile during processing for clean printing and easy stitching.</p>
+                            
+                            <div class="size-breakdown">
+                                <div class="breakdown-item">
+                                    <strong>Your Input:</strong> <span id="inputDimensions">Select grid first</span>
+                                </div>
+                                <div class="breakdown-arrow">↓ Processing adds borders ↓</div>
+                                <div class="breakdown-item">
+                                    <strong>Final Tiles:</strong> Each tile becomes 210×297mm (full A4)
+                                </div>
+                            </div>
+                            
+                            <p class="border-explanation">
+                                <strong>🎯 Why 10mm borders?</strong> The white borders ensure perfect alignment when assembling your map and prevent any important details from being cut off during printing.
+                            </p>
+                        </div>
+                    </div>
+                    
                     <p>Supported formats: PNG, JPG, JPEG</p>
                     <input type="file" id="fileInput" accept="image/*" hidden>
                     <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
@@ -165,16 +195,46 @@
                 </div>
             </div>
             
-            <h4>📋 Technical Specifications</h4>
-            <ul>
-                <li><strong>2×3 Grid:</strong> 6 tiles for standard battle maps (3366 × 3276 pixels)</li>
-                <li><strong>3×3 Grid:</strong> 9 tiles for large dungeon maps (3366 × 4911 pixels)</li>
-                <li><strong>Output:</strong> Each tile is 190mm × 277mm (fits A4 with margins)</li>
-                <li><strong>Resolution:</strong> 1122 × 1638 pixels at 150 DPI</li>
-                <li><strong>Margins:</strong> 1cm white border around each tile for clean printing</li>
-                <li><strong>Formats:</strong> PNG images or PDF files</li>
-                <li><strong>Browser-based:</strong> No server uploads, works offline</li>
-            </ul>
+            <h4>📋 Why These Specific Sizes? - Technical Deep Dive</h4>
+            
+            <div class="tech-explanation">
+                <div class="tech-section">
+                    <h5>🎯 A4 Paper Optimization</h5>
+                    <p>Both grid systems are engineered around standard A4 paper (210×297mm). Each tile is sized at 190×277mm to fit comfortably with 1cm margins on all sides, ensuring clean printing without edge cutoffs on any consumer printer.</p>
+                </div>
+                
+                <div class="tech-section">
+                    <h5>📐 150 DPI Standard</h5>
+                    <p>The 150 DPI resolution is the sweet spot for tabletop gaming:</p>
+                    <ul>
+                        <li><strong>Perfect Grid Squares:</strong> 25mm squares = exactly 147.6 pixels at 150 DPI</li>
+                        <li><strong>Miniature Compatibility:</strong> Standard 28-32mm miniatures fit perfectly</li>
+                        <li><strong>Print Quality:</strong> Crisp details without massive file sizes</li>
+                        <li><strong>Processing Speed:</strong> Fast web browser handling without memory issues</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-section">
+                    <h5>📏 Grid Dimensions Explained</h5>
+                    <p><strong>2×3 Grid (57×55cm):</strong> Based on average tabletop space and typical encounter sizes. Six A4 sheets create a substantial play area without overwhelming smaller tables.</p>
+                    <p><strong>3×3 Grid (57×83cm):</strong> 50% taller format accommodates corridor-heavy dungeons and outdoor scenes that need more vertical space for natural exploration flow.</p>
+                </div>
+                
+                <div class="tech-section">
+                    <h5>🔢 Pixel Mathematics</h5>
+                    <ul>
+                        <li><strong>Tile Size:</strong> 190mm × 277mm = 1122 × 1638 pixels at 150 DPI</li>
+                        <li><strong>2×3 Total:</strong> 3 tiles × 1122px = 3366px wide, 2 tiles × 1638px = 3276px tall</li>
+                        <li><strong>3×3 Total:</strong> 3 tiles × 1122px = 3366px wide, 3 tiles × 1638px = 4911px tall</li>
+                        <li><strong>Margin Addition:</strong> Each tile gets 1cm (59px) margins added during export</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-section">
+                    <h5>✅ Output Quality Guarantee</h5>
+                    <p>When you print the generated tiles at 100% scale on A4 paper, your assembled map will have perfectly aligned grid squares that measure exactly 25mm - the international standard for tabletop miniatures.</p>
+                </div>
+            </div>
             
             <h4>💡 Tips for Best Results</h4>
             <ul>
@@ -220,7 +280,13 @@
                 </div>
             </div>
         </section>
-    </div>        <!-- Scripts -->    <!-- Scripts -->
+    </div>
+    
+    <!-- Scripts -->
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Core Scripts -->
     <script src="../../assets/scripts/core/navigation.js?v=202509292053"></script>
     <script src="../../assets/scripts/core/logger.js?v=202509292036"></script>
     <script src="../../assets/scripts/core/error-handler.js?v=202509292036"></script>
@@ -229,6 +295,8 @@
     <script src="../../assets/scripts/core/theme-switcher.js?v=202509292036"></script>
     <script src="../../assets/scripts/core/pwa-manager.js?v=202509292036"></script>
     <script src="../../assets/scripts/core/pwa-install-guide.js?v=202509292036"></script>
-    <script src="../../assets/scripts/converters/image-splitter.js?v=202509292036"></script>
+    
+    <!-- Page Script -->
+    <script src="../../assets/scripts/converters/image-splitter.js?v=20251001001"></script>
 </body>
 </html>
