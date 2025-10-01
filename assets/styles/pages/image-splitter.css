@@ -98,9 +98,8 @@ h5 {
     grid-template-rows: repeat(3, 1fr);
 }
 
+/* Base grid cell styles */
 .grid-cell {
-    width: 40px;
-    height: 30px;
     background: var(--features-bg);
     display: flex;
     align-items: center;
@@ -110,6 +109,18 @@ h5 {
     border-radius: 3px;
     color: #ffffff; /* Ensure high contrast white text on blue background */
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); /* Add subtle shadow for extra readability */
+}
+
+/* 2×3 Grid cells - 570×554mm (slightly wider landscape format) */
+.grid-2x3 .grid-cell {
+    width: 42px;
+    height: 30px;
+}
+
+/* 3×3 Grid cells - 570×831mm displayed as landscape (wider than tall for consistency) */  
+.grid-3x3 .grid-cell {
+    width: 36px;
+    height: 26px;
 }
 
 .grid-info h4 {
