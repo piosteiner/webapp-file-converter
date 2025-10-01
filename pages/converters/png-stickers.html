@@ -11,7 +11,16 @@
     <meta name="keywords" content="PNG converter, image converter, 512px, aspect ratio, sticker maker">
     <link rel="canonical" href="https://converter.piogino.ch/html/png-stickers.html">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏷️</text></svg>">
-        <link rel="stylesheet" href="../../assets/styles/styles.css?v=202509292036">
+    <link rel="stylesheet" href="../../assets/styles/styles.css">
+    <script>
+        // Prevent flash of light theme - must run immediately before page renders
+        (function() {
+            const theme = localStorage.getItem('preferred-theme') || 'system';
+            if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
 </head>
 <body class="converter-page png-stickers">
     <div class="container">
