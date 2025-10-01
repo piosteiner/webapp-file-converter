@@ -583,11 +583,12 @@ class BattleMapSplitter {
         // Configure text styling
         const fontSize = Math.min(canvasWidth, canvasHeight) * 0.02; // 2% of smaller dimension
         ctx.font = `bold ${Math.max(12, fontSize)}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
         
         // Add text with outline for visibility
-        const drawTextWithOutline = (text, x, y) => {
+        const drawTextWithOutline = (text, x, y, align, baseline) => {
+            ctx.textAlign = align;
+            ctx.textBaseline = baseline;
+            
             // White outline for visibility on any background
             ctx.lineWidth = 3;
             ctx.strokeStyle = '#FFFFFF';
@@ -598,22 +599,22 @@ class BattleMapSplitter {
             ctx.fillText(text, x, y);
         };
 
-        // Position numbers at the inner edge of the 10mm border (59px from outer edge)
-        // This ensures they're in the printable area, right at the image corners
+        // Position numbers just outside the image area, touching the border edges
+        // Image starts at borderOffset pixels from canvas edge
         const borderOffset = this.marginPixels; // 59px (10mm at 150 DPI)
-        const textOffset = 8; // Small offset from the exact border edge for readability
+        const textGap = 3; // Small gap between text and image edge for clarity
 
-        // Top-left corner (at inner border edge)
-        drawTextWithOutline(tileId, borderOffset + textOffset, borderOffset + textOffset);
+        // Top-left corner - text positioned so its bottom-right touches image top-left
+        drawTextWithOutline(tileId, borderOffset - textGap, borderOffset - textGap, 'right', 'bottom');
         
-        // Top-right corner (at inner border edge)
-        drawTextWithOutline(tileId, canvasWidth - borderOffset - textOffset, borderOffset + textOffset);
+        // Top-right corner - text positioned so its bottom-left touches image top-right  
+        drawTextWithOutline(tileId, canvasWidth - borderOffset + textGap, borderOffset - textGap, 'left', 'bottom');
         
-        // Bottom-left corner (at inner border edge)
-        drawTextWithOutline(tileId, borderOffset + textOffset, canvasHeight - borderOffset - textOffset);
+        // Bottom-left corner - text positioned so its top-right touches image bottom-left
+        drawTextWithOutline(tileId, borderOffset - textGap, canvasHeight - borderOffset + textGap, 'right', 'top');
         
-        // Bottom-right corner (at inner border edge)
-        drawTextWithOutline(tileId, canvasWidth - borderOffset - textOffset, canvasHeight - borderOffset - textOffset);
+        // Bottom-right corner - text positioned so its top-left touches image bottom-right
+        drawTextWithOutline(tileId, canvasWidth - borderOffset + textGap, canvasHeight - borderOffset + textGap, 'left', 'top');
     }
 }
 

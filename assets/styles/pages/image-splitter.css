@@ -188,11 +188,16 @@ h5 {
 .breakdown-item {
     padding: 8px 0;
     font-size: 0.9rem;
+    color: var(--text-secondary);
 }
 
 .breakdown-item strong {
     color: var(--text-primary);
     font-weight: 600;
+}
+
+.breakdown-item span {
+    color: var(--text-secondary);
 }
 
 .breakdown-arrow {
@@ -256,6 +261,15 @@ h5 {
 .upload-content p {
     margin-bottom: 8px;
     color: var(--text-secondary);
+}
+
+/* Ensure all text in upload section has proper dark mode colors */
+.upload-section p {
+    color: var(--text-secondary);
+}
+
+.upload-section strong {
+    color: var(--text-primary);
 }
 
 .upload-btn {
