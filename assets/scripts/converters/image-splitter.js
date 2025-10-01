@@ -1,12 +1,20 @@
 class BattleMapSplitter {
     constructor() {
         this.originalImage = null;
+        this.baseFileName = 'image'; // Default filename if none provided
+        this.generatedTiles = []; // Store all generated tiles for bulk download
         this.previewCanvas = document.getElementById('previewCanvas');
         this.previewCtx = this.previewCanvas.getContext('2d');
         
         // Grid configurations
         this.gridConfigs = {
-            '2x3': {
+                        downloadBtn.disabled = false;
+            downloadBtn.textContent = '✅ Downloads Complete!';     // Show completion message
+            downloadBtn.textContent = '✅ All files downloaded!';
+            setTimeout(() => {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = '📁 Download All Tiles';
+            }, 2000);   '2x3': {
                 rows: 2,
                 cols: 3,
                 expectedWidth: 3366,
@@ -19,17 +27,17 @@ class BattleMapSplitter {
                 rows: 3,
                 cols: 3,
                 expectedWidth: 3366,
-                expectedHeight: 4911,
+                expectedHeight: 4914, // Fixed: 1638px × 3 = 4914px (was 4911px)
                 totalTiles: 9,
                 description: '3 rows × 3 columns (9 tiles)',
-                sizeMM: '570 × 831 mm'
+                sizeMM: '570 × 832 mm'
             }
         };
         
         this.selectedGrid = null;
-        this.tileWidth = 1122;  // 190mm at 150 DPI
-        this.tileHeight = 1638; // 277mm at 150 DPI
-        this.marginPixels = 59; // 1cm at 150 DPI (10mm * 150 DPI / 25.4)
+        this.tileWidth = Math.round(190 * 150 / 25.4);   // 190mm at 150 DPI = 1122px
+        this.tileHeight = Math.round(277 * 150 / 25.4); // 277mm at 150 DPI = 1638px  
+        this.marginPixels = Math.round(10 * 150 / 25.4); // 10mm at 150 DPI = 59px
         
         this.initializeEventListeners();
     }
@@ -73,6 +81,10 @@ class BattleMapSplitter {
 
         // Export button
         exportBtn.addEventListener('click', () => this.exportTiles());
+        
+        // Download all button
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        downloadAllBtn.addEventListener('click', () => this.downloadAllTiles());
     }
 
     selectGrid(gridType) {
@@ -124,6 +136,15 @@ class BattleMapSplitter {
 
         // Store the current file for size calculations
         this.currentFile = file;
+        
+        // Extract filename without extension for tile naming
+        const fileName = file.name;
+        const lastDot = fileName.lastIndexOf('.');
+        let baseFileName = lastDot > 0 ? fileName.substring(0, lastDot) : fileName;
+        
+        // Clean filename to remove problematic characters
+        this.baseFileName = baseFileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        console.log(`Original filename: "${file.name}" -> Base filename: "${this.baseFileName}"`);
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -307,9 +328,13 @@ class BattleMapSplitter {
         const progressText = document.getElementById('progressText');
         const downloadLinks = document.getElementById('downloadLinks');
 
-        // Show export section
+        // Show export section and reset generated tiles
         exportSection.style.display = 'block';
         downloadLinks.innerHTML = '';
+        this.generatedTiles = []; // Reset for new export
+        
+        // Hide bulk download section initially
+        document.getElementById('bulkDownloadSection').style.display = 'none';
 
         // Calculate actual tile dimensions based on image size
         const actualTileWidth = this.originalImage.width / config.cols;
@@ -331,6 +356,11 @@ class BattleMapSplitter {
                 canvas.width = actualTileWidth + (this.marginPixels * 2);
                 canvas.height = actualTileHeight + (this.marginPixels * 2);
                 
+                // Debug: Log actual dimensions for verification
+                const canvasWidthMM = (canvas.width * 25.4) / 150;
+                const canvasHeightMM = (canvas.height * 25.4) / 150;
+                console.log(`Tile ${tileNumber}: Canvas ${canvas.width}×${canvas.height}px = ${canvasWidthMM.toFixed(1)}×${canvasHeightMM.toFixed(1)}mm`);
+                
                 // Fill with white background
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -345,12 +375,21 @@ class BattleMapSplitter {
                     this.marginPixels, this.marginPixels, actualTileWidth, actualTileHeight
                 );
 
+                // Store tile for bulk download
+                const tileFilename = `${this.baseFileName}_tile_${tileNumber}`;
+                this.generatedTiles.push({
+                    canvas: canvas,
+                    filename: tileFilename,
+                    tileNumber: tileNumber,
+                    format: format
+                });
+                
                 // Export based on format
                 try {
                     if (format === 'png') {
-                        await this.exportAsPNG(canvas, `tile_${tileNumber}`, tileNumber);
+                        await this.exportAsPNG(canvas, tileFilename, tileNumber);
                     } else {
-                        await this.exportAsPDF(canvas, `tile_${tileNumber}`, tileNumber);
+                        await this.exportAsPDF(canvas, tileFilename, tileNumber);
                     }
                 } catch (error) {
                     console.error(`Export failed for tile ${tileNumber}:`, error);
@@ -368,6 +407,88 @@ class BattleMapSplitter {
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
         }
+        
+        // Show bulk download button after all tiles are generated
+        if (this.generatedTiles.length > 0) {
+            document.getElementById('bulkDownloadSection').style.display = 'block';
+        }
+    }
+
+    async downloadAllTiles() {
+        if (!this.generatedTiles || this.generatedTiles.length === 0) {
+            ErrorHandler.showError('No Tiles Available', 'Please export tiles first before downloading.');
+            return;
+        }
+
+        const downloadBtn = document.getElementById('downloadAllBtn');
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = '� Downloading files...';
+
+        try {
+            // Download each tile individually with a small delay between downloads
+            for (let i = 0; i < this.generatedTiles.length; i++) {
+                const tile = this.generatedTiles[i];
+                const canvas = tile.canvas;
+                const filename = tile.filename;
+                const format = tile.format;
+                
+                // Update button text with progress
+                downloadBtn.textContent = `📁 Downloading ${i + 1}/${this.generatedTiles.length}...`;
+                
+                if (format === 'png') {
+                    // Convert canvas to blob and download
+                    const blob = await new Promise(resolve => {
+                        canvas.toBlob(resolve, 'image/png');
+                    });
+                    this.triggerDownload(blob, `${filename}.png`);
+                } else {
+                    // For PDF, generate and download
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdfWidth = 210;  // Full A4 width (margins already in canvas)
+                    const pdfHeight = 297; // Full A4 height (margins already in canvas)
+                    
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    const pdfBlob = pdf.output('blob');
+                    this.triggerDownload(pdfBlob, `${filename}.pdf`);
+                }
+                
+                // Small delay between downloads to avoid browser blocking
+                if (i < this.generatedTiles.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+            
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = '� Download All Tiles';
+            
+        } catch (error) {
+            console.error('Bulk download failed:', error);
+            ErrorHandler.showError('Download Failed', `Failed to download files: ${error.message}`);
+            
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = '� Download All Tiles';
+        }
+    }
+
+    triggerDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the URL after a short delay
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     async exportAsPNG(canvas, filename, tileNumber) {
@@ -380,7 +501,7 @@ class BattleMapSplitter {
                 link.href = url;
                 link.download = `${filename}.png`;
                 link.className = 'download-link';
-                link.textContent = `📄 Download Tile ${tileNumber} (PNG)`;
+                link.textContent = `📄 Download ${filename}.png`;
                 
                 downloadLinks.appendChild(link);
                 resolve();
@@ -407,11 +528,11 @@ class BattleMapSplitter {
                     format: 'a4'
                 });
                 
-                // Add image to PDF (fit to A4 with margins)
-                const pdfWidth = 210 - 20; // A4 width minus 1cm margins on each side
-                const pdfHeight = 297 - 20; // A4 height minus 1cm margins on each side
+                // Add image to PDF (full A4 size - margins already in canvas)
+                const pdfWidth = 210;  // Full A4 width (margins already built into canvas)
+                const pdfHeight = 297; // Full A4 height (margins already built into canvas)
                 
-                pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, pdfHeight);
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                 
                 // Create download link
                 const pdfBlob = pdf.output('blob');
@@ -422,7 +543,7 @@ class BattleMapSplitter {
                 link.href = url;
                 link.download = `${filename}.pdf`;
                 link.className = 'download-link';
-                link.textContent = `📄 Download Tile ${tileNumber} (PDF)`;
+                link.textContent = `📄 Download ${filename}.pdf`;
                 
                 downloadLinks.appendChild(link);
                 resolve();

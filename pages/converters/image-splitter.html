@@ -74,9 +74,9 @@
                     <div class="grid-info">
                         <h4>3×3 Grid - Large Dungeon Maps</h4>
                         <div class="grid-specs">
-                            <p><strong>📐 Input Required:</strong> 3366 × 4911 pixels (570 × 831 mm at 150 DPI)</p>
+                            <p><strong>📐 Input Required:</strong> 3366 × 4914 pixels (570 × 833 mm at 150 DPI)</p>
                             <p><strong>🎯 Why This Size:</strong> Designed for epic encounters and large exploration areas. The 50% taller format accommodates sprawling dungeon complexes, outdoor wilderness, and multi-room encounters that need more vertical space.</p>
-                            <p><strong>📄 Output:</strong> 9 printable A4 pages that assemble into a massive 57×83cm battle map</p>
+                            <p><strong>📄 Output:</strong> 9 printable A4 pages that assemble into a massive 57×83.2cm battle map</p>
                             <p><strong>🎲 Perfect For:</strong> Large dungeons, outdoor wilderness encounters, castle layouts, town squares, boss battle arenas</p>
                             <p><strong>⚡ Print Quality:</strong> Same 150 DPI standard ensures perfect 25mm grid alignment across all 9 tiles</p>
                         </div>
@@ -167,6 +167,15 @@
                 </div>
                 <div class="progress-text" id="progressText">0 tiles exported</div>
             </div>
+            
+            <!-- Bulk Download Section -->
+            <div class="bulk-download" id="bulkDownloadSection" style="display: none;">
+                <button class="download-all-btn" id="downloadAllBtn">
+                    � Download All Tiles
+                </button>
+                <p class="bulk-download-info">All tiles will be downloaded individually to your Downloads folder.</p>
+            </div>
+            
             <div class="download-links" id="downloadLinks"></div>
         </section>
 
@@ -186,7 +195,7 @@
                 <div class="guide-section">
                     <h4>For Large Dungeon Maps (3×3 Grid):</h4>
                     <ol>
-                        <li>Set canvas size to <strong>570mm × 831mm</strong> at <strong>150 DPI</strong></li>
+                        <li>Set canvas size to <strong>570mm × 832mm</strong> at <strong>150 DPI</strong></li>
                         <li>Create your large dungeon or outdoor map</li>
                         <li>Export as PNG or JPG</li>
                         <li>Upload to web app and select <strong>3×3 Grid</strong></li>
@@ -225,7 +234,7 @@
                     <ul>
                         <li><strong>Tile Size:</strong> 190mm × 277mm = 1122 × 1638 pixels at 150 DPI</li>
                         <li><strong>2×3 Total:</strong> 3 tiles × 1122px = 3366px wide, 2 tiles × 1638px = 3276px tall</li>
-                        <li><strong>3×3 Total:</strong> 3 tiles × 1122px = 3366px wide, 3 tiles × 1638px = 4911px tall</li>
+                        <li><strong>3×3 Total:</strong> 3 tiles × 1122px = 3366px wide, 3 tiles × 1638px = 4914px tall</li>
                         <li><strong>Margin Addition:</strong> Each tile gets 1cm (59px) margins added during export</li>
                     </ul>
                 </div>
@@ -297,6 +306,6 @@
     <script src="../../assets/scripts/core/pwa-install-guide.js?v=202509292036"></script>
     
     <!-- Page Script -->
-    <script src="../../assets/scripts/converters/image-splitter.js?v=20251001001"></script>
+    <script src="../../assets/scripts/converters/image-splitter.js?v=20251001009"></script>
 </body>
 </html>

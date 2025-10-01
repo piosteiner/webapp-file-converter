@@ -426,6 +426,49 @@
     box-shadow: 0 4px 6px var(--shadow-color);
 }
 
+/* Bulk Download Section */
+.bulk-download {
+    margin: 25px 0;
+    text-align: center;
+    padding: 20px;
+    background: var(--controls-section-bg);
+    border-radius: 12px;
+    border: 2px solid var(--text-accent);
+}
+
+.download-all-btn {
+    background: var(--text-accent);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 10px;
+}
+
+.download-all-btn:hover {
+    background: var(--success-text);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px var(--shadow-color);
+}
+
+.download-all-btn:disabled {
+    background: var(--text-secondary);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.bulk-download-info {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.4;
+}
+
 /* ========================================
    IMAGE SPLITTER - PROCREATE GUIDE
    ======================================== */
